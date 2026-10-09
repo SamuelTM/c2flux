@@ -293,6 +293,41 @@ def escape(text):
 
 # ----- entry point -----------------------------------------------------------
 
+# Relative spread (max - min) / median above which a time-only failure is
+# measured again.
+NOISY_SPREAD = 0.25
+
+
+def measure_rounds(arguments, versions, target, measured, warmup, runs, label):
+    total_rounds = warmup + runs
+
+    for round_index in range(total_rounds):
+        order = versions if round_index % 2 == 0 else list(reversed(versions))
+        for name, app_dir in order:
+            result = run_once(arguments, app_dir, target)
+            phase = "warm-up" if round_index < warmup else "run"
+            print("[{}] {} {}{} {}/{}: {} {}".format(
+                target.label, name, phase, label, round_index + 1, total_rounds, result.get("status"),
+                "{:,.0f} ms".format(result["elapsed_ms"]) if result.get("elapsed_ms") is not None
+                else result.get("error", "")), flush=True)
+            if round_index >= warmup:
+                measured[name].append(result)
+            if result.get("status") == "unsupported":
+                # Support does not change between runs; skip the remaining rounds.
+                measured[name] = [result]
+        if all(len(results) == 1 and results[0].get("status") == "unsupported"
+               for results in measured.values()):
+            break
+
+
+def is_time_only(target, baseline, candidate, arguments):
+    """True when the target would pass if time were not checked."""
+    relaxed = argparse.Namespace(**vars(arguments))
+    relaxed.max_slowdown = float("inf")
+    verdict, _ = compare(target, baseline, candidate, relaxed)
+    return verdict == "ok"
+
+
 def main():
     # The Windows console defaults to a legacy code page (cp1252 on the CI
     # runners) that cannot print the report's symbols.
@@ -332,29 +367,25 @@ def main():
 
     for target in arguments.target:
         measured = {name: [] for name, _ in versions}
-        total_rounds = arguments.warmup + arguments.runs
-
-        for round_index in range(total_rounds):
-            order = versions if round_index % 2 == 0 else list(reversed(versions))
-            for name, app_dir in order:
-                result = run_once(arguments, app_dir, target)
-                phase = "warm-up" if round_index < arguments.warmup else "run"
-                print("[{}] {} {} {}/{}: {} {}".format(
-                    target.label, name, phase, round_index + 1, total_rounds, result.get("status"),
-                    "{:,.0f} ms".format(result["elapsed_ms"]) if result.get("elapsed_ms") is not None
-                    else result.get("error", "")), flush=True)
-                if round_index >= arguments.warmup:
-                    measured[name].append(result)
-                if result.get("status") == "unsupported":
-                    # Support does not change between runs; skip the remaining rounds.
-                    measured[name] = [result]
-            if all(len(results) == 1 and results[0].get("status") == "unsupported"
-                   for results in measured.values()):
-                break
+        measure_rounds(arguments, versions, target, measured, arguments.warmup, arguments.runs, "")
 
         baseline = summarize_version(measured["baseline"])
         candidate = summarize_version(measured["candidate"]) if arguments.candidate_app else None
         verdict, notes = compare(target, baseline, candidate, arguments)
+
+        # A shared runner sometimes stays in a slow state for a whole set of
+        # rounds, so no run of either version is clean and even the best run
+        # is off. When a target fails on time alone and the runs were noisy,
+        # measure it once more and decide on all runs together: a real
+        # regression shows up in both sets.
+        if verdict == "regression" and is_time_only(target, baseline, candidate, arguments) \
+                and max(baseline.get("elapsed_spread") or 0, candidate.get("elapsed_spread") or 0) > NOISY_SPREAD:
+            print("[{}] noisy runs and only time failed: measuring again".format(target.label), flush=True)
+            measure_rounds(arguments, versions, target, measured, 1, arguments.runs, " (re-measure)")
+            baseline = summarize_version(measured["baseline"])
+            candidate = summarize_version(measured["candidate"])
+            verdict, notes = compare(target, baseline, candidate, arguments)
+            notes = ["re-measured after noisy runs ({} runs per version)".format(len(measured["baseline"]))] + notes
 
         report["targets"].append({
             "scanner": target.scanner,

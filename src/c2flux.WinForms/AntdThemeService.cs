@@ -1299,14 +1299,34 @@ namespace c2flux
                 return 0;
 
             int hash =
-                StringComparer.OrdinalIgnoreCase
-                    .GetHashCode(
-                        familyName ??
-                        string.Empty);
+                GetStableNameHash(
+                    familyName);
 
             return Math.Abs(
                 hash %
                 ChartFamilyColors.Length);
+        }
+
+        // Chart colors are derived from names. string.GetHashCode and
+        // StringComparer.GetHashCode are randomized per process in .NET, which
+        // gave the same folder different treemap and sunburst colors on every
+        // launch. FNV-1a over the upper-cased name is the same in every run
+        // (and keeps the case-insensitive behavior of OrdinalIgnoreCase).
+        private static int GetStableNameHash(
+            string name)
+        {
+            unchecked
+            {
+                uint hash = 2166136261;
+
+                foreach (char character in (name ?? string.Empty).ToUpperInvariant())
+                {
+                    hash ^= character;
+                    hash *= 16777619;
+                }
+
+                return (int)(hash & 0x7FFFFFFF);
+            }
         }
 
         public static Color GetChartFamilyShade(
@@ -1315,10 +1335,8 @@ namespace c2flux
             int depth)
         {
             int nameHash =
-                StringComparer.OrdinalIgnoreCase
-                    .GetHashCode(
-                        name ??
-                        string.Empty);
+                GetStableNameHash(
+                    name);
 
             double factor =
                 0.72D +

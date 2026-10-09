@@ -138,6 +138,7 @@ O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows
 
 **Ambiente local** (adiado: por enquanto, o CI é a única referência de desempenho e de visual no Windows):
 
+  - Na Fase 1, o `ntfsmft` no `C:` ficou no patamar lento em **todas** as rodadas medidas das duas versões, e o melhor tempo também falhou (+13,4% com código idêntico). Agora, quando um alvo reprova só por tempo e as rodadas estão dispersas (mais de 25%), ele é medido de novo uma vez e decidido com todas as rodadas. Com os tempos reais dessa execução, passa (+0,2%); uma lentidão real de 20% injetada continua reprovando
 - [ ] ~~Instalar Windows 11 ARM numa VM (Parallels ou UTM) com o .NET 10 SDK~~ (adiado)
 - [ ] ~~Documentar em `docs/dev/windows-vm.md` como compilar, rodar como administrador e executar a ferramenta de benchmark na VM~~ (adiado)
 
@@ -192,7 +193,9 @@ O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows
 - [x] `LocalizationService`: a pasta `Languages` era ao mesmo tempo os idiomas do app e onde o usuário instala idiomas novos (e de onde o app apaga arquivos antigos ao iniciar), o que não funciona num `.app` somente leitura. Agora são duas: idiomas do app em `ResourcesDirectory/Languages` e do usuário em `DataDirectory/Languages`; a lista junta as duas, e o arquivo do usuário vence. No Windows são a mesma pasta
 - [x] Projeto WinForms passa a referenciar o Core (os pacotes do SQLite chegam por ele). `c2flux-bench` e `c2flux-shots` procuram os tipos também nos assemblies `c2flux.*` referenciados, funcionando com a `baseline-winforms` e com o layout novo
 - [x] Testes do Core em `tests/c2flux.Core.Tests` (11 testes), no CI **nos três SOs** (job `core-tests`): regras do `AppPaths` por sistema, idiomas em duas pastas, configurações indo e voltando do disco e a **regressão do bug do histórico** da Fase 0.3 (falha com o código antigo, passa com o novo)
+- [x] **Bug pré-existente nas cores do Treemap e do Sunburst, corrigido** (encontrado ao comparar as capturas da Fase 1): a cor de cada família e o tom de cada bloco vinham de `StringComparer.OrdinalIgnoreCase.GetHashCode()`, que o .NET torna aleatório a cada processo. A mesma pasta aparecia com cores diferentes a cada vez que o app abria (nas execuções anteriores, as cores coincidiram por acaso). Corrigido com um hash estável (FNV-1a sobre o nome em maiúsculas) em [AntdThemeService.cs](src/c2flux.WinForms/AntdThemeService.cs). As cores continuam vindo da mesma paleta, mas agora são iguais em toda execução; as referências do Treemap e do Sunburst precisam ser atualizadas
 - [ ] Confirmar no CI que o app Windows continua idêntico: build, testes do Core nos três SOs, benchmark sem regressão e capturas iguais às referências
+  - Primeira execução (`dc0ae8d`): build e testes do Core ✅ nos três SOs; dados gravados ao lado do `.exe`, como antes; 40 das 42 capturas idênticas (diferenças ≤ 0,12%, só datas e espaço livre do runner); Treemap e Sunburst com cores trocadas (o bug acima); benchmark ✅ em todos os alvos menos `ntfsmft` no `C:`, reprovado por ruído (as rodadas medidas das duas versões ficaram todas no patamar lento, 15–30 s, contra 6,3 s limpo)
 
 **Entregável:** app Windows igual ao de hoje e Core compilando e passando nos testes em Windows, macOS e Linux.
 
