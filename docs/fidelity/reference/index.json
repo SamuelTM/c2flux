@@ -1,0 +1,188 @@
+{
+  "app_version": "1.4.1",
+  "display": "1920x1080 (changed from 1024x768)",
+  "os": "Microsoft Windows NT 10.0.26100.0",
+  "dpi": 96,
+  "captures": [
+    {
+      "name": "main-empty",
+      "file": "main-empty.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "MainForm",
+      "title": "c\u00B2 flux - Tree Scanner",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "name": "main-table",
+      "file": "main-table.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "MainForm",
+      "title": "c\u00B2 flux - Tree Scanner - Scan: 100% / completed",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "name": "main-pie",
+      "file": "main-pie.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "MainForm",
+      "title": "c\u00B2 flux - Tree Scanner - Scan: 100% / completed",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "name": "main-bar",
+      "file": "main-bar.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "MainForm",
+      "title": "c\u00B2 flux - Tree Scanner - Scan: 100% / completed",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "name": "main-sunburst",
+      "file": "main-sunburst.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "MainForm",
+      "title": "c\u00B2 flux - Tree Scanner - Scan: 100% / completed",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "name": "main-treemap",
+      "file": "main-treemap.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "MainForm",
+      "title": "c\u00B2 flux - Tree Scanner - Scan: 100% / completed",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "name": "main-analysis",
+      "file": "main-analysis.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "MainForm",
+      "title": "c\u00B2 flux - Tree Scanner - Scan: 100% / completed",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "name": "main-storage-history",
+      "file": "main-storage-history.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "MainForm",
+      "title": "c\u00B2 flux - Tree Scanner - Scan: 100% / completed",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "name": "search",
+      "file": "search.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "SearchForm",
+      "title": "Search",
+      "width": 704,
+      "height": 720
+    },
+    {
+      "name": "settings",
+      "file": "settings.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "SettingsForm",
+      "title": "Settings",
+      "width": 536,
+      "height": 493
+    },
+    {
+      "name": "about",
+      "file": "about.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "AboutForm",
+      "title": "About c\u00B2 flux",
+      "width": 491,
+      "height": 348
+    },
+    {
+      "name": "alert-history",
+      "file": "alert-history.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "AlertHistoryForm",
+      "title": "Short log",
+      "width": 820,
+      "height": 500
+    },
+    {
+      "name": "scan-history",
+      "file": "scan-history.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "ScanHistoryForm",
+      "title": "Scan history",
+      "width": 1120,
+      "height": 700
+    },
+    {
+      "name": "storage-history",
+      "file": "storage-history.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "StorageHistoryForm",
+      "title": "Scan History",
+      "width": 1120,
+      "height": 650
+    },
+    {
+      "name": "database-move",
+      "file": "database-move.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "DatabaseMoveForm",
+      "title": "Select database",
+      "width": 630,
+      "height": 350
+    },
+    {
+      "name": "debug-class",
+      "file": "debug-class.png",
+      "status": "ok",
+      "method": "PrintWindow",
+      "form_type": "DebugClassForm",
+      "title": "DebugClassForm",
+      "width": 536,
+      "height": 319
+    }
+  ],
+  "messages": [
+    "[    0.0s] Display: 1920x1080 (changed from 1024x768)",
+    "[    4.4s] main-empty: 1280x800 via PrintWindow",
+    "[    6.5s] Scan of T:\\: done after 1.2s",
+    "[   10.7s] main-table: 1280x800 via PrintWindow",
+    "[   12.8s] main-pie: 1280x800 via PrintWindow",
+    "[   15.0s] main-bar: 1280x800 via PrintWindow",
+    "[   17.2s] main-sunburst: 1280x800 via PrintWindow",
+    "[   19.4s] main-treemap: 1280x800 via PrintWindow",
+    "[   21.6s] main-analysis: 1280x800 via PrintWindow",
+    "[   23.8s] main-storage-history: 1280x800 via PrintWindow",
+    "[   28.1s] search: 704x720 via PrintWindow",
+    "[   30.9s] settings: 536x493 via PrintWindow",
+    "[   33.3s] about: 491x348 via PrintWindow",
+    "[   35.8s] alert-history: 820x500 via PrintWindow",
+    "[   38.2s] scan-history: 1120x700 via PrintWindow",
+    "[   40.7s] storage-history: 1120x650 via PrintWindow",
+    "[   43.1s] database-move: 630x350 via PrintWindow",
+    "[   45.5s] debug-class: 536x319 via PrintWindow"
+  ]
+}

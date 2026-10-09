@@ -396,7 +396,10 @@ namespace c2flux
 
         private IEnumerable<Win32FileSystemEntry> EnumerateFileSystemEntries(string directoryPath)
         {
-            string searchPath = Path.Combine(directoryPath, "*");
+            // Extended-length prefix so directories deeper than MAX_PATH (260
+            // characters) are listed instead of reported as skipped. Entry paths
+            // below keep the normal form the rest of the app expects.
+            string searchPath = Path.Combine(NormalizePathForDirectoryHandle(directoryPath), "*");
 
             IntPtr findHandle = FindFirstFileEx(
                 searchPath,

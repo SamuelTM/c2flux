@@ -156,7 +156,7 @@ O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows
   - Resolução: a ferramenta pede 1920×1080 ao Windows. A escala de DPI fica a do runner (provavelmente 100%)
   - [x] Primeira execução no GitHub: as 19 capturas funcionaram (resolução trocada de 1024×768 para 1920×1080, DPI 96), com imagens nítidas e completas
   - [x] **Bug pré-existente no gráfico de pizza, corrigido** (encontrado na 0.3): itens de 0 bytes viram fatias de ângulo zero, e a fatia no topo do círculo (270°) tem largura 0. O `LinearGradientBrush` de [Chart_PieChart.cs:242](Chart_PieChart.cs#L242) lança `ArgumentException` e o app mostra a janela de exceção não tratada. Acontece com o `T:` de teste (`$BadClus`, `$Secure` e `$Volume` têm 0 B) e, provavelmente, com qualquer pasta cujos últimos itens tenham 0 bytes. Corrigido: fatias com área zero não são preenchidas. As referências passam a ser capturadas do `cross-platform` (original + correções de bugs, mesma interface)
-  - [ ] Salvar as capturas aprovadas em `docs/fidelity/reference/`
+  - [x] Capturas revisadas e salvas em `docs/fidelity/reference/` (16 telas, 796 KB), com descrição e limitações em `docs/fidelity/README.md`
   - [ ] Cobrir as telas restantes (detalhes do histórico de armazenamento, aviso de atualização, diálogos de `AppDialogs`, menus de contexto)
 
 **Entregável:** workflow de benchmark comparativo funcionando no CI, números de referência e capturas de tela registrados.
@@ -222,7 +222,8 @@ public sealed class ScanOptions
   - `NtQueryDirectoryScanner` → `NtQueryScanner`
   - `DirectoryScanner` → `Win32FindScanner`
 - [ ] Corrigir o uso direto de scanners fora do pipeline (`MainForm.cs`, no fluxo de detalhes do histórico de armazenamento)
-- [x] **Bug pré-existente no `DirectoryScanner`, corrigido** (encontrado na Fase 0.2, corrigido junto com a 0.3): com a configuração padrão `SkipReparsePoints = true`, `_activeDirectoryIdentities` fica `null` e `ScanDirectoryContents` lança `NullReferenceException` (`DirectoryScanner.cs:248`). O último fallback de varredura do Windows nunca funcionava. Corrigido: a lista é sempre criada
+- [x] **Bugs pré-existentes no `DirectoryScanner`, corrigidos** (encontrados nas Fases 0.2 e 0.3): com a configuração padrão `SkipReparsePoints = true`, `_activeDirectoryIdentities` fica `null` e `ScanDirectoryContents` lança `NullReferenceException` (`DirectoryScanner.cs:248`). O último fallback de varredura do Windows nunca funcionava. Corrigido: a lista é sempre criada
+  - Caminhos longos: a listagem chamava `FindFirstFileEx` sem o prefixo `\\?\`, então pastas com mais de ~260 caracteres eram registradas como puladas, sem conteúdo. No `T:` de teste faltavam 38 pastas e 37 arquivos (a cadeia `deep/` parava na profundidade 27 de 62). Corrigido usando o mesmo prefixo que o scanner já aplicava ao abrir pastas
 - [ ] Extrair código duplicado entre scanners (`CompiledPathFilter`, `DirectoryIdentity`, montagem da árvore, relatório de progresso) para utilitários comuns no Core
 - [ ] **`ManagedScanner`** (fallback universal): `FileSystemEnumerable<T>` do .NET com paralelismo por diretório. Funciona em qualquer SO e é a rede de segurança final
 - [ ] **Suíte de conformidade:** roda todos os scanners disponíveis no SO sobre a árvore sintética da Fase 0 e exige resultados idênticos (contagem de arquivos/pastas, tamanhos, datas, tratamento de hardlinks/symlinks, pastas sem permissão)
