@@ -141,6 +141,24 @@ jobs:
           if ($code -ne 0) { Write-Warning "Some captures failed (exit code $code)." }
           exit 0
 
+      # Databases and logs the app wrote during the run, to investigate what a
+      # screen shows (for example the scan history comparison).
+      - name: Upload app data
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-app-data-${{ github.run_number }}
+          path: |
+            ${{ runner.temp }}/app/ScanHistory
+            ${{ runner.temp }}/app/StorageHistory
+            ${{ runner.temp }}/app/Settings
+            ${{ runner.temp }}/app/**/*.db
+            ${{ runner.temp }}/app/**/storage_history*.json
+            ${{ runner.temp }}/app/**/*.log
+            ${{ runner.temp }}/test-tree-manifest.json
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v7

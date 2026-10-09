@@ -157,12 +157,15 @@ namespace c2flux.Screenshots
 
                 // A second scan after changing the volume gives the scan and
                 // storage histories something to show and compare.
+                LogEntrySize(main, "sparse-64MiB.bin", "first scan");
+
                 if (ChangeScannedVolume())
                 {
                     object firstRoot = AppHost.Get(main, "_currentRootEntry");
                     AppHost.Invoke(main, "toolStripButtonScan_Click", null, EventArgs.Empty);
                     await WaitForScanAsync(main, firstRoot);
                     await SettleAsync();
+                    LogEntrySize(main, "sparse-64MiB.bin", "second scan");
                 }
             }
             catch (Exception exception)
@@ -195,6 +198,45 @@ namespace c2flux.Screenshots
             if (!scanned)
             {
                 throw new TimeoutException("Scan did not finish within " + ScanTimeout + ".");
+            }
+        }
+
+        // Diagnostic for the scan history: what size the scan itself recorded
+        // for a file, so a wrong value can be traced to the scan or the database.
+        private void LogEntrySize(Form main, string fileName, string label)
+        {
+            try
+            {
+                object root = AppHost.Get(main, "_currentRootEntry");
+                Stack<object> pending = new Stack<object>();
+                pending.Push(root);
+
+                while (pending.Count > 0)
+                {
+                    object entry = pending.Pop();
+
+                    if (string.Equals((string)AppHost.Get(entry, "Name"), fileName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _log.Info(string.Format(
+                            "{0}: {1} = {2:N0} bytes, last write {3:o}",
+                            label,
+                            AppHost.Get(entry, "FullPath"),
+                            AppHost.Get(entry, "SizeBytes"),
+                            AppHost.Get(entry, "LastWriteTimeUtc")));
+                        return;
+                    }
+
+                    foreach (object child in (IEnumerable)AppHost.Get(entry, "Children"))
+                    {
+                        pending.Push(child);
+                    }
+                }
+
+                _log.Info(label + ": " + fileName + " not found in the scanned tree.");
+            }
+            catch (Exception exception)
+            {
+                _log.Info(label + ": could not read " + fileName + ": " + Program.Unwrap(exception).Message);
             }
         }
 
