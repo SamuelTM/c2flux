@@ -6,7 +6,7 @@ Capturas da interface WinForms atual, usadas na Fase 5 do [ROADMAP](../../ROADMA
 
 | | |
 |---|---|
-| **Versão** | `cross-platform` no commit `370eb61`: a v1.4.1 original (`baseline-winforms`) mais as correções do gráfico de pizza e do `DirectoryScanner`. A interface é idêntica à original; a única diferença visível é que o gráfico de pizza deixou de quebrar |
+| **Versão** | `cross-platform` (commit a definir após a próxima execução): a v1.4.1 original (`baseline-winforms`) mais as correções do gráfico de pizza, do `DirectoryScanner` e do carregamento do histórico de varreduras. A interface é idêntica à original; a única diferença visível é que o gráfico de pizza deixou de quebrar |
 | **Onde** | Runner `windows-latest` do GitHub, workflow [`ui-screenshots.yml`](../../.github/workflows/ui-screenshots.yml), [execução de 09/10/2026](https://github.com/SamuelTM/c2flux/actions/runs/38000804583) |
 | **Tela** | 1920×1080, DPI 96 (escala 100%), tema escuro, idioma inglês |
 | **Dados** | `T:\` é um disco virtual NTFS de 4 GiB com a árvore de teste (`tests/fixtures/generate_test_tree.py --profile medium`). Ele é varrido duas vezes; entre as varreduras, a ferramenta adiciona um arquivo de 8 MB, apaga um e aumenta outro em 4 MB. "Salvar histórico de varreduras" e "detalhes do histórico de armazenamento" ficam ligados |
@@ -43,7 +43,6 @@ Capturas da interface WinForms atual, usadas na Fase 5 do [ROADMAP](../../ROADMA
 - **Só tema escuro:** na v1.4.1 o tema claro não é alcançável (o `AppSettings.Load()` força `WindowsDarkMode`). Não existe referência para o claro.
 - **Só 100% de escala:** o runner não permite mudar o DPI.
 - **Conteúdo variável:** datas, o painel de partições e a barra de status mostram o momento da execução e o espaço livre real de `C:` e `D:` do runner.
-- **Aba "Changed files" vazia:** o arquivo aumentado entre as varreduras não aparece como alterado, nem forçando a gravação no disco. A causa ainda não foi encontrada (ver ROADMAP, 0.3). O layout da aba é o mesmo de "New files" e "Deleted files", que estão preenchidas.
 - **Fora de propósito:**
   - **Aba "Colors" das Configurações:** o botão nunca é adicionado à janela na v1.4.1, então o usuário não chega a ela.
   - **Diálogos de arquivo (`AppFileDialog`):** serão substituídos pelos nativos de cada sistema.

@@ -1458,44 +1458,67 @@ namespace c2flux
                     : CreateUtcDateTimeOrMinValue(rootData.LastWriteUtcTicks)
             };
 
-            Dictionary<long, FileSystemEntry> materializedEntries =
-                new Dictionary<long, FileSystemEntry>();
+            if (rootData == null)
+                return rootEntry;
 
-            if (rootData != null)
-            {
-                materializedEntries[rootData.PathId] = rootEntry;
-            }
+            // Built top-down from the root through each directory's children.
+            // Entries loaded from the database have no Depth (it is only set when
+            // saving), so ordering by it put directories whose name sorts before
+            // their parent's ahead of that parent, and they were dropped with
+            // everything below them.
+            Dictionary<long, List<EntryData>> childrenByParentPathId = entries.Values
+                .Where(entry => entry.ParentPathId != 0)
+                .GroupBy(entry => entry.ParentPathId)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group
+                        .OrderBy(entry => entry.IsDirectory ? 0 : 1)
+                        .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+                        .ToList());
 
-            foreach (EntryData entryData in entries.Values
-                         .Where(entry => entry.ParentPathId != 0)
-                         .OrderBy(entry => entry.Depth)
-                         .ThenBy(entry => entry.IsDirectory ? 0 : 1)
-                         .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase))
+            Queue<(long PathId, FileSystemEntry Entry)> pendingDirectories =
+                new Queue<(long PathId, FileSystemEntry Entry)>();
+            HashSet<long> visitedDirectoryPathIds = new HashSet<long> { rootData.PathId };
+            pendingDirectories.Enqueue((rootData.PathId, rootEntry));
+
+            while (pendingDirectories.Count > 0)
             {
-                if (!materializedEntries.TryGetValue(
-                        entryData.ParentPathId,
-                        out FileSystemEntry parentEntry))
+                (long parentPathId, FileSystemEntry parentEntry) = pendingDirectories.Dequeue();
+
+                if (!childrenByParentPathId.TryGetValue(
+                        parentPathId,
+                        out List<EntryData> children))
                 {
                     continue;
                 }
 
-                string fullPath = Path.Combine(parentEntry.FullPath, entryData.Name);
-                FileSystemEntry entry = new FileSystemEntry
+                foreach (EntryData entryData in children)
                 {
-                    Name = entryData.Name,
-                    FullPath = fullPath,
-                    SizeBytes = entryData.SizeBytes,
-                    IsDirectory = entryData.IsDirectory,
-                    LastWriteTimeUtc = CreateUtcDateTimeOrMinValue(
-                        entryData.LastWriteUtcTicks)
-                };
+                    string fullPath = Path.Combine(parentEntry.FullPath, entryData.Name);
+                    FileSystemEntry entry = new FileSystemEntry
+                    {
+                        Name = entryData.Name,
+                        FullPath = fullPath,
+                        SizeBytes = entryData.SizeBytes,
+                        IsDirectory = entryData.IsDirectory,
+                        LastWriteTimeUtc = CreateUtcDateTimeOrMinValue(
+                            entryData.LastWriteUtcTicks)
+                    };
 
-                materializedEntries[entryData.PathId] = entry;
-                parentEntry.Children.Add(entry);
+                    parentEntry.Children.Add(entry);
 
-                if (!entry.IsDirectory)
-                {
-                    rootEntry.AllFiles.Add(entry);
+                    if (entry.IsDirectory)
+                    {
+                        // Guards against a corrupt database with a cycle.
+                        if (visitedDirectoryPathIds.Add(entryData.PathId))
+                        {
+                            pendingDirectories.Enqueue((entryData.PathId, entry));
+                        }
+                    }
+                    else
+                    {
+                        rootEntry.AllFiles.Add(entry);
+                    }
                 }
             }
 

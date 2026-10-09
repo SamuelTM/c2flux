@@ -253,11 +253,6 @@ namespace c2flux.Screenshots
                 using (FileStream grown = new FileStream(Path.Combine(tree, "sparse", "sparse-64MiB.bin"), FileMode.Append))
                 {
                     grown.Write(new byte[4 * 1024 * 1024]);
-
-                    // The MFT scanners read file records straight from the
-                    // volume; without a flush NTFS may not have written the new
-                    // size there yet when the second scan starts.
-                    grown.Flush(flushToDisk: true);
                 }
 
                 _log.Info("Changed the scanned volume: 1 file added, 1 deleted, 1 grown.");
