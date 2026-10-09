@@ -148,7 +148,14 @@ O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows
 
 #### 0.3 Referências visuais
 
-- [ ] **Capturas de tela de referência** de todas as telas, nos temas claro e escuro, em `docs/fidelity/reference/`, feitas na VM Windows a partir da tag `baseline-winforms`, em resolução e escala de DPI fixas (ex.: 1920×1080, 100% e 150%) para servir de comparação com a nova UI
+- [ ] **Capturas de tela de referência** de todas as telas em `docs/fidelity/reference/`, a partir da tag `baseline-winforms`, para servir de comparação com a nova UI. Feitas **no CI** (a VM foi adiada):
+  - [x] Ferramenta `c2flux-shots` (`tests/c2flux.Screenshots`): carrega o app por reflexão, como o `c2flux-bench`, abre cada janela e salva um PNG via `PrintWindow`, mais um `index.json` com o que deu certo e o que falhou. Janelas inesperadas (avisos, erros) também são capturadas
+  - [x] Workflow `ui-screenshots.yml`: publica a versão escolhida, monta o disco `T:` com a árvore de teste, varre e captura. Manual (`workflow_dispatch`) ou automático quando a ferramenta muda
+  - Telas: janela principal vazia e após varrer `T:\` (Tabela, Pizza, Barras, Sunburst, Treemap, Análise, Histórico de armazenamento), Busca, Configurações, Sobre, Histórico de alertas, Histórico de varreduras, Histórico de armazenamento, Mover banco de dados, Debug
+  - **Só tema escuro:** na v1.4.1 o tema claro não é alcançável. O `AppSettings.Load()` força `WindowsDarkMode` e o seletor de tema nas Configurações fica oculto. A nova UI deve oferecer os dois, mas a referência de fidelidade existe só para o escuro
+  - Resolução: a ferramenta pede 1920×1080 ao Windows. A escala de DPI fica a do runner (provavelmente 100%)
+  - [ ] Confirmar a primeira execução no GitHub e revisar as imagens
+  - [ ] Cobrir as telas restantes (detalhes do histórico de armazenamento, aviso de atualização, diálogos de `AppDialogs`, menus de contexto)
 
 **Entregável:** workflow de benchmark comparativo funcionando no CI, números de referência e capturas de tela registrados.
 

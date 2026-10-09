@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+		Opens c2flux windows and saves a PNG of each one, for the visual
+		references of ROADMAP.md phase 0.3. Like c2flux-bench, it does not
+		reference c2flux at compile time: the app is loaded by reflection, so one
+		build can capture any version, including the baseline-winforms tag.
+
+		The tool must be copied into the app's publish directory before running:
+		c2flux reads its settings and languages from AppContext.BaseDirectory,
+		which is the directory of the running executable.
+
+		Windows only. It builds on other systems (EnableWindowsTargeting) so the
+		solution stays buildable on macOS, but it can only run on Windows.
+	-->
+
+	<PropertyGroup>
+		<!-- Console subsystem so CI shells wait for it and capture its output; it
+		     still opens windows like any WinForms app. -->
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net10.0-windows</TargetFramework>
+		<UseWindowsForms>true</UseWindowsForms>
+		<EnableWindowsTargeting>true</EnableWindowsTargeting>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<SelfContained>false</SelfContained>
+		<Nullable>disable</Nullable>
+		<ImplicitUsings>disable</ImplicitUsings>
+		<AssemblyName>c2flux-shots</AssemblyName>
+		<RootNamespace>c2flux.Screenshots</RootNamespace>
+		<!-- Match the app, so windows are measured in the same pixels. -->
+		<ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+	</PropertyGroup>
+
+</Project>

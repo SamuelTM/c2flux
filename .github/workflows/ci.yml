@@ -38,6 +38,9 @@ jobs:
       - name: Build benchmark tool
         run: dotnet build tests/c2flux.Benchmarks/c2flux.Benchmarks.csproj --configuration Release
 
+      - name: Build screenshot tool
+        run: dotnet build tests/c2flux.Screenshots/c2flux.Screenshots.csproj --configuration Release
+
       - name: Publish (same settings as release.yml)
         run: >
           dotnet publish c2flux.csproj
