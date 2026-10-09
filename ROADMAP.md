@@ -154,7 +154,9 @@ O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows
   - Telas: janela principal vazia e após varrer `T:\` (Tabela, Pizza, Barras, Sunburst, Treemap, Análise, Histórico de armazenamento), Busca, Configurações, Sobre, Histórico de alertas, Histórico de varreduras, Histórico de armazenamento, Mover banco de dados, Debug
   - **Só tema escuro:** na v1.4.1 o tema claro não é alcançável. O `AppSettings.Load()` força `WindowsDarkMode` e o seletor de tema nas Configurações fica oculto. A nova UI deve oferecer os dois, mas a referência de fidelidade existe só para o escuro
   - Resolução: a ferramenta pede 1920×1080 ao Windows. A escala de DPI fica a do runner (provavelmente 100%)
-  - [ ] Confirmar a primeira execução no GitHub e revisar as imagens
+  - [x] Primeira execução no GitHub: as 19 capturas funcionaram (resolução trocada de 1024×768 para 1920×1080, DPI 96), com imagens nítidas e completas
+  - [ ] **Bug pré-existente no gráfico de pizza** (encontrado na 0.3): itens de 0 bytes viram fatias de ângulo zero, e a fatia no topo do círculo (270°) tem largura 0. O `LinearGradientBrush` de [Chart_PieChart.cs:242](Chart_PieChart.cs#L242) lança `ArgumentException` e o app mostra a janela de exceção não tratada. Acontece com o `T:` de teste (`$BadClus`, `$Secure` e `$Volume` têm 0 B) e, provavelmente, com qualquer pasta cujos últimos itens tenham 0 bytes. A referência do gráfico de pizza fica faltando até decidir como tratar
+  - [ ] Salvar as capturas aprovadas em `docs/fidelity/reference/`
   - [ ] Cobrir as telas restantes (detalhes do histórico de armazenamento, aviso de atualização, diálogos de `AppDialogs`, menus de contexto)
 
 **Entregável:** workflow de benchmark comparativo funcionando no CI, números de referência e capturas de tela registrados.

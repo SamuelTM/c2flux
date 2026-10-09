@@ -213,7 +213,10 @@ namespace c2flux.Screenshots
 
             foreach (Form popup in Application.OpenForms.Cast<Form>().ToList())
             {
-                if (popup == expected || popup.IsDisposed || IsMainForm(popup) || !popup.Visible)
+                // Forms embedded in another window (TopLevel = false, like the
+                // main window's analysis and storage history panels) are part of
+                // that window's capture, not popups.
+                if (popup == expected || popup.IsDisposed || IsMainForm(popup) || !popup.Visible || !popup.TopLevel)
                 {
                     continue;
                 }
@@ -252,7 +255,9 @@ namespace c2flux.Screenshots
                     record.Height = bitmap.Height;
                 }
 
-                record.Status = "ok";
+                // WinForms shows this dialog for exceptions the app did not
+                // handle: the capture worked, but it documents an app bug.
+                record.Status = form.GetType().Name == "ThreadExceptionDialog" ? "app-error" : "ok";
                 _log.Info(string.Format("{0}: {1}x{2} via {3}", name, record.Width, record.Height, record.Method));
             }
             catch (Exception exception)

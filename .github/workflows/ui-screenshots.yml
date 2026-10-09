@@ -114,13 +114,19 @@ jobs:
             "",
             "App: ``$env:APP_REF`` ($($index.app_version)) · Display: $($index.display) · DPI: $($index.dpi)",
             "",
+            "✅ captured · ⚠️ captured an unhandled-exception dialog of the app (app bug) · ❌ capture failed",
+            "",
             "| | Capture | Window | Size | Method |",
             "|---|---|---|---|---|"
           )
           foreach ($capture in $index.captures) {
-            $icon = if ($capture.status -eq 'ok') { '✅' } else { '❌' }
+            $icon = switch ($capture.status) { 'ok' { '✅' } 'app-error' { '⚠️' } default { '❌' } }
             $size = if ($capture.width) { "$($capture.width)×$($capture.height)" } else { '—' }
-            $detail = if ($capture.status -eq 'ok') { $capture.method } else { ($capture.error -split "`n")[0] }
+            $detail = switch ($capture.status) {
+              'ok' { $capture.method }
+              'app-error' { "unhandled exception in the app: $($capture.title)" }
+              default { ($capture.error -split "`n")[0] }
+            }
             $summary += "| $icon | $($capture.name) | $($capture.form_type) | $size | $detail |"
           }
           $summary -join "`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
