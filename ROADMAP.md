@@ -136,21 +136,21 @@ O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows
   - O mesmo `C:\` levou 4,3 s numa execução e 12 s em outra (hardware diferente entre runners). Isso confirma que só vale comparar dentro do mesmo job
   - No `C:\`, o `ntfsmft` alterna entre dois patamares (cerca de 13 s e 25–31 s) nas duas versões. Com a mediana, isso gerou um falso positivo de +65,8% com código idêntico. Como a interferência do runner só soma tempo, o critério passou a ser o melhor tempo, e a mesma sequência real fica em +0,2%
 
-**Ambiente local:**
+**Ambiente local** (adiado: por enquanto, o CI é a única referência de desempenho e de visual no Windows):
 
-- [ ] Instalar Windows 11 ARM numa VM (Parallels ou UTM) com o .NET 10 SDK
-- [ ] Documentar em `docs/dev/windows-vm.md` como compilar, rodar como administrador e executar a ferramenta de benchmark na VM
+- [ ] ~~Instalar Windows 11 ARM numa VM (Parallels ou UTM) com o .NET 10 SDK~~ (adiado)
+- [ ] ~~Documentar em `docs/dev/windows-vm.md` como compilar, rodar como administrador e executar a ferramenta de benchmark na VM~~ (adiado)
 
 **Números de referência:**
 
 - [x] Rodar o workflow uma vez só com a referência e guardar o resultado em `docs/benchmarks/baseline-winforms.json`, como registro histórico (não como limite de comparação, já que o hardware do CI muda). Resumo e observações em `docs/benchmarks/README.md`
-- [ ] Quando houver acesso a hardware real, registrar também esses números em `docs/benchmarks/`, com a especificação da máquina
+- [ ] ~~Quando houver acesso a hardware real, registrar também esses números em `docs/benchmarks/`, com a especificação da máquina~~ (adiado)
 
 #### 0.3 Referências visuais
 
 - [ ] **Capturas de tela de referência** de todas as telas, nos temas claro e escuro, em `docs/fidelity/reference/`, feitas na VM Windows a partir da tag `baseline-winforms`, em resolução e escala de DPI fixas (ex.: 1920×1080, 100% e 150%) para servir de comparação com a nova UI
 
-**Entregável:** workflow de benchmark comparativo funcionando no CI, VM de desenvolvimento documentada, números de referência e capturas de tela registrados.
+**Entregável:** workflow de benchmark comparativo funcionando no CI, números de referência e capturas de tela registrados.
 
 ---
 
