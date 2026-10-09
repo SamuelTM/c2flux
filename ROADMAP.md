@@ -161,6 +161,8 @@ O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows
 
 **Entregável:** workflow de benchmark comparativo funcionando no CI, números de referência e capturas de tela registrados.
 
+**Situação:** ✅ concluída em 09/10/2026. Ficaram adiados só os ambientes locais (VM e hardware real). De quebra, foram encontrados e corrigidos três bugs do original: gráfico de pizza com itens de 0 B, `DirectoryScanner` sempre quebrando e `DirectoryScanner` sem caminhos longos
+
 ---
 
 ### Fase 1: Extração do núcleo (`c2flux.Core`)
@@ -224,10 +226,12 @@ public sealed class ScanOptions
 - [ ] Corrigir o uso direto de scanners fora do pipeline (`MainForm.cs`, no fluxo de detalhes do histórico de armazenamento)
 - [x] **Bugs pré-existentes no `DirectoryScanner`, corrigidos** (encontrados nas Fases 0.2 e 0.3): com a configuração padrão `SkipReparsePoints = true`, `_activeDirectoryIdentities` fica `null` e `ScanDirectoryContents` lança `NullReferenceException` (`DirectoryScanner.cs:248`). O último fallback de varredura do Windows nunca funcionava. Corrigido: a lista é sempre criada
   - Caminhos longos: a listagem chamava `FindFirstFileEx` sem o prefixo `\\?\`, então pastas com mais de ~260 caracteres eram registradas como puladas, sem conteúdo. No `T:` de teste faltavam 38 pastas e 37 arquivos (a cadeia `deep/` parava na profundidade 27 de 62). Corrigido usando o mesmo prefixo que o scanner já aplicava ao abrir pastas
+  - Verificado no CI: depois das correções, o `win32find` encontra no `T:` exatamente as mesmas 304 pastas, 15.127 arquivos e 687.069.899 bytes do `ntquery` (profundidade 62), e o mesmo que ele no `C:\Program Files`
 - [ ] Extrair código duplicado entre scanners (`CompiledPathFilter`, `DirectoryIdentity`, montagem da árvore, relatório de progresso) para utilitários comuns no Core
 - [ ] **`ManagedScanner`** (fallback universal): `FileSystemEnumerable<T>` do .NET com paralelismo por diretório. Funciona em qualquer SO e é a rede de segurança final
 - [ ] **Suíte de conformidade:** roda todos os scanners disponíveis no SO sobre a árvore sintética da Fase 0 e exige resultados idênticos (contagem de arquivos/pastas, tamanhos, datas, tratamento de hardlinks/symlinks, pastas sem permissão)
   - Definir a semântica esperada antes de exigir resultados iguais. Na Fase 0.2, os scanners já divergem no mesmo disco: o `ntquery` soma só o que o usuário consegue ler e conta symlinks de arquivo como arquivos de 0 bytes, enquanto os de MFT ignoram permissões e incluem os arquivos internos do NTFS e a `System Volume Information` (+31,5 MB num disco de 690 MB). Ver `docs/benchmarks/README.md`
+  - Mesmo quando os totais batem, as impressões digitais diferem (`ntquery` × `win32find` no `T:` e no `C:\Program Files`). Elas incluem a data de modificação e o tamanho de cada pasta, e um dos dois provavelmente não preenche esses campos para pastas. Para investigar, o `c2flux-bench` precisa de um modo que grave a listagem entrada por entrada
 - [ ] **Benchmark:** compara os scanners com BenchmarkDotNet. No Windows, o workflow comparativo da Fase 0.2 confirma que não houve regressão em relação à tag `baseline-winforms`
 
 **Cadeias de fallback:**
