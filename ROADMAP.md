@@ -1,0 +1,456 @@
+# Roadmap: c² flux multiplataforma
+
+Plano para transformar o c² flux, hoje exclusivo do Windows (WinForms + AntdUI), em um aplicativo **100% multiplataforma** (Windows, macOS e Linux). A ideia é usar **uma única base de código**, ter uma **interface o mais fiel possível à atual** e usar **o método de varredura mais rápido disponível em cada sistema**.
+
+---
+
+## 1. Objetivos e princípios
+
+1. **Uma base de código.** C# / .NET 10 em todas as plataformas. Código específico de SO fica isolado atrás de interfaces, nunca espalhado pela UI.
+2. **Fidelidade visual.** A nova interface deve ser reconhecível como o c² flux atual: mesmo layout, mesmas cores Ant Design, mesmos gráficos (Treemap, Sunburst, Pizza, Barras, Tabela), mesmos temas claro/escuro e os 30 idiomas.
+3. **Velocidade máxima por SO.** Cada plataforma usa a sua API de varredura mais rápida, com fallback automático para métodos mais simples.
+4. **Nunca quebrar o Windows.** Durante toda a migração, a versão Windows continua funcionando e sendo lançada. A troca de UI só acontece quando houver paridade.
+5. **Migração incremental.** Cada fase entrega algo que compila, roda e pode ser testado.
+
+---
+
+## 2. Diagnóstico do código atual
+
+| Item | Situação |
+|---|---|
+| Linguagem / runtime | C# sobre .NET 10 (`net10.0-windows7.0`), cerca de 51 mil linhas |
+| UI | WinForms + AntdUI 2.4.3, **só Windows** (cerca de 33 mil linhas, sendo 6,6 mil só em `AntdThemeService.cs`) |
+| Gráficos | Desenhados à mão com GDI+ (`Graphics`, `FillRectangle`, `DrawString`) em `Chart_*.cs`, `TreeEntrySizeBarView.cs` e `StorageHistoryChart.cs` |
+| Lógica sem dependência de UI | Cerca de 34 arquivos: histórico, busca, redundância, cache, SQLite, localização, configurações, exportação CSV etc. |
+| Banco de dados | `Microsoft.Data.Sqlite` + `SQLitePCLRaw.bundle_e_sqlite3`, que já são multiplataforma |
+| Biblioteca NtfsReader | Compila para `net10.0` mas usa APIs Win32 (`CreateFile`, `DeviceIoControl`); só funciona no Windows |
+
+### 2.1 Pontos específicos do Windows
+
+| Área | Onde | O que usa |
+|---|---|---|
+| Varredura MFT | `C2FluxScanner.cs`, `NtfsMftScanner.cs`, `NtfsReaderFastNodeProvider.cs`, `Libraries/NtfsReader` | Leitura direta da MFT do NTFS (exige admin) |
+| Varredura nativa | `NtQueryDirectoryScanner.cs` | `NtOpenFile`, `NtQueryDirectoryFile` |
+| Varredura fallback | `DirectoryScanner.cs` | `FindFirstFileEx`, `GetFileInformationByHandle(Ex)` |
+| Menu de contexto do Explorer | `NativeShellContextMenu.cs`, `ShellContextMenuService.cs` | `SHParseDisplayName`, `SHBindToParent`, `CreatePopupMenu`, `TrackPopupMenuEx` |
+| Ícones de arquivo | `ShellIconService.cs` | `SHGetFileInfo`, `SHGetStockIconInfo`, `DrawIconEx` |
+| "Abrir no Explorer" | `Chart_*.cs`, `AdvancedFeaturesForm.cs` | `Process.Start("explorer.exe", ...)` |
+| Tema escuro do sistema | `AntdThemeService.cs`, `PartitionGridController.cs` | Registro (`AppsUseLightTheme`), `DwmSetWindowAttribute`, `SetWindowTheme` |
+| Hooks de janela | `AntdThemeService.cs`, `StorageHistoryForm.cs` | `SetWindowsHookEx`, `WindowFromPoint`, `GetClassName` |
+| Espaço livre | `StatusMainFormController.cs` | `GetDiskFreeSpace` |
+| Elevação para admin | `Program.cs`, `NtfsMftScanner.cs` | `WindowsPrincipal`, `Verb = "runas"` |
+| Lista de unidades | `DriveComboBoxController.cs`, `PartitionGridController.cs`, `AppFileDialog.cs` | `DriveInfo.GetDrives()` com semântica de letras de unidade |
+| Diálogo de arquivos próprio | `AppFileDialog.cs` (1,7 mil linhas) | Pastas especiais do Windows + unidades |
+| Dados ao lado do executável | `AppSettings.cs`, `ScanHistoryDatabaseService.cs`, `RedundancyHashCacheService.cs`, `StorageHistoryDetailsService.cs`, `AppAlertLog.cs`, `LocalizationService.cs`, `DatabaseMoveForm.cs` | `AppContext.BaseDirectory`. Funciona num app "portátil" no Windows, mas **não** dentro de um `.app` assinado no macOS nem em `/usr` / AppImage no Linux |
+| Build e release | `.github/workflows/release.yml` | Só `windows-latest` e `win-x64`, gera um único ZIP |
+
+---
+
+## 3. Arquitetura alvo
+
+```
+c2flux.sln
+├── src/
+│   ├── c2flux.Core/                 net10.0 — modelo, serviços, SQLite, localização, abstrações
+│   │   ├── Model/                   FileSystemEntry, ScanProgress, PauseToken, ...
+│   │   ├── Scanning/                IFileSystemScanner, ScannerPipeline, ManagedScanner
+│   │   ├── Platform/                IPlatformServices, IVolumeProvider, IShellIntegration, IAppPaths
+│   │   └── Services/                ScanHistory, Search, Redundancy, StorageHistory, CSV, Settings, Update
+│   │
+│   ├── c2flux.Platform.Windows/     net10.0 (+ [SupportedOSPlatform("windows")])
+│   │   ├── Scanning/                MftScanner (C2Flux + NtfsMft), NtQueryScanner, Win32FindScanner
+│   │   └── Shell/                   menu de contexto, ícones, elevação, volumes, tema
+│   │
+│   ├── c2flux.Platform.MacOS/       net10.0 (+ [SupportedOSPlatform("macos")])
+│   │   ├── Scanning/                GetAttrListBulkScanner
+│   │   └── Shell/                   Finder, NSWorkspace, volumes, Acesso Total ao Disco
+│   │
+│   ├── c2flux.Platform.Linux/       net10.0 (+ [SupportedOSPlatform("linux")])
+│   │   ├── Scanning/                GetDentsStatxScanner (+ IoUringStatxScanner opcional)
+│   │   └── Shell/                   xdg-open, D-Bus FileManager1, /proc/self/mountinfo
+│   │
+│   ├── c2flux.App/                  Avalonia UI — janelas, controles, gráficos, tema Ant Design
+│   │
+│   └── c2flux.WinForms/             UI atual (mantida até a paridade, depois removida)
+│
+├── libs/NtfsReader/                 inalterado, referenciado só por Platform.Windows
+│
+└── tests/
+    ├── c2flux.Core.Tests/
+    ├── c2flux.Scanning.Conformance/ mesma árvore de teste, todos os scanners, resultados idênticos
+    └── c2flux.Benchmarks/           BenchmarkDotNet — comparação entre scanners por SO
+```
+
+**Seleção em tempo de execução:** os três projetos `Platform.*` compilam como `net10.0` puro. A aplicação escolhe a implementação na inicialização com `OperatingSystem.IsWindows()` / `IsMacOS()` / `IsLinux()`. Os publishes por RID (`win-x64`, `osx-arm64`, `linux-x64` etc.) podem usar *trimming* para descartar o código das outras plataformas.
+
+**Interop:** todo P/Invoke novo usa `[LibraryImport]` (gerado em tempo de compilação, compatível com AOT/trimming) em vez de `[DllImport]`.
+
+---
+
+## 4. Fases
+
+### Fase 0: Preparação
+
+**Objetivo:** ter uma base de medição e de segurança antes de mexer em qualquer coisa.
+
+#### 0.1 Estrutura
+
+- [x] Criar branch de longa duração `cross-platform` no fork `SamuelTM/c2flux`
+- [ ] Garantir que o build atual do Windows passa no CI (`dotnet build` em `windows-latest`). Workflow criado em `.github/workflows/ci.yml`, falta confirmar a primeira execução no GitHub. O build também funciona no macOS com `-p:EnableWindowsTargeting=true`, útil para checagem local rápida
+- [x] Marcar o commit atual com a tag `baseline-winforms` (`92ecc38`, upstream v1.4.1), a referência fixa para todas as comparações de desempenho e fidelidade
+- [x] Criar uma **árvore de teste sintética** reproduzível: `tests/fixtures/generate_test_tree.py`
+  - Cobre limites de tamanho, pasta muito larga, pasta muito profunda, caminhos com mais de 260 caracteres, nomes Unicode (NFC e NFD) e especiais, hardlinks, symlinks (inclusive quebrados e em loop), conteúdo duplicado, arquivo esparso, datas extremas, pastas vazias e itens sem permissão
+  - Perfis `small` (cerca de 800 arquivos), `medium` (cerca de 15 mil) e `large` (cerca de 200 mil), todos determinísticos a partir de uma semente
+  - Gera um manifesto JSON com cada entrada e os totais esperados, com e sem as pastas ilegíveis, para os testes de conformidade. O que o SO não suporta vai para `skipped_features`
+  - Só apaga ou sobrescreve pastas que ele mesmo criou (arquivo marcador `.c2flux-test-tree`)
+  - Testado localmente no macOS. O job `test-tree` do CI valida nos três SOs (pendente da primeira execução)
+- [ ] Decidir as questões em aberto da seção 9
+
+#### 0.2 Estratégia de medição de desempenho no Windows
+
+O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows físico. Por isso, a medição **não depende de números absolutos**. Ela compara a versão de referência com a versão nova **na mesma máquina e na mesma execução**. Três ambientes complementares:
+
+| Ambiente | Uso | Vantagens | Limitações |
+|---|---|---|---|
+| **GitHub Actions** (`windows-latest`) | Detecção automática de regressão a cada mudança nos scanners | Gratuito, roda como administrador (MFT funciona), unidade C: em NTFS com centenas de milhares de arquivos reais, disparado do Mac | Hardware compartilhado: números variam entre execuções. Só vale comparar dentro do mesmo job |
+| **VM Windows 11 ARM no Mac** (Parallels ou UTM) | Desenvolvimento, depuração, inspeção visual da UI, testes manuais da MFT | Interativo, local, sem custo por execução (UTM) | Disco virtual distorce tempos absolutos. Build `win-x64` roda emulado (usar `win-arm64` quando disponível) |
+| **Hardware real** (usuários beta, PC emprestado, autor original ou VM na nuvem) | Validação final e números para divulgação | Representa o uso real | Esporádico, não automatizável |
+
+**Workflow de benchmark comparativo** (`.github/workflows/scanner-benchmark.yml`):
+
+- [ ] Criar uma ferramenta de linha de comando de benchmark (`tests/c2flux.Benchmarks`) que roda um scanner específico em um caminho e devolve em JSON: tempo total, pico de memória, arquivos, pastas, bytes e pastas puladas. Ela usa os scanners diretamente, sem UI
+- [ ] Como a ferramenta ainda não existe na tag `baseline-winforms`, compilá-la **duas vezes** no job: uma contra o código da referência e outra contra o código novo (checkout de cada versão em pastas separadas)
+- [ ] Para cada scanner (MFT/C2Flux, MFT/NtfsMft, NtQuery, FindFirstFile), rodar **intercalando** referência e nova versão (R, N, R, N…), com no mínimo 5 rodadas cada, descartando a primeira (aquecimento de cache)
+- [ ] Alvos de varredura: a unidade `C:\` inteira (MFT) e uma pasta grande como `C:\Program Files` (NtQuery e FindFirstFile), mais a árvore sintética
+- [ ] Comparar **medianas** e falhar o job se a versão nova for mais de 10% mais lenta ou usar mais de 15% de memória (limites ajustáveis depois de observar o ruído real)
+- [ ] Verificar também a **correção**: contagens de arquivos, pastas e bytes iguais entre referência e nova versão
+- [ ] Publicar o relatório como resumo do job (`$GITHUB_STEP_SUMMARY`) e como artefato JSON
+- [ ] Disparar automaticamente em PRs que alterem arquivos de varredura e manualmente via `workflow_dispatch`
+
+**Ambiente local:**
+
+- [ ] Instalar Windows 11 ARM numa VM (Parallels ou UTM) com o .NET 10 SDK
+- [ ] Documentar em `docs/dev/windows-vm.md` como compilar, rodar como administrador e executar a ferramenta de benchmark na VM
+
+**Números de referência:**
+
+- [ ] Rodar o workflow uma vez só com a referência e guardar o resultado em `docs/benchmarks/baseline-winforms.json`, como registro histórico (não como limite de comparação, já que o hardware do CI muda)
+- [ ] Quando houver acesso a hardware real, registrar também esses números em `docs/benchmarks/`, com a especificação da máquina
+
+#### 0.3 Referências visuais
+
+- [ ] **Capturas de tela de referência** de todas as telas, nos temas claro e escuro, em `docs/fidelity/reference/`, feitas na VM Windows a partir da tag `baseline-winforms`, em resolução e escala de DPI fixas (ex.: 1920×1080, 100% e 150%) para servir de comparação com a nova UI
+
+**Entregável:** workflow de benchmark comparativo funcionando no CI, VM de desenvolvimento documentada, números de referência e capturas de tela registrados.
+
+---
+
+### Fase 1: Extração do núcleo (`c2flux.Core`)
+
+**Objetivo:** separar tudo o que não é interface num projeto `net10.0` puro, sem mudar o comportamento no Windows.
+
+- [ ] Reorganizar a solução na estrutura da seção 3 (mover arquivos sem reescrever)
+- [ ] Mover para o Core os arquivos já livres de UI: `FileSystemEntry`, `ScanProgress`, `PauseToken`, `ScanPathFilter`, `SizeFormatter`, `TreeSortService`, `TreeSortMode`, `ViewMode`, `SearchCriteria`, `SearchService`, `SearchDataSource`, `ScanHistory*Service`, `ScanHistoryComparisonResult`, `StorageHistory*` (serviços e registro), `Redundancy*Service`, `ScanCacheService`, `ScanResultFileService`, `CsvExportService`, `LocalizationService`, `AppSettings`, `AppConstants`, `AppAlertLog`, `GitHubUpdateService`
+- [ ] Remover do Core qualquer referência residual a `System.Windows.Forms` / `System.Drawing` (ex.: cores e fontes em `AppSettings` passam a ser tipos neutros, como hex string ou struct própria)
+- [ ] **Caminhos de dados (`IAppPaths`):** substituir `AppContext.BaseDirectory` por um serviço de caminhos:
+  - Windows: manter o modo portátil (ao lado do `.exe`) quando a pasta for gravável, senão `%LOCALAPPDATA%\c2flux`
+  - macOS: `~/Library/Application Support/c2flux` (dados) e `~/Library/Caches/c2flux` (cache)
+  - Linux: `$XDG_CONFIG_HOME/c2flux`, `$XDG_DATA_HOME/c2flux` e `$XDG_CACHE_HOME/c2flux`
+  - Migração automática dos dados do local antigo
+- [ ] `LocalizationService`: carregar idiomas como recurso embutido ou de um caminho resolvido por `IAppPaths`
+- [ ] Projeto WinForms passa a referenciar o Core. O app Windows continua idêntico
+- [ ] Testes unitários do Core rodando em CI **nos três SOs** (matriz `windows-latest`, `macos-latest`, `ubuntu-latest`)
+
+**Entregável:** app Windows igual ao de hoje e Core compilando e passando nos testes em Windows, macOS e Linux.
+
+---
+
+### Fase 2: Abstração da varredura
+
+**Objetivo:** formalizar o contrato que os scanners atuais já seguem implicitamente e criar a cadeia de fallback por SO.
+
+```csharp
+public interface IFileSystemScanner
+{
+    string Name { get; }
+
+    // Rápido e sem efeitos colaterais: SO, sistema de arquivos, permissões, tipo de caminho.
+    ScannerSupport GetSupport(string rootPath);
+
+    Task<FileSystemEntry> ScanAsync(
+        string rootPath,
+        ScanOptions options,
+        IProgress<ScanProgress> progress,
+        CancellationToken cancellationToken,
+        PauseToken pauseToken);
+}
+
+public sealed record ScannerSupport(bool IsSupported, string ReasonKey = null);
+
+public sealed class ScanOptions
+{
+    public bool CrossMountPoints { get; init; }       // padrão: false
+    public bool FollowSymlinks { get; init; }         // padrão: false (sempre)
+    public SizeMode SizeMode { get; init; }           // Lógico ou AlocadoEmDisco
+    public IReadOnlyList<string> ExcludedPaths { get; init; }
+    public int? MaxDegreeOfParallelism { get; init; }
+}
+```
+
+- [ ] Criar `IFileSystemScanner`, `ScannerSupport`, `ScanOptions` no Core
+- [ ] Transformar `ScanExecutionController` em `ScannerPipeline`: recebe uma lista ordenada de scanners, tenta cada um, registra o motivo de cada fallback no `AppAlertLog` e mede o tempo (o código atual já faz isso, só passa a ser genérico)
+- [ ] Adaptar os scanners do Windows à interface (sem alterar a lógica interna):
+  - `C2FluxScanner` / `NtfsMftScanner` → `MftScanner` (os dois modos continuam escolhidos pela configuração `C2FluxScan`)
+  - `NtQueryDirectoryScanner` → `NtQueryScanner`
+  - `DirectoryScanner` → `Win32FindScanner`
+- [ ] Corrigir o uso direto de scanners fora do pipeline (`MainForm.cs`, no fluxo de detalhes do histórico de armazenamento)
+- [ ] Extrair código duplicado entre scanners (`CompiledPathFilter`, `DirectoryIdentity`, montagem da árvore, relatório de progresso) para utilitários comuns no Core
+- [ ] **`ManagedScanner`** (fallback universal): `FileSystemEnumerable<T>` do .NET com paralelismo por diretório. Funciona em qualquer SO e é a rede de segurança final
+- [ ] **Suíte de conformidade:** roda todos os scanners disponíveis no SO sobre a árvore sintética da Fase 0 e exige resultados idênticos (contagem de arquivos/pastas, tamanhos, datas, tratamento de hardlinks/symlinks, pastas sem permissão)
+- [ ] **Benchmark:** compara os scanners com BenchmarkDotNet. No Windows, o workflow comparativo da Fase 0.2 confirma que não houve regressão em relação à tag `baseline-winforms`
+
+**Cadeias de fallback:**
+
+| SO | 1º | 2º | 3º | Final |
+|---|---|---|---|---|
+| Windows | `MftScanner` (NTFS, raiz de unidade, admin) | `NtQueryScanner` | `Win32FindScanner` | `ManagedScanner` |
+| macOS | `GetAttrListBulkScanner` | — | — | `ManagedScanner` |
+| Linux | `IoUringStatxScanner` (opcional, kernel ≥ 5.6) | `GetDentsStatxScanner` | — | `ManagedScanner` |
+
+**Entregável:** pipeline de varredura plugável, `ManagedScanner` funcionando nos três SOs e suíte de conformidade verde.
+
+---
+
+### Fase 3: Scanners nativos de alto desempenho
+
+#### 3.1 macOS: `GetAttrListBulkScanner`
+
+- [ ] P/Invoke para `open(O_RDONLY | O_DIRECTORY)`, `getattrlistbulk`, `close`
+- [ ] Atributos solicitados numa única chamada por lote: `ATTR_CMN_NAME`, `ATTR_CMN_OBJTYPE`, `ATTR_CMN_DEVID`, `ATTR_CMN_FILEID`, `ATTR_CMN_MODTIME`, `ATTR_CMN_FLAGS`, `ATTR_FILE_LINKCOUNT`, `ATTR_FILE_DATALENGTH`, `ATTR_FILE_ALLOCSIZE`
+- [ ] Buffer grande reutilizado por thread (`ArrayPool`), parsing do formato empacotado com `Span<byte>`, sem alocações por entrada além do nome
+- [ ] Paralelismo: fila de diretórios com N workers (work-stealing), N padrão = núcleos lógicos, ajustável
+- [ ] **Firmlinks do APFS:** detectar `/System/Volumes/Data` e deduplicar por `(devid, fileid)` para não contar o mesmo dado duas vezes ao varrer `/`
+- [ ] **Hardlinks:** contar o tamanho uma vez só quando `linkcount > 1` (conjunto `(devid, fileid)`)
+- [ ] Não atravessar outros volumes (comparar `devid`), exceto se `CrossMountPoints`
+- [ ] Ignorar volumes de sistema somente leitura e snapshots quando apropriado
+- [ ] **Acesso Total ao Disco:** detectar falhas `EPERM` em pastas protegidas (`~/Library/Mail`, `~/Library/Safari` etc.) e mostrar um aviso único na UI com um botão que abre *Ajustes do Sistema → Privacidade e Segurança → Acesso Total ao Disco*
+- [ ] Tamanho lógico (`DATALENGTH`) e alocado (`ALLOCSIZE`) disponíveis para o modo de exibição
+- [ ] Benchmark contra o `ManagedScanner` e contra `du -sk` no mesmo volume
+
+#### 3.2 Linux: `GetDentsStatxScanner`
+
+- [ ] P/Invoke para `openat`, `getdents64`, `statx`, `close` (libc)
+- [ ] Ler cada diretório com `getdents64` usando um buffer grande. O `d_type` identifica pastas sem precisar de `stat`
+- [ ] `statx(dirfd, nome, AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC, STATX_SIZE | STATX_BLOCKS | STATX_MTIME | STATX_INO | STATX_NLINK, ...)`: chamada relativa ao diretório e apenas os campos necessários
+- [ ] Tratar `d_type == DT_UNKNOWN` (alguns sistemas de arquivos, como XFS antigo e alguns FUSE) com `statx` adicional
+- [ ] Paralelismo com fila de diretórios e N workers
+- [ ] **Sistemas de arquivos virtuais:** ler `/proc/self/mountinfo` e ignorar `proc`, `sysfs`, `devtmpfs`, `devpts`, `cgroup*`, `tracefs`, `debugfs`, `securityfs`, `pstore`, `bpf`, `autofs` etc.
+- [ ] Não atravessar pontos de montagem por padrão (comparar `stx_dev_major/minor`)
+- [ ] Hardlinks contados uma vez `(dev, ino)`, symlinks nunca seguidos
+- [ ] Tamanho lógico (`stx_size`) e alocado (`stx_blocks * 512`)
+- [ ] Tratar `EACCES` / `EPERM` como "pasta pulada" (igual ao comportamento atual no Windows)
+- [ ] Benchmark contra o `ManagedScanner`, `du -s`, `gdu` e `dua`
+
+#### 3.3 Linux: `IoUringStatxScanner` (opcional, depois da 3.2)
+
+- [ ] Enviar os `statx` em lote via `io_uring` (`IORING_OP_STATX`), reduzindo trocas de contexto
+- [ ] Ativar só se o kernel suportar e se o benchmark mostrar ganho real (principalmente em HDD e armazenamento de rede)
+
+#### 3.4 Windows: ajustes
+
+- [ ] Manter a MFT como caminho principal. Avaliar se o `C2FluxScanner` e o `NtfsMftScanner` podem virar um só
+- [ ] Suporte a `win-arm64` (verificar o NtfsReader em ARM64)
+- [ ] Avaliar ReFS / exFAT: hoje caem no NtQuery, o que está correto
+
+**Entregável:** varredura nativa e paralela nos três SOs, validada pela suíte de conformidade e com benchmarks publicados.
+
+---
+
+### Fase 4: Serviços de plataforma
+
+**Objetivo:** abstrair tudo que não é varredura mas depende do SO.
+
+| Interface | Windows | macOS | Linux |
+|---|---|---|---|
+| `IVolumeProvider`: listar unidades/volumes, rótulo, sistema de arquivos, total/livre | `DriveInfo` + `GetDiskFreeSpace` | `getmntinfo` / `statfs`, filtrando volumes de sistema e mostrando "Macintosh HD" | `/proc/self/mountinfo` + `statvfs`, filtrando pseudo-FS e snaps/loops |
+| `IFileManager`: "mostrar no gerenciador", "abrir" | `explorer.exe /select,` | `open -R` / `NSWorkspace` | D-Bus `org.freedesktop.FileManager1.ShowItems`, com fallback `xdg-open` na pasta pai |
+| `IShellContextMenu`: menu de contexto nativo | Código atual (`NativeShellContextMenu`) | Menu próprio: Mostrar no Finder, Abrir, Copiar caminho, Mover para o Lixo, Informações | Menu próprio: Abrir, Abrir pasta, Copiar caminho, Mover para a Lixeira |
+| `IFileIconProvider`: ícones por tipo | `SHGetFileInfo` (código atual) | `NSWorkspace.iconForFile` via interop Objective-C | Tema de ícones freedesktop por tipo MIME (`shared-mime-info`), com conjunto de ícones próprio como fallback |
+| `ITrashService`: excluir para a lixeira | `SHFileOperation` / `IFileOperation` | `NSFileManager.trashItem` | Especificação freedesktop Trash (`~/.local/share/Trash`) ou `gio trash` |
+| `IPrivilegeService`: elevação | `runas` (código atual) | Não aplicável (orientar sobre Acesso Total ao Disco) | Opcional: `pkexec` para varrer pastas de root |
+| `IThemeDetector`: claro/escuro do SO | Registro (código atual) | Fornecido pelo Avalonia (`PlatformSettings`) | Fornecido pelo Avalonia (portal freedesktop) |
+| `IAppPaths`: pastas de dados | Fase 1 | Fase 1 | Fase 1 |
+
+- [ ] Implementar cada interface nos três projetos `Platform.*`
+- [ ] Substituir **todas** as chamadas diretas a `explorer.exe`, Registro, `DriveInfo` e `WindowsPrincipal` pelas interfaces
+- [ ] `PartitionGridController` / `DriveComboBoxController`: trabalhar com "volumes" em vez de letras de unidade (no macOS/Linux o caminho raiz é o ponto de montagem)
+
+**Entregável:** nenhuma chamada específica de SO fora dos projetos `Platform.*`.
+
+---
+
+### Fase 5: Nova interface em Avalonia (`c2flux.App`)
+
+**Objetivo:** recriar a interface com a maior fidelidade possível à atual.
+
+#### 5.1 Fundação
+
+- [ ] Projeto Avalonia 11 (versão estável mais recente) com MVVM leve (CommunityToolkit.Mvvm)
+- [ ] **Tema Ant Design:** portar a paleta, raios, espaçamentos, tipografia e estados (hover, foco, pressionado, desabilitado) de `AntdThemeService.cs` para estilos Avalonia (`ControlTheme`). Avaliar o Semi.Avalonia como base ou fazer o tema do zero, só com os controles usados
+- [ ] Temas claro, escuro e "seguir o sistema" (reaproveitar as opções de `AppLayout`)
+- [ ] Integração do `LocalizationService` com binding (troca de idioma em tempo de execução)
+- [ ] **RTL:** árabe, hebraico, persa e urdu com `FlowDirection.RightToLeft`
+- [ ] Fontes embutidas para resultado idêntico entre SOs, com fallback para CJK, tailandês e devanágari
+- [ ] Ícone do app, barra de título (decorações nativas por padrão; avaliar barra customizada para imitar o Windows)
+- [ ] Menu de aplicativo nativo no macOS (Sobre, Ajustes ⌘, , Sair ⌘Q) e atalhos com ⌘ em vez de Ctrl
+
+#### 5.2 Gráficos (desenho customizado)
+
+Portar de GDI+ para `DrawingContext` do Avalonia (ou SkiaSharp direto, se for preciso mais desempenho). A lógica de layout (algoritmo de treemap, ângulos do sunburst, escalas) é reaproveitada quase sem mudanças.
+
+- [ ] `TreeEntrySizeBarView`: barras de tamanho na árvore
+- [ ] `Chart_Treemap` (3,3 mil linhas, o maior): layout, cores, rótulos, hover, clique, zoom
+- [ ] `Chart_Sunburst`
+- [ ] `Chart_PieChart`
+- [ ] `Chart_BarChart`
+- [ ] `Chart_TableGridChart` / `Chart_ResponsiveTableGrid`
+- [ ] `StorageHistoryChart`
+- [ ] `ScanHistoryGrowthOverviewControl`
+- [ ] `StatusSymbolRenderer`
+- [ ] Virtualização e cache de renderização para árvores com milhões de entradas
+
+#### 5.3 Janelas e controles
+
+Ordem sugerida: o que é visto primeiro vem antes.
+
+- [ ] `MainForm`: layout principal, barra de ferramentas, seletor de unidade, árvore, painel de gráficos, barra de status (`LayoutMainFormController`, `StatusMainFormController`, `TreeEntryController`, `ExportEntryController`, `PartitionGridController`, `DriveComboBoxController`)
+- [ ] `SearchForm`: busca rápida
+- [ ] `SettingsForm`
+- [ ] `ScanHistoryForm`
+- [ ] `StorageHistoryForm` + `StorageHistoryDetailsForm`
+- [ ] `AdvancedFeaturesForm`: análise, redundância
+- [ ] `AlertHistoryForm`
+- [ ] `AboutForm`, `UpdateAvailableForm`, `DatabaseMoveForm`, `DebugClassForm`
+- [ ] `AppDialogs`: caixas de mensagem no estilo Ant
+- [ ] `AppFileDialog`: **substituir** pelo `StorageProvider` nativo do Avalonia (diálogos nativos de cada SO). Avaliar se vale manter o diálogo customizado por fidelidade
+
+#### 5.4 Validação de fidelidade
+
+- [ ] Capturas de tela da nova UI no Windows comparadas lado a lado com as referências da Fase 0
+- [ ] Checklist por tela: layout, cores, fontes, ícones, estados, comportamento de redimensionamento
+- [ ] Testes de UI headless (`Avalonia.Headless`) para fluxos principais: varrer, navegar, buscar, exportar
+
+**Entregável:** nova UI com paridade funcional, rodando nos três SOs.
+
+---
+
+### Fase 6: Empacotamento, distribuição e atualização
+
+- [ ] **CI em matriz** (`windows-latest`, `macos-latest`, `ubuntu-latest`): build, testes e conformidade de scanners em cada push
+- [ ] **Publicação por RID**, self-contained (sem exigir .NET instalado), com trimming. Avaliar Native AOT (Avalonia suporta)
+
+| SO | RIDs | Formatos |
+|---|---|---|
+| Windows | `win-x64`, `win-arm64` | ZIP portátil (como hoje) + instalador opcional (MSIX ou Inno Setup) |
+| macOS | `osx-arm64`, `osx-x64` → app universal via `lipo` | `.app` em `.dmg`, **assinado e notarizado** (exige conta Apple Developer) |
+| Linux | `linux-x64`, `linux-arm64` | AppImage (principal), `.deb`, `.rpm`, opcional Flatpak / Flathub |
+
+- [ ] Adaptar `release.yml` para gerar todos os artefatos e anexá-los à release
+- [ ] **`GitHubUpdateService`:** escolher o asset certo por SO/arquitetura e manter a lógica atual de notificação
+- [ ] Integração com o desktop:
+  - Linux: arquivo `.desktop`, ícones em vários tamanhos, metainfo AppStream
+  - macOS: `Info.plist` (nome, ícone `.icns`, versão, `NSHumanReadableCopyright`)
+- [ ] Atualizar README, `docs/Troubleshooting.md` e o site (`docs/index.html`) com instruções por SO
+
+**Entregável:** releases automáticas para os três SOs a partir de uma única tag.
+
+---
+
+### Fase 7: Paridade, transição e lançamento 2.0
+
+- [ ] Matriz de funcionalidades (seção 5) completamente marcada
+- [ ] Período beta público (`v2.0.0-beta.N`) com builds para os três SOs
+- [ ] Coleta de feedback, sobretudo de usuários Windows, para detectar regressões de fidelidade ou desempenho
+- [ ] Remover o projeto `c2flux.WinForms` e as dependências do AntdUI
+- [ ] Lançar `v2.0.0`
+
+---
+
+## 5. Matriz de funcionalidades
+
+Legenda: ✅ igual ao atual · 🟡 adaptado ao SO · ⛔ não se aplica
+
+| Funcionalidade | Windows | macOS | Linux |
+|---|---|---|---|
+| Varredura de unidade/pasta | ✅ MFT / NtQuery | 🟡 getattrlistbulk | 🟡 getdents64 + statx |
+| Pausar / cancelar varredura | ✅ | ✅ | ✅ |
+| Árvore com barras de tamanho | ✅ | ✅ | ✅ |
+| Treemap / Sunburst / Pizza / Barras / Tabela | ✅ | ✅ | ✅ |
+| Busca rápida | ✅ | ✅ | ✅ |
+| Histórico de varreduras e comparação | ✅ | ✅ | ✅ |
+| Histórico de armazenamento | ✅ | ✅ | ✅ |
+| Análise de redundância (duplicados) | ✅ | ✅ | ✅ |
+| Exportação CSV | ✅ | ✅ | ✅ |
+| 30 idiomas, incluindo RTL | ✅ | ✅ | ✅ |
+| Tema claro/escuro/sistema | ✅ | ✅ | ✅ |
+| Menu de contexto | ✅ shell nativo | 🟡 menu próprio | 🟡 menu próprio |
+| Ícones de arquivo do sistema | ✅ | 🟡 NSWorkspace | 🟡 tema freedesktop |
+| Mostrar no gerenciador de arquivos | ✅ Explorer | 🟡 Finder | 🟡 FileManager1 / xdg-open |
+| Elevação de privilégios | ✅ runas | ⛔ (Acesso Total ao Disco) | 🟡 pkexec (opcional) |
+| Verificação de atualização | ✅ | ✅ | ✅ |
+| Modo portátil | ✅ | ⛔ | 🟡 AppImage |
+
+---
+
+## 6. Riscos e mitigações
+
+| Risco | Impacto | Mitigação |
+|---|---|---|
+| Fidelidade visual menor que o esperado (AntdUI não existe para Avalonia) | Alto | Capturas de referência na Fase 0, checklist por tela, tema portado diretamente dos valores do `AntdThemeService` |
+| Varredura no macOS/Linux mais lenta que a MFT no Windows | Médio | Inevitável: não existe equivalente à MFT. Comunicar claramente. Meta: ficar no nível das melhores ferramentas nativas (DaisyDisk, gdu, dua) |
+| Divergências entre scanners (tamanhos, hardlinks, permissões) | Alto | Suíte de conformidade obrigatória no CI |
+| Treemap com milhões de itens lento no novo renderizador | Médio | Cache de renderização, desenho em bitmap fora da thread de UI, SkiaSharp direto se necessário |
+| Permissões do macOS (TCC) confundindo o usuário | Médio | Detecção automática e aviso com atalho para os Ajustes |
+| Custo de assinatura/notarização da Apple | Baixo/Médio | Conta Apple Developer (US$ 99/ano). Sem ela, o app abre só com "Abrir mesmo assim" |
+| Fragmentação do Linux (distros, sistemas de arquivos, DEs) | Médio | AppImage como formato principal, `ManagedScanner` como fallback, testes em Ubuntu, Fedora e Arch |
+| Divergência com o projeto original (upstream) durante a migração | Médio | Sincronizar com o upstream com frequência durante as Fases 1–2. Propor a extração do Core ao autor original |
+| Licenças | Baixo | Projeto GPL-3.0 (fork permitido, deve continuar GPL e manter créditos). NtfsReader é LGPL-2.1. Avalonia e SkiaSharp são MIT, compatíveis |
+
+---
+
+## 7. Critérios de "100% multiplataforma"
+
+O projeto é considerado concluído quando:
+
+1. Uma única tag gera builds para Windows, macOS e Linux, sem passos manuais (exceto assinatura, se feita localmente).
+2. Nenhum arquivo fora de `c2flux.Platform.*` contém P/Invoke, Registro ou caminhos específicos de SO.
+3. A suíte de conformidade de scanners passa nos três SOs.
+4. Todas as linhas da matriz de funcionalidades estão marcadas.
+5. A versão Windows não regrediu em desempenho de varredura (workflow comparativo da Fase 0.2 contra `baseline-winforms`, confirmado em hardware real) nem em funcionalidades.
+6. As capturas de tela da nova UI no Windows passaram pelo checklist de fidelidade.
+
+---
+
+## 8. Ordem de execução recomendada
+
+```
+Fase 0 ──► Fase 1 ──► Fase 2 ──┬──► Fase 3 (scanners nativos) ──┐
+                               │                               ├──► Fase 6 ──► Fase 7
+                               └──► Fase 4 ──► Fase 5 (UI) ────┘
+```
+
+As Fases 3 e 4/5 podem andar em paralelo depois da Fase 2: os scanners nativos não dependem da nova UI, e a nova UI pode ser desenvolvida usando o `ManagedScanner` enquanto os nativos ficam prontos.
+
+**Primeiro marco visível:** Fases 1 + 2 + um esqueleto da Fase 5 (janela principal com árvore e Treemap) rodando no macOS com o `ManagedScanner`.
+
+---
+
+## 9. Decisões em aberto
+
+- [ ] **Fork próprio ou contribuição upstream?** Propor ao autor original incorporar a versão multiplataforma, ou manter um fork separado (com outro nome/ícone para evitar confusão)?
+- [ ] **Tema base:** partir do Semi.Avalonia ou escrever o tema Ant Design do zero?
+- [ ] **Diálogo de arquivos:** usar os diálogos nativos de cada SO (recomendado) ou portar o `AppFileDialog` customizado para manter o visual idêntico?
+- [ ] **Native AOT:** inicialização mais rápida e binário menor, mas exige revisar reflexão e serialização JSON (usar *source generators*)
+- [ ] **Distribuição no macOS:** investir em conta Apple Developer para assinatura e notarização?
+- [ ] **Linux:** quais formatos além do AppImage (deb, rpm, Flatpak)?
+- [ ] **io_uring:** vale a complexidade extra? Decidir com base nos benchmarks da Fase 3.2

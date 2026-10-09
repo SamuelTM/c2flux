@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - cross-platform
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore c2flux.sln
+
+      - name: Build
+        run: dotnet build c2flux.sln --configuration Release --no-restore
+
+      - name: Publish (same settings as release.yml)
+        run: >
+          dotnet publish c2flux.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained false
+          --output publish
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: c2flux-win-x64-${{ github.sha }}
+          path: publish
+          retention-days: 7
+
+  test-tree:
+    name: Synthetic test tree (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - macos-latest
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate test tree
+        run: python tests/fixtures/generate_test_tree.py "${{ runner.temp }}/c2flux-test-tree" --profile small --manifest "${{ runner.temp }}/manifest.json"
+
+      - name: Regenerate (must be deterministic)
+        run: python tests/fixtures/generate_test_tree.py "${{ runner.temp }}/c2flux-test-tree" --profile small --manifest "${{ runner.temp }}/manifest-2.json" --force
+
+      - name: Compare manifests
+        shell: python
+        run: |
+          import json, os, sys
+          temp = os.environ["RUNNER_TEMP"]
+          def load(name):
+              with open(os.path.join(temp, name), encoding="utf-8") as f:
+                  data = json.load(f)
+              data.pop("generated_at", None)
+              return data
+          a, b = load("manifest.json"), load("manifest-2.json")
+          if a != b:
+              sys.exit("Manifests differ between runs: generator is not deterministic")
+          print(json.dumps(a["totals"], indent=2))
+          print(json.dumps(a["skipped_features"], indent=2))
+
+      - name: Remove test tree
+        if: always()
+        run: python tests/fixtures/generate_test_tree.py "${{ runner.temp }}/c2flux-test-tree" --clean
+
+      - name: Upload manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-tree-manifest-${{ matrix.os }}
+          path: ${{ runner.temp }}/manifest.json
+          retention-days: 7
