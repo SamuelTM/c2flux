@@ -118,14 +118,21 @@ O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows
 
 **Workflow de benchmark comparativo** (`.github/workflows/scanner-benchmark.yml`):
 
-- [ ] Criar uma ferramenta de linha de comando de benchmark (`tests/c2flux.Benchmarks`) que roda um scanner específico em um caminho e devolve em JSON: tempo total, pico de memória, arquivos, pastas, bytes e pastas puladas. Ela usa os scanners diretamente, sem UI
-- [ ] Como a ferramenta ainda não existe na tag `baseline-winforms`, compilá-la **duas vezes** no job: uma contra o código da referência e outra contra o código novo (checkout de cada versão em pastas separadas)
-- [ ] Para cada scanner (MFT/C2Flux, MFT/NtfsMft, NtQuery, FindFirstFile), rodar **intercalando** referência e nova versão (R, N, R, N…), com no mínimo 5 rodadas cada, descartando a primeira (aquecimento de cache)
-- [ ] Alvos de varredura: a unidade `C:\` inteira (MFT) e uma pasta grande como `C:\Program Files` (NtQuery e FindFirstFile), mais a árvore sintética
-- [ ] Comparar **medianas** e falhar o job se a versão nova for mais de 10% mais lenta ou usar mais de 15% de memória (limites ajustáveis depois de observar o ruído real)
-- [ ] Verificar também a **correção**: contagens de arquivos, pastas e bytes iguais entre referência e nova versão
-- [ ] Publicar o relatório como resumo do job (`$GITHUB_STEP_SUMMARY`) e como artefato JSON
-- [ ] Disparar automaticamente em PRs que alterem arquivos de varredura e manualmente via `workflow_dispatch`
+- [x] Ferramenta de linha de comando `c2flux-bench` (`tests/c2flux.Benchmarks`): roda **um** scanner **uma** vez e devolve em JSON o tempo, os bytes alocados, a memória retida, o pico de memória, as coletas de GC e uma impressão digital da árvore (contagens, bytes e SHA-256 de todas as entradas)
+  - É compilada **uma única vez** e carrega por reflexão o `c2flux.dll` de cada versão (`AssemblyLoadContext` próprio). As duas versões são medidas exatamente pelo mesmo código, e não é preciso compilá-la contra a referência
+  - Os nomes de tipo de cada scanner ficam em `ScannerDefinition` (`AppLoader.cs`). **Quando um scanner for renomeado ou movido (Fases 1 e 2), adicionar o novo nome ali**
+  - Usa `new AppSettings()` (padrões de instalação nova), nunca as configurações do disco
+- [x] Orquestrador `run_benchmark.py`: um processo novo por medição, 1 rodada de aquecimento descartada + N rodadas, alternando a ordem das versões a cada rodada (R,N depois N,R) para nenhuma se beneficiar de rodar em segundo
+- [x] Alvos:
+  - **Estáticos:** um disco virtual NTFS (`T:`, VHDX criado no job) com a árvore sintética. Nada mais escreve nele, então **os quatro scanners, inclusive os de MFT, precisam produzir árvores idênticas** entre referência e nova versão
+  - **Reais:** `C:\` inteiro (MFT) e `C:\Program Files` (NtQuery e FindFirstFile). Só tempo e memória, porque os arquivos mudam enquanto o runner trabalha
+- [x] Compara **medianas** e falha se a versão nova for mais de 10% mais lenta ou tiver pico de memória 15% maior (ajustáveis no `workflow_dispatch`)
+- [x] Veredictos: ✅ ok · ❌ regressão · 🟢 corrigido (falhava só na referência) · ⚠️ quebrado nas duas versões (não falha o job) · ⏭️ sem suporte no ambiente
+- [x] Limpa o cache de varredura (`%LOCALAPPDATA%\WTF\ScanCache`) antes de cada execução, para uma versão não aproveitar o cache da outra
+- [x] Relatório no resumo do job (`$GITHUB_STEP_SUMMARY`) e artefato JSON com todas as medições brutas
+- [x] Dispara em PRs e pushes no `cross-platform` que alterem arquivos de varredura, e manualmente via `workflow_dispatch` (com opção de medir só a referência)
+- [ ] Confirmar a primeira execução no GitHub. Localmente só foi possível validar o carregamento por reflexão (no macOS, os scanners falham nas chamadas nativas do Windows, como esperado) e a lógica de comparação (com um `c2flux-bench` simulado)
+- [ ] Observar o ruído real das primeiras execuções e ajustar os limites de 10% / 15%, se necessário
 
 **Ambiente local:**
 
@@ -152,7 +159,7 @@ O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows
 - [ ] Reorganizar a solução na estrutura da seção 3 (mover arquivos sem reescrever)
 - [ ] Mover para o Core os arquivos já livres de UI: `FileSystemEntry`, `ScanProgress`, `PauseToken`, `ScanPathFilter`, `SizeFormatter`, `TreeSortService`, `TreeSortMode`, `ViewMode`, `SearchCriteria`, `SearchService`, `SearchDataSource`, `ScanHistory*Service`, `ScanHistoryComparisonResult`, `StorageHistory*` (serviços e registro), `Redundancy*Service`, `ScanCacheService`, `ScanResultFileService`, `CsvExportService`, `LocalizationService`, `AppSettings`, `AppConstants`, `AppAlertLog`, `GitHubUpdateService`
 - [ ] Remover do Core qualquer referência residual a `System.Windows.Forms` / `System.Drawing` (ex.: cores e fontes em `AppSettings` passam a ser tipos neutros, como hex string ou struct própria)
-- [ ] **Caminhos de dados (`IAppPaths`):** substituir `AppContext.BaseDirectory` por um serviço de caminhos:
+- [ ] **Caminhos de dados (`IAppPaths`):** substituir `AppContext.BaseDirectory` (e caminhos fixos como `%LOCALAPPDATA%\WTF\ScanCache` do `ScanCacheService`) por um serviço de caminhos:
   - Windows: manter o modo portátil (ao lado do `.exe`) quando a pasta for gravável, senão `%LOCALAPPDATA%\c2flux`
   - macOS: `~/Library/Application Support/c2flux` (dados) e `~/Library/Caches/c2flux` (cache)
   - Linux: `$XDG_CONFIG_HOME/c2flux`, `$XDG_DATA_HOME/c2flux` e `$XDG_CACHE_HOME/c2flux`
@@ -204,6 +211,7 @@ public sealed class ScanOptions
   - `NtQueryDirectoryScanner` → `NtQueryScanner`
   - `DirectoryScanner` → `Win32FindScanner`
 - [ ] Corrigir o uso direto de scanners fora do pipeline (`MainForm.cs`, no fluxo de detalhes do histórico de armazenamento)
+- [ ] **Corrigir bug pré-existente no `DirectoryScanner`** (encontrado na Fase 0.2): com a configuração padrão `SkipReparsePoints = true`, `_activeDirectoryIdentities` fica `null` e `ScanDirectoryContents` lança `NullReferenceException` (`DirectoryScanner.cs:248`). O último fallback de varredura do Windows nunca funciona. O benchmark vai mostrar 🟢 quando for corrigido
 - [ ] Extrair código duplicado entre scanners (`CompiledPathFilter`, `DirectoryIdentity`, montagem da árvore, relatório de progresso) para utilitários comuns no Core
 - [ ] **`ManagedScanner`** (fallback universal): `FileSystemEnumerable<T>` do .NET com paralelismo por diretório. Funciona em qualquer SO e é a rede de segurança final
 - [ ] **Suíte de conformidade:** roda todos os scanners disponíveis no SO sobre a árvore sintética da Fase 0 e exige resultados idênticos (contagem de arquivos/pastas, tamanhos, datas, tratamento de hardlinks/symlinks, pastas sem permissão)

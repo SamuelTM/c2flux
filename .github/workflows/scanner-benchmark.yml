@@ -1,0 +1,194 @@
+name: Scanner benchmark
+
+# Compares the Windows scanners of the current code (candidate) with a
+# reference version (baseline, by default the baseline-winforms tag) on the
+# same runner, in the same job. See ROADMAP.md, phase 0.2.
+
+on:
+  pull_request:
+    paths: &scanner-paths
+      - "**/*Scanner*.cs"
+      - "**/FileSystemEntry.cs"
+      - "**/ScanProgress.cs"
+      - "**/PauseToken.cs"
+      - "**/ScanCacheService.cs"
+      - "Libraries/NtfsReader/**"
+      - "tests/c2flux.Benchmarks/**"
+      - "tests/fixtures/**"
+      - ".github/workflows/scanner-benchmark.yml"
+  push:
+    branches:
+      - cross-platform
+    paths: *scanner-paths
+  workflow_dispatch:
+    inputs:
+      baseline_ref:
+        description: "Git ref to compare against"
+        default: baseline-winforms
+        type: string
+      baseline_only:
+        description: "Only measure the baseline (records reference numbers)"
+        default: false
+        type: boolean
+      runs:
+        description: "Measured runs per version and target"
+        default: "5"
+        type: string
+      profile:
+        description: "Synthetic test tree size"
+        default: medium
+        type: choice
+        options:
+          - small
+          - medium
+      max_slowdown:
+        description: "Maximum allowed slowdown (0.10 = 10%)"
+        default: "0.10"
+        type: string
+      max_memory_increase:
+        description: "Maximum allowed peak memory increase (0.15 = 15%)"
+        default: "0.15"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scanner-benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Benchmark (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 120
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      BASELINE_REF: ${{ inputs.baseline_ref || 'baseline-winforms' }}
+      BASELINE_ONLY: ${{ inputs.baseline_only || false }}
+      RUNS: ${{ inputs.runs || '5' }}
+      PROFILE: ${{ inputs.profile || 'medium' }}
+      MAX_SLOWDOWN: ${{ inputs.max_slowdown || '0.10' }}
+      MAX_MEMORY_INCREASE: ${{ inputs.max_memory_increase || '0.15' }}
+      # Project files to publish. Update CANDIDATE_PROJECT when the app project
+      # moves (phase 1); BASELINE_PROJECT stays as it is in the baseline tag.
+      BASELINE_PROJECT: baseline/c2flux.csproj
+      CANDIDATE_PROJECT: candidate/c2flux.csproj
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          path: candidate
+
+      - name: Checkout baseline (${{ env.BASELINE_REF }})
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BASELINE_REF }}
+          path: baseline
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Publish baseline app
+        run: dotnet publish $env:BASELINE_PROJECT --configuration Release --runtime win-x64 --self-contained false --output "$env:RUNNER_TEMP\apps\baseline"
+
+      - name: Publish candidate app
+        if: env.BASELINE_ONLY != 'true'
+        run: dotnet publish $env:CANDIDATE_PROJECT --configuration Release --runtime win-x64 --self-contained false --output "$env:RUNNER_TEMP\apps\candidate"
+
+      - name: Publish benchmark tool
+        run: dotnet publish candidate/tests/c2flux.Benchmarks/c2flux.Benchmarks.csproj --configuration Release --output "$env:RUNNER_TEMP\bench"
+
+      # A dedicated NTFS volume that nothing else writes to, so every scanner
+      # (including the MFT ones, which only scan whole volumes) sees exactly the
+      # same files in every run and results can be compared byte for byte.
+      - name: Create static NTFS volume (T:)
+        run: |
+          $vhd = Join-Path $env:RUNNER_TEMP 'c2flux-bench.vhdx'
+          $script = Join-Path $env:RUNNER_TEMP 'diskpart.txt'
+          @(
+            "create vdisk file=`"$vhd`" maximum=4096 type=expandable",
+            "select vdisk file=`"$vhd`"",
+            "attach vdisk",
+            "convert mbr",
+            "create partition primary",
+            "format fs=ntfs quick label=C2BENCH",
+            "assign letter=T"
+          ) | Set-Content -Path $script -Encoding ascii
+
+          diskpart /s $script
+          if ($LASTEXITCODE -eq 0 -and (Test-Path 'T:\')) {
+            "STATIC_ROOT=T:\" >> $env:GITHUB_ENV
+            "TREE_ROOT=T:\tree" >> $env:GITHUB_ENV
+          }
+          else {
+            # Without the volume the MFT scanners report "unsupported" for the
+            # static target; directory scanners still get an exact comparison.
+            Write-Warning "Could not create the virtual NTFS volume; using a folder on C: instead."
+            $fallback = Join-Path $env:RUNNER_TEMP 'static-tree'
+            "STATIC_ROOT=$fallback" >> $env:GITHUB_ENV
+            "TREE_ROOT=$fallback" >> $env:GITHUB_ENV
+          }
+
+      - name: Generate synthetic test tree
+        run: python candidate/tests/fixtures/generate_test_tree.py $env:TREE_ROOT --profile $env:PROFILE --manifest "$env:RUNNER_TEMP\test-tree-manifest.json"
+
+      - name: Run benchmark
+        run: |
+          $arguments = @(
+            'candidate/tests/c2flux.Benchmarks/run_benchmark.py',
+            '--bench', "$env:RUNNER_TEMP\bench\c2flux-bench.exe",
+            '--baseline-app', "$env:RUNNER_TEMP\apps\baseline",
+            '--runs', $env:RUNS,
+            '--warmup', '1',
+            '--max-slowdown', $env:MAX_SLOWDOWN,
+            '--max-memory-increase', $env:MAX_MEMORY_INCREASE,
+            '--reset-dir', "$env:LOCALAPPDATA\WTF\ScanCache",
+            '--json-out', "$env:RUNNER_TEMP\benchmark-results.json",
+            '--summary-out', $env:GITHUB_STEP_SUMMARY
+          )
+
+          if ($env:BASELINE_ONLY -ne 'true') {
+            $arguments += @('--candidate-app', "$env:RUNNER_TEMP\apps\candidate")
+          }
+
+          # Static targets: exact tree comparison.
+          foreach ($scanner in 'c2flux', 'ntfsmft', 'ntquery', 'win32find') {
+            $arguments += @('--target', "$scanner=$($env:STATIC_ROOT):static")
+          }
+
+          # Live targets: realistic size, timing only (files change while the runner works).
+          $arguments += @(
+            '--target', 'c2flux=C:\',
+            '--target', 'ntfsmft=C:\',
+            '--target', 'ntquery=C:\Program Files',
+            '--target', 'win32find=C:\Program Files'
+          )
+
+          python @arguments
+          exit $LASTEXITCODE
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanner-benchmark-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/benchmark-results.json
+            ${{ runner.temp }}/test-tree-manifest.json
+          if-no-files-found: ignore
+          retention-days: 30
