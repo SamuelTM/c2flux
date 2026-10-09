@@ -239,16 +239,23 @@ namespace c2flux
                     RectangleF segmentBounds =
                         segmentPath.GetBounds();
 
-                    using (LinearGradientBrush brush =
-                           new LinearGradientBrush(
-                               segmentBounds,
-                               segmentGradientTopColor,
-                               segmentGradientBottomColor,
-                               LinearGradientMode.Vertical))
+                    // A zero-byte item is a zero-degree slice. On a vertical
+                    // edge its bounds have no width, which LinearGradientBrush
+                    // rejects; there is nothing visible to fill anyway.
+                    if (segmentBounds.Width > 0F &&
+                        segmentBounds.Height > 0F)
                     {
-                        e.Graphics.FillPath(
-                            brush,
-                            segmentPath);
+                        using (LinearGradientBrush brush =
+                               new LinearGradientBrush(
+                                   segmentBounds,
+                                   segmentGradientTopColor,
+                                   segmentGradientBottomColor,
+                                   LinearGradientMode.Vertical))
+                        {
+                            e.Graphics.FillPath(
+                                brush,
+                                segmentPath);
+                        }
                     }
                 }
 

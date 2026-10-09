@@ -211,9 +211,9 @@ namespace c2flux
                 _scanCacheService = ScanCacheService.Load(rootPath);
                 _skippedDirectories = 0;
                 _skippedDirectoryDetails = new List<string>();
-                _activeDirectoryIdentities = _settings.SkipReparsePoints
-                    ? null
-                    : new List<DirectoryIdentity>();
+                // Always created: ScanDirectoryContents reads its Count even when
+                // reparse points are skipped and no identity is ever tracked.
+                _activeDirectoryIdentities = new List<DirectoryIdentity>();
 
                 FileSystemEntry rootEntry = CreateDirectoryEntry(rootPath);
                 _liveRootEntry = rootEntry;

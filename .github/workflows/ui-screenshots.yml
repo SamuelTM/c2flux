@@ -25,6 +25,9 @@ on:
     paths:
       - "tests/c2flux.Screenshots/**"
       - ".github/workflows/ui-screenshots.yml"
+      - "Chart_*.cs"
+      - "*Form.cs"
+      - "AntdThemeService.cs"
 
 permissions:
   contents: read
@@ -44,7 +47,9 @@ jobs:
         shell: pwsh
 
     env:
-      APP_REF: ${{ inputs.app_ref || 'baseline-winforms' }}
+      # Manual runs default to baseline-winforms; pushes capture the pushed
+      # commit, so fixes to the app show up in the next screenshots.
+      APP_REF: ${{ inputs.app_ref || github.sha }}
       DISPLAY_SIZE: ${{ inputs.display || '1920x1080' }}
       MAIN_SIZE: ${{ inputs.main_size || '1280x800' }}
       # Update when the app project moves (phase 1); the baseline tag keeps
