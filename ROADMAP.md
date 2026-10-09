@@ -104,7 +104,7 @@ c2flux.sln
   - Gera um manifesto JSON com cada entrada e os totais esperados, com e sem as pastas ilegíveis, para os testes de conformidade. O que o SO não suporta vai para `skipped_features`
   - Só apaga ou sobrescreve pastas que ele mesmo criou (arquivo marcador `.c2flux-test-tree`)
   - Testado localmente no macOS. O job `test-tree` do CI valida nos três SOs (pendente da primeira execução)
-- [ ] Decidir as questões em aberto da seção 9
+- [x] Decidir as questões da seção 9 que afetam o início do trabalho (fork, diálogo de arquivos, assinatura no macOS). As demais ficam para as fases em que se tornam relevantes
 
 #### 0.2 Estratégia de medição de desempenho no Windows
 
@@ -332,7 +332,7 @@ Ordem sugerida: o que é visto primeiro vem antes.
 - [ ] `AlertHistoryForm`
 - [ ] `AboutForm`, `UpdateAvailableForm`, `DatabaseMoveForm`, `DebugClassForm`
 - [ ] `AppDialogs`: caixas de mensagem no estilo Ant
-- [ ] `AppFileDialog`: **substituir** pelo `StorageProvider` nativo do Avalonia (diálogos nativos de cada SO). Avaliar se vale manter o diálogo customizado por fidelidade
+- [ ] `AppFileDialog`: **substituir** pelo `StorageProvider` nativo do Avalonia (diálogos nativos de cada SO), conforme decidido na seção 9
 
 #### 5.4 Validação de fidelidade
 
@@ -352,7 +352,7 @@ Ordem sugerida: o que é visto primeiro vem antes.
 | SO | RIDs | Formatos |
 |---|---|---|
 | Windows | `win-x64`, `win-arm64` | ZIP portátil (como hoje) + instalador opcional (MSIX ou Inno Setup) |
-| macOS | `osx-arm64`, `osx-x64` → app universal via `lipo` | `.app` em `.dmg`, **assinado e notarizado** (exige conta Apple Developer) |
+| macOS | `osx-arm64`, `osx-x64` → app universal via `lipo` | `.app` em `.dmg` com assinatura *ad-hoc*, sem notarização (seção 9) + instruções de primeira abertura no README |
 | Linux | `linux-x64`, `linux-arm64` | AppImage (principal), `.deb`, `.rpm`, opcional Flatpak / Flathub |
 
 - [ ] Adaptar `release.yml` para gerar todos os artefatos e anexá-los à release
@@ -411,9 +411,9 @@ Legenda: ✅ igual ao atual · 🟡 adaptado ao SO · ⛔ não se aplica
 | Divergências entre scanners (tamanhos, hardlinks, permissões) | Alto | Suíte de conformidade obrigatória no CI |
 | Treemap com milhões de itens lento no novo renderizador | Médio | Cache de renderização, desenho em bitmap fora da thread de UI, SkiaSharp direto se necessário |
 | Permissões do macOS (TCC) confundindo o usuário | Médio | Detecção automática e aviso com atalho para os Ajustes |
-| Custo de assinatura/notarização da Apple | Baixo/Médio | Conta Apple Developer (US$ 99/ano). Sem ela, o app abre só com "Abrir mesmo assim" |
+| App de macOS sem notarização (decisão da seção 9) | Médio | Usuários veem o aviso do Gatekeeper na primeira abertura. Mitigar com instruções claras com imagens no README e no site, e reavaliar a conta Apple Developer se a adoção no macOS crescer |
 | Fragmentação do Linux (distros, sistemas de arquivos, DEs) | Médio | AppImage como formato principal, `ManagedScanner` como fallback, testes em Ubuntu, Fedora e Arch |
-| Divergência com o projeto original (upstream) durante a migração | Médio | Sincronizar com o upstream com frequência durante as Fases 1–2. Propor a extração do Core ao autor original |
+| Fork independente fica sem as correções do projeto original | Baixo/Médio | Acompanhar as releases do upstream e trazer correções relevantes pontualmente (*cherry-pick*), principalmente nos scanners do Windows |
 | Licenças | Baixo | Projeto GPL-3.0 (fork permitido, deve continuar GPL e manter créditos). NtfsReader é LGPL-2.1. Avalonia e SkiaSharp são MIT, compatíveis |
 
 ---
@@ -422,7 +422,7 @@ Legenda: ✅ igual ao atual · 🟡 adaptado ao SO · ⛔ não se aplica
 
 O projeto é considerado concluído quando:
 
-1. Uma única tag gera builds para Windows, macOS e Linux, sem passos manuais (exceto assinatura, se feita localmente).
+1. Uma única tag gera builds para Windows, macOS e Linux, sem passos manuais.
 2. Nenhum arquivo fora de `c2flux.Platform.*` contém P/Invoke, Registro ou caminhos específicos de SO.
 3. A suíte de conformidade de scanners passa nos três SOs.
 4. Todas as linhas da matriz de funcionalidades estão marcadas.
@@ -445,12 +445,18 @@ As Fases 3 e 4/5 podem andar em paralelo depois da Fase 2: os scanners nativos n
 
 ---
 
-## 9. Decisões em aberto
+## 9. Decisões
 
-- [ ] **Fork próprio ou contribuição upstream?** Propor ao autor original incorporar a versão multiplataforma, ou manter um fork separado (com outro nome/ícone para evitar confusão)?
-- [ ] **Tema base:** partir do Semi.Avalonia ou escrever o tema Ant Design do zero?
-- [ ] **Diálogo de arquivos:** usar os diálogos nativos de cada SO (recomendado) ou portar o `AppFileDialog` customizado para manter o visual idêntico?
+### Tomadas
+
+- [x] **Fork ou upstream:** **fork independente.** Consequências: novo nome e ícone próprios (ver abaixo), créditos ao c² flux original e ao autor no README e na janela Sobre, licença GPL-3.0 mantida. A sincronização com o upstream deixa de ser obrigatória; correções relevantes do original podem ser trazidas pontualmente (*cherry-pick*)
+- [x] **Diálogo de arquivos:** **nativo de cada SO** (`StorageProvider` do Avalonia). O `AppFileDialog` customizado não será portado
+- [x] **Distribuição no macOS:** **sem conta Apple Developer.** O app é distribuído só com assinatura *ad-hoc* (exigida para rodar em Apple Silicon e aplicada automaticamente pelo `dotnet publish`), sem notarização. Na primeira abertura, o usuário precisa liberar em *Ajustes do Sistema → Privacidade e Segurança → Abrir mesmo assim*
+
+### Em aberto
+
+- [ ] **Nome e ícone do fork:** necessário antes da primeira release pública (Fase 6)
+- [ ] **Tema base:** partir do Semi.Avalonia ou escrever o tema Ant Design do zero? Decidir no início da Fase 5
 - [ ] **Native AOT:** inicialização mais rápida e binário menor, mas exige revisar reflexão e serialização JSON (usar *source generators*)
-- [ ] **Distribuição no macOS:** investir em conta Apple Developer para assinatura e notarização?
 - [ ] **Linux:** quais formatos além do AppImage (deb, rpm, Flatpak)?
 - [ ] **io_uring:** vale a complexidade extra? Decidir com base nos benchmarks da Fase 3.2
