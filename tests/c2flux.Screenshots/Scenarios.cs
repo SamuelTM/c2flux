@@ -34,7 +34,8 @@ namespace c2flux.Screenshots
         {
             ("settings", "buttonGeneralTab_Click"),
             ("settings-export", "buttonExportTab_Click"),
-            ("settings-colors", "buttonColorsTab_Click"),
+            // No "Colors" tab: its button is never added to the form in v1.4.1,
+            // so users cannot reach that page.
             ("settings-layout", "buttonLayoutTab_Click"),
             ("settings-statistics", "buttonStatisticsTab_Click"),
             ("settings-logging", "buttonLoggingTab_Click"),

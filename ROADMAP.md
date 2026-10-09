@@ -157,16 +157,17 @@ O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows
   - [x] Primeira execução no GitHub: as 19 capturas funcionaram (resolução trocada de 1024×768 para 1920×1080, DPI 96), com imagens nítidas e completas
   - [x] **Bug pré-existente no gráfico de pizza, corrigido** (encontrado na 0.3): itens de 0 bytes viram fatias de ângulo zero, e a fatia no topo do círculo (270°) tem largura 0. O `LinearGradientBrush` de [Chart_PieChart.cs:242](Chart_PieChart.cs#L242) lança `ArgumentException` e o app mostra a janela de exceção não tratada. Acontece com o `T:` de teste (`$BadClus`, `$Secure` e `$Volume` têm 0 B) e, provavelmente, com qualquer pasta cujos últimos itens tenham 0 bytes. Corrigido: fatias com área zero não são preenchidas. As referências passam a ser capturadas do `cross-platform` (original + correções de bugs, mesma interface)
   - [x] Capturas revisadas e salvas em `docs/fidelity/reference/` (16 telas, 796 KB), com descrição e limitações em `docs/fidelity/README.md`
-  - [ ] Cobrir as telas restantes. Implementado, falta rodar no CI e revisar:
+  - [x] Telas restantes cobertas: as referências passaram de 16 para **42 capturas** (1,9 MB), revisadas uma a uma:
     - Menus da janela principal (File, View, Tools, Help) e menus de contexto da árvore e da barra de ferramentas, capturados sobre a janela principal. O da árvore é o menu próprio do app; o menu nativo do Explorer, usado normalmente no Windows, não será replicado (Fase 4)
-    - Abas: as 6 das Configurações, as 4 da Análise e as 7 do Histórico de varreduras
-    - Telas com dados: busca com resultados, histórico de alertas com entradas de exemplo, histórico de varreduras com duas varreduras comparadas (o volume é alterado entre elas) e histórico de armazenamento com dois registros
-    - Detalhes do histórico de armazenamento, aviso de atualização (dados de exemplo) e os diálogos de `AppDialogs` (aviso, sim/não, pedido de administrador)
-    - Fora: diálogos de arquivo (`AppFileDialog`), que serão substituídos pelos nativos (decisão da seção 9)
+    - Abas: as 5 das Configurações, as 4 da Análise e as 7 do Histórico de varreduras
+    - Telas com dados: busca com resultados, histórico de alertas com entradas de exemplo, histórico de varreduras com duas varreduras comparadas (o volume é alterado entre elas) e histórico de armazenamento com dois registros e detalhes
+    - Aviso de atualização (dados de exemplo) e os diálogos de `AppDialogs` (aviso, sim/não, pedido de administrador)
+    - Fora: diálogos de arquivo (`AppFileDialog`), que serão substituídos pelos nativos (decisão da seção 9), e a aba "Colors" das Configurações, que o usuário não alcança (o botão nunca é adicionado à janela)
+  - [ ] **A investigar: "Changed files" sempre vazio.** O histórico de varreduras não marca como alterado um arquivo que cresceu de 64 para 68 MB entre as duas varreduras, embora detecte os arquivos novo e excluído. Forçar a gravação no disco (`Flush(true)`) não resolveu, então a hipótese de tamanho desatualizado na MFT não se confirmou. A comparação ([ScanHistoryCompareService.cs:73](ScanHistoryCompareService.cs#L73)) e a gravação dos deltas parecem corretas; o próximo passo é ler as duas varreduras salvas no banco e ver qual tamanho foi gravado para esse arquivo. Pode ser mais um bug do original
 
 **Entregável:** workflow de benchmark comparativo funcionando no CI, números de referência e capturas de tela registrados.
 
-**Situação:** falta cobrir as telas restantes da 0.3. Os ambientes locais (VM e hardware real) ficaram adiados. De quebra, foram encontrados e corrigidos três bugs do original: gráfico de pizza com itens de 0 B, `DirectoryScanner` sempre quebrando e `DirectoryScanner` sem caminhos longos
+**Situação:** ✅ concluída em 09/10/2026. Os ambientes locais (VM e hardware real) ficaram adiados. De quebra, foram encontrados e corrigidos três bugs do original: gráfico de pizza com itens de 0 B, `DirectoryScanner` sempre quebrando e `DirectoryScanner` sem caminhos longos. Fica uma investigação em aberto ("Changed files" sempre vazio)
 
 ---
 
