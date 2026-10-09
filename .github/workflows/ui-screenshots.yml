@@ -25,9 +25,7 @@ on:
     paths:
       - "tests/c2flux.Screenshots/**"
       - ".github/workflows/ui-screenshots.yml"
-      - "Chart_*.cs"
-      - "*Form.cs"
-      - "AntdThemeService.cs"
+      - "src/c2flux.WinForms/**"
 
 permissions:
   contents: read
@@ -52,9 +50,6 @@ jobs:
       APP_REF: ${{ inputs.app_ref || github.sha }}
       DISPLAY_SIZE: ${{ inputs.display || '1920x1080' }}
       MAIN_SIZE: ${{ inputs.main_size || '1280x800' }}
-      # Update when the app project moves (phase 1); the baseline tag keeps
-      # c2flux.csproj at the root.
-      APP_PROJECT: app/c2flux.csproj
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       DOTNET_NOLOGO: "1"
 
@@ -81,7 +76,12 @@ jobs:
           python-version: "3.12"
 
       - name: Publish app
-        run: dotnet publish $env:APP_PROJECT --configuration Release --runtime win-x64 --self-contained false --output "$env:RUNNER_TEMP\app"
+        # The app project moved to src/c2flux.WinForms in phase 1; older refs
+        # (such as baseline-winforms) still have it at the root.
+        run: |
+          $project = @('src/c2flux.WinForms/c2flux.csproj', 'c2flux.csproj') | ForEach-Object { Join-Path 'app' $_ } | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $project) { throw "No c2flux.csproj found in app" }
+          dotnet publish $project --configuration Release --runtime win-x64 --self-contained false --output "$env:RUNNER_TEMP\app"
 
       # c2flux reads its settings and languages from the directory of the
       # running executable, so the tool runs from inside the app directory.

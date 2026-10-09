@@ -41,10 +41,7 @@
 
 
 	<ItemGroup>
-		<Compile Remove="Libraries\NtfsReader\**\*.cs" />
-		<Compile Remove="tests\**" />
-		<None Remove="tests\**" />
-		<ProjectReference Include="Libraries\NtfsReader\NtfsReader.csproj" />
+		<ProjectReference Include="..\..\libs\NtfsReader\NtfsReader.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

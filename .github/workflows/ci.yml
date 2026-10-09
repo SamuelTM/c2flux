@@ -43,7 +43,7 @@ jobs:
 
       - name: Publish (same settings as release.yml)
         run: >
-          dotnet publish c2flux.csproj
+          dotnet publish src/c2flux.WinForms/c2flux.csproj
           --configuration Release
           --runtime win-x64
           --self-contained false

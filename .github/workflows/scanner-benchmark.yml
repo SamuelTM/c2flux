@@ -12,7 +12,7 @@ on:
       - "**/ScanProgress.cs"
       - "**/PauseToken.cs"
       - "**/ScanCacheService.cs"
-      - "Libraries/NtfsReader/**"
+      - "libs/NtfsReader/**"
       - "tests/c2flux.Benchmarks/**"
       - "tests/fixtures/**"
       - ".github/workflows/scanner-benchmark.yml"
@@ -74,10 +74,6 @@ jobs:
       PROFILE: ${{ inputs.profile || 'medium' }}
       MAX_SLOWDOWN: ${{ inputs.max_slowdown || '0.10' }}
       MAX_MEMORY_INCREASE: ${{ inputs.max_memory_increase || '0.15' }}
-      # Project files to publish. Update CANDIDATE_PROJECT when the app project
-      # moves (phase 1); BASELINE_PROJECT stays as it is in the baseline tag.
-      BASELINE_PROJECT: baseline/c2flux.csproj
-      CANDIDATE_PROJECT: candidate/c2flux.csproj
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       DOTNET_NOLOGO: "1"
 
@@ -104,11 +100,19 @@ jobs:
           python-version: "3.12"
 
       - name: Publish baseline app
-        run: dotnet publish $env:BASELINE_PROJECT --configuration Release --runtime win-x64 --self-contained false --output "$env:RUNNER_TEMP\apps\baseline"
+        # The app project moved to src/c2flux.WinForms in phase 1; older refs
+        # (such as baseline-winforms) still have it at the root.
+        run: |
+          $project = @('src/c2flux.WinForms/c2flux.csproj', 'c2flux.csproj') | ForEach-Object { Join-Path 'baseline' $_ } | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $project) { throw "No c2flux.csproj found in baseline" }
+          dotnet publish $project --configuration Release --runtime win-x64 --self-contained false --output "$env:RUNNER_TEMP\apps\baseline"
 
       - name: Publish candidate app
         if: env.BASELINE_ONLY != 'true'
-        run: dotnet publish $env:CANDIDATE_PROJECT --configuration Release --runtime win-x64 --self-contained false --output "$env:RUNNER_TEMP\apps\candidate"
+        run: |
+          $project = @('src/c2flux.WinForms/c2flux.csproj', 'c2flux.csproj') | ForEach-Object { Join-Path 'candidate' $_ } | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $project) { throw "No c2flux.csproj found in candidate" }
+          dotnet publish $project --configuration Release --runtime win-x64 --self-contained false --output "$env:RUNNER_TEMP\apps\candidate"
 
       - name: Publish benchmark tool
         run: dotnet publish candidate/tests/c2flux.Benchmarks/c2flux.Benchmarks.csproj --configuration Release --output "$env:RUNNER_TEMP\bench"

@@ -94,7 +94,7 @@ jobs:
       - name: Projekt veröffentlichen
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.backfill_changelog) }}
         run: >
-          dotnet publish c2flux.csproj
+          dotnet publish src/c2flux.WinForms/c2flux.csproj
           --configuration Release
           --runtime win-x64
           --self-contained false
