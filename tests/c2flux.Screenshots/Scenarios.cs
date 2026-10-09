@@ -205,7 +205,12 @@ namespace c2flux.Screenshots
 
                 File.WriteAllBytes(Path.Combine(tree, "added-after-first-scan.bin"), new byte[8 * 1024 * 1024]);
                 File.Delete(Path.Combine(tree, "wide", "file-000000.dat"));
-                File.AppendAllText(Path.Combine(tree, "symlinks", "target.txt"), new string('x', 4096));
+                // A large file: the scan history only keeps the biggest files,
+                // so growing a small one would not show up as changed.
+                using (FileStream grown = new FileStream(Path.Combine(tree, "sparse", "sparse-64MiB.bin"), FileMode.Append))
+                {
+                    grown.Write(new byte[4 * 1024 * 1024]);
+                }
 
                 _log.Info("Changed the scanned volume: 1 file added, 1 deleted, 1 grown.");
                 return true;
