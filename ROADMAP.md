@@ -148,7 +148,7 @@ O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows
 
 #### 0.3 Referências visuais
 
-- [ ] **Capturas de tela de referência** de todas as telas em `docs/fidelity/reference/`, a partir da tag `baseline-winforms`, para servir de comparação com a nova UI. Feitas **no CI** (a VM foi adiada):
+- [x] **Capturas de tela de referência** de todas as telas em `docs/fidelity/reference/`, para servir de comparação com a nova UI. Tiradas do `cross-platform` (commit `f70c14f`): a `baseline-winforms` mais as correções dos bugs encontrados nesta fase, com a mesma interface. Feitas **no CI** (a VM foi adiada):
   - [x] Ferramenta `c2flux-shots` (`tests/c2flux.Screenshots`): carrega o app por reflexão, como o `c2flux-bench`, abre cada janela e salva um PNG via `PrintWindow`, mais um `index.json` com o que deu certo e o que falhou. Janelas inesperadas (avisos, erros) também são capturadas
   - [x] Workflow `ui-screenshots.yml`: publica a versão escolhida, monta o disco `T:` com a árvore de teste, varre e captura. Manual (`workflow_dispatch`) ou automático quando a ferramenta muda
   - Telas: janela principal vazia e após varrer `T:\` (Tabela, Pizza, Barras, Sunburst, Treemap, Análise, Histórico de armazenamento), Busca, Configurações, Sobre, Histórico de alertas, Histórico de varreduras, Histórico de armazenamento, Mover banco de dados, Debug
