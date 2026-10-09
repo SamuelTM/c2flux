@@ -1,10 +1,13 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -16,6 +19,7 @@ namespace c2flux.Screenshots
     {
         private static readonly TimeSpan ScanTimeout = TimeSpan.FromMinutes(3);
         private static readonly TimeSpan SettleDelay = TimeSpan.FromSeconds(2);
+        private static readonly TimeSpan WindowTimeout = TimeSpan.FromSeconds(15);
 
         private static readonly (string Name, string Handler)[] ViewModes =
         {
@@ -24,6 +28,16 @@ namespace c2flux.Screenshots
             ("bar", "toolStripButtonBarChart_Click"),
             ("sunburst", "toolStripButtonSunburst_Click"),
             ("treemap", "toolStripButtonTreemap_Click"),
+        };
+
+        private static readonly (string Name, string Handler)[] SettingsTabs =
+        {
+            ("settings", "buttonGeneralTab_Click"),
+            ("settings-export", "buttonExportTab_Click"),
+            ("settings-colors", "buttonColorsTab_Click"),
+            ("settings-layout", "buttonLayoutTab_Click"),
+            ("settings-statistics", "buttonStatisticsTab_Click"),
+            ("settings-logging", "buttonLoggingTab_Click"),
         };
 
         private readonly AppHost _app;
@@ -42,11 +56,28 @@ namespace c2flux.Screenshots
             await RunMainWindowEmptyAsync();
             await RunMainWindowScannedAsync();
 
-            await RunStandaloneAsync("settings", () => _app.CreateForm("SettingsForm", _app.LoadSettings()));
+            await RunSettingsAsync();
             await RunStandaloneAsync("about", () => _app.CreateForm("AboutForm", _app.LoadSettings()));
+
             await RunStandaloneAsync("alert-history", () => _app.CreateForm("AlertHistoryForm", _app.LoadSettings()));
-            await RunStandaloneAsync("scan-history", () => _app.CreateForm("ScanHistoryForm", _app.LoadSettings()));
-            await RunStandaloneAsync("storage-history", () => _app.CreateForm("StorageHistoryForm", _app.LoadSettings()));
+            AddSampleAlerts();
+            await RunStandaloneAsync("alert-history-entries", () => _app.CreateForm("AlertHistoryForm", _app.LoadSettings()));
+
+            await RunScanHistoryAsync();
+            await RunStorageHistoryAsync();
+
+            await RunStandaloneAsync("update-available", () =>
+                _app.CreateForm("UpdateAvailableForm", AppHost.Get(_app.LoadSettings(), "Layout"), CreateSampleUpdateResult()));
+
+            await RunDialogAsync("dialog-warning-ok", () => _app.CallStatic(
+                "AppDialogs", "ShowWarningOk",
+                _app.LoadSettings(), "The selected folder could not be read completely. Some sizes may be too small.", "c² flux", "OK"));
+            await RunDialogAsync("dialog-warning-yes-no", () => _app.CallStatic(
+                "AppDialogs", "ShowWarningYesNo",
+                _app.LoadSettings(), "Do you really want to delete the scan history of this drive?", "c² flux", "Yes", "No"));
+            await RunDialogAsync("dialog-elevation-prompt", () => _app.CallStatic(
+                "AppDialogs", "ShowElevationPrompt", _app.LoadSettings()));
+
             await RunStandaloneAsync("database-move", () =>
             {
                 object settings = _app.LoadSettings();
@@ -58,6 +89,8 @@ namespace c2flux.Screenshots
             await RunStandaloneAsync("debug-class", () =>
                 _app.CreateForm("DebugClassForm", AppHost.Get(_app.LoadSettings(), "Layout")));
         }
+
+        // ----- main window ------------------------------------------------
 
         private async Task RunMainWindowEmptyAsync()
         {
@@ -87,11 +120,6 @@ namespace c2flux.Screenshots
 
         private async Task RunMainWindowScannedAsync()
         {
-            if (!_options.ShouldRun("main-"))
-            {
-                return;
-            }
-
             if (string.IsNullOrEmpty(_options.ScanPath))
             {
                 _log.Info("Skipping scanned main window captures: no --scan path.");
@@ -104,16 +132,7 @@ namespace c2flux.Screenshots
             {
                 main = _app.CreateForm("MainForm", _options.ScanPath);
                 main.Show();
-
-                Stopwatch scanClock = Stopwatch.StartNew();
-                bool scanned = await WaitUntilAsync(() => AppHost.Get(main, "_currentRootEntry") != null, ScanTimeout);
-                _log.Info(string.Format("Scan of {0}: {1} after {2:0.0}s", _options.ScanPath, scanned ? "done" : "timed out", scanClock.Elapsed.TotalSeconds));
-
-                if (!scanned)
-                {
-                    throw new TimeoutException("Scan did not finish within " + ScanTimeout + ".");
-                }
-
+                await WaitForScanAsync(main, null);
                 await SettleAsync();
 
                 foreach ((string name, string handler) in ViewModes)
@@ -122,29 +141,27 @@ namespace c2flux.Screenshots
                 }
 
                 await RunStepAsync("main-analysis", main, () => AppHost.Invoke(main, "menuItemAdvancedFeatures_Click", null, EventArgs.Empty));
+                await CaptureTabsAsync("main-analysis", main, FindChild(main, "AdvancedFeaturesForm"), main);
+
                 await RunStepAsync("main-storage-history", main, () => AppHost.Invoke(main, "menuItemStorageHistory_Click", null, EventArgs.Empty));
 
-                // Back to the default view before opening the search window on top.
                 AppHost.Invoke(main, "toolStripButtonTable_Click", null, EventArgs.Empty);
                 await SettleAsync();
 
-                if (_options.ShouldRun("search"))
+                await CaptureMenusAsync(main);
+                await CaptureContextMenuAsync("context-menu-tree", main, "contextMenuStripTreeEntries", "treeViewEntries");
+                await CaptureContextMenuAsync("context-menu-toolbar", main, "contextMenuStripToolbars", "toolStripMain");
+
+                await RunSearchAsync(main);
+
+                // A second scan after changing the volume gives the scan and
+                // storage histories something to show and compare.
+                if (ChangeScannedVolume())
                 {
-                    HashSet<Form> before = new HashSet<Form>(Application.OpenForms.Cast<Form>());
-                    AppHost.Invoke(main, "toolStripButtonSearch_Click", null, EventArgs.Empty);
+                    object firstRoot = AppHost.Get(main, "_currentRootEntry");
+                    AppHost.Invoke(main, "toolStripButtonScan_Click", null, EventArgs.Empty);
+                    await WaitForScanAsync(main, firstRoot);
                     await SettleAsync();
-
-                    Form search = Application.OpenForms.Cast<Form>().FirstOrDefault(form => !before.Contains(form));
-
-                    if (search == null)
-                    {
-                        Fail("search", new InvalidOperationException("The search window did not open."));
-                    }
-                    else
-                    {
-                        Save("search", search);
-                        await CloseAsync(search);
-                    }
                 }
             }
             catch (Exception exception)
@@ -156,6 +173,283 @@ namespace c2flux.Screenshots
                 await CloseAsync(main);
             }
         }
+
+        private async Task WaitForScanAsync(Form main, object previousRoot)
+        {
+            Stopwatch clock = Stopwatch.StartNew();
+            bool scanned = await WaitUntilAsync(
+                () =>
+                {
+                    object root = AppHost.Get(main, "_currentRootEntry");
+                    return root != null && !ReferenceEquals(root, previousRoot);
+                },
+                ScanTimeout);
+
+            _log.Info(string.Format("Scan of {0}: {1} after {2:0.0}s", _options.ScanPath, scanned ? "done" : "timed out", clock.Elapsed.TotalSeconds));
+
+            if (!scanned)
+            {
+                throw new TimeoutException("Scan did not finish within " + ScanTimeout + ".");
+            }
+        }
+
+        private bool ChangeScannedVolume()
+        {
+            try
+            {
+                string tree = Path.Combine(_options.ScanPath, "tree");
+
+                File.WriteAllBytes(Path.Combine(tree, "added-after-first-scan.bin"), new byte[8 * 1024 * 1024]);
+                File.Delete(Path.Combine(tree, "wide", "file-000000.dat"));
+                File.AppendAllText(Path.Combine(tree, "symlinks", "target.txt"), new string('x', 4096));
+
+                _log.Info("Changed the scanned volume: 1 file added, 1 deleted, 1 grown.");
+                return true;
+            }
+            catch (Exception exception)
+            {
+                _log.Info("Could not change the scanned volume: " + exception.Message);
+                return false;
+            }
+        }
+
+        private async Task CaptureMenusAsync(Form main)
+        {
+            MenuStrip menu = (MenuStrip)AppHost.Get(main, "menuStripMain");
+
+            foreach (ToolStripMenuItem item in menu.Items.OfType<ToolStripMenuItem>())
+            {
+                string name = "menu-" + Slug(item.Text);
+
+                if (!_options.ShouldRun(name))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    item.ShowDropDown();
+                    await Task.Delay(500);
+                    SaveScreen(name, Rectangle.Union(main.Bounds, item.DropDown.Bounds), "ToolStripDropDown", item.Text);
+                }
+                catch (Exception exception)
+                {
+                    Fail(name, exception);
+                }
+                finally
+                {
+                    item.HideDropDown();
+                    await Task.Delay(300);
+                }
+            }
+        }
+
+        private async Task CaptureContextMenuAsync(string name, Form main, string menuField, string targetField)
+        {
+            if (!_options.ShouldRun(name))
+            {
+                return;
+            }
+
+            ContextMenuStrip menu = null;
+
+            try
+            {
+                menu = (ContextMenuStrip)AppHost.Get(main, menuField);
+                Control target = (Control)AppHost.Get(main, targetField);
+                menu.Show(target, new Point(60, 30));
+                await Task.Delay(500);
+                SaveScreen(name, Rectangle.Union(main.Bounds, menu.Bounds), "ContextMenuStrip", null);
+            }
+            catch (Exception exception)
+            {
+                Fail(name, exception);
+            }
+            finally
+            {
+                menu?.Close();
+                await Task.Delay(300);
+            }
+        }
+
+        private async Task RunSearchAsync(Form main)
+        {
+            if (!_options.ShouldRun("search"))
+            {
+                return;
+            }
+
+            Form search = null;
+
+            try
+            {
+                HashSet<Form> before = OpenForms();
+                AppHost.Invoke(main, "toolStripButtonSearch_Click", null, EventArgs.Empty);
+                search = await WaitForNewFormAsync(before);
+                await SettleAsync();
+                Save("search", search);
+
+                Control input = (Control)AppHost.Get(search, "textBoxSearch");
+                input.Text = "file-00";
+                AppHost.Invoke(search, "buttonSearch_Click", null, EventArgs.Empty);
+                await Task.Delay(TimeSpan.FromSeconds(4));
+                Save("search-results", search);
+            }
+            catch (Exception exception)
+            {
+                Fail("search", exception);
+            }
+            finally
+            {
+                await CloseAsync(search);
+            }
+        }
+
+        // ----- other windows -----------------------------------------------
+
+        private async Task RunSettingsAsync()
+        {
+            if (!SettingsTabs.Any(tab => _options.ShouldRun(tab.Name)))
+            {
+                return;
+            }
+
+            Form settings = null;
+
+            try
+            {
+                settings = ShowAt(_app.CreateForm("SettingsForm", _app.LoadSettings()));
+                await SettleAsync();
+
+                foreach ((string name, string handler) in SettingsTabs)
+                {
+                    await RunStepAsync(name, settings, () => AppHost.Invoke(settings, handler, null, EventArgs.Empty));
+                }
+            }
+            catch (Exception exception)
+            {
+                Fail("settings", exception);
+            }
+            finally
+            {
+                await CloseAsync(settings);
+            }
+        }
+
+        private async Task RunScanHistoryAsync()
+        {
+            if (!_options.ShouldRun("scan-history"))
+            {
+                return;
+            }
+
+            Form history = null;
+
+            try
+            {
+                history = ShowAt(_app.CreateForm("ScanHistoryForm", _app.LoadSettings()));
+                await SettleAsync();
+                Save("scan-history", history);
+
+                AppHost.Invoke(history, "buttonCompare_Click", null, EventArgs.Empty);
+                await Task.Delay(TimeSpan.FromSeconds(4));
+                await CaptureTabsAsync("scan-history", history, FindChildOfType(history, "Tabs"), history);
+            }
+            catch (Exception exception)
+            {
+                Fail("scan-history", exception);
+            }
+
+            await CapturePopupsAsync("scan-history", history);
+            await CloseAsync(history);
+        }
+
+        private async Task RunStorageHistoryAsync()
+        {
+            if (!_options.ShouldRun("storage-history"))
+            {
+                return;
+            }
+
+            Form history = null;
+
+            try
+            {
+                history = ShowAt(_app.CreateForm("StorageHistoryForm", _app.LoadSettings()));
+                await SettleAsync();
+                Save("storage-history", history);
+
+                object record = FindRecord(history);
+
+                if (record == null)
+                {
+                    Fail("storage-history-details", new InvalidOperationException("No storage history record to open."));
+                }
+                else
+                {
+                    Form owner = history;
+                    await RunDialogAsync("storage-history-details", () =>
+                    {
+                        SetField(owner, "_contextMenuRecord", record);
+                        AppHost.Invoke(owner, "contextMenuItemDetails_Click", null, EventArgs.Empty);
+                    });
+                }
+            }
+            catch (Exception exception)
+            {
+                Fail("storage-history", exception);
+            }
+
+            await CloseAsync(history);
+        }
+
+        private object FindRecord(Form history)
+        {
+            const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
+
+            foreach (FieldInfo field in history.GetType().GetFields(flags))
+            {
+                if (field.GetValue(history) is IEnumerable values && !(values is string))
+                {
+                    object first = values.Cast<object>().FirstOrDefault(value => value?.GetType().Name == "StorageHistoryRecord");
+
+                    if (first != null)
+                    {
+                        return values.Cast<object>().Last(value => value?.GetType().Name == "StorageHistoryRecord");
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private object CreateSampleUpdateResult()
+        {
+            object result = Activator.CreateInstance(_app.GetType("GitHubUpdateResult"));
+            SetProperty(result, "CanConnectToGitHub", true);
+            SetProperty(result, "UpdateAvailable", true);
+            SetProperty(result, "LatestVersion", "9.9.9");
+            SetProperty(result, "DownloadUrl", "https://example.invalid/c2flux.zip");
+            SetProperty(result, "ReleaseNotes",
+                "## Changelog v9.9.9\n\n- Sample release notes used for UI screenshots.\n- Second line.\n- Third line.");
+            return result;
+        }
+
+        private void AddSampleAlerts()
+        {
+            try
+            {
+                _app.CallStatic("AppAlertLog", "AddInformation", "Scan", "Scan of T:\\ completed.");
+                _app.CallStatic("AppAlertLog", "AddWarning", "Scan", "3 folders could not be read.", "T:\\tree\\unreadable\\locked-dir\nAccess is denied.");
+                _app.CallStatic("AppAlertLog", "AddError", "Export", "The CSV file could not be written.", "The file is in use by another process.");
+            }
+            catch (Exception exception)
+            {
+                _log.Info("Could not add sample alerts: " + Program.Unwrap(exception).Message);
+            }
+        }
+
+        // ----- building blocks ----------------------------------------------
 
         private async Task RunStepAsync(string name, Form form, Action action)
         {
@@ -189,10 +483,7 @@ namespace c2flux.Screenshots
 
             try
             {
-                form = create();
-                form.StartPosition = FormStartPosition.Manual;
-                form.Location = new Point(40, 40);
-                form.Show();
+                form = ShowAt(create());
                 await SettleAsync();
                 Save(name, form);
             }
@@ -203,6 +494,72 @@ namespace c2flux.Screenshots
 
             await CapturePopupsAsync(name, form);
             await CloseAsync(form);
+        }
+
+        // Modal dialogs block the code that opens them, so they are opened
+        // from a posted callback; this method keeps running inside the
+        // dialog's message loop, captures it and closes it.
+        private async Task RunDialogAsync(string name, Action showModal)
+        {
+            if (!_options.ShouldRun(name))
+            {
+                return;
+            }
+
+            Form dialog = null;
+
+            try
+            {
+                HashSet<Form> before = OpenForms();
+                Exception thrown = null;
+
+                SynchronizationContext.Current.Post(_ =>
+                {
+                    try
+                    {
+                        showModal();
+                    }
+                    catch (Exception exception)
+                    {
+                        thrown = exception;
+                    }
+                }, null);
+
+                dialog = await WaitForNewFormAsync(before, () => thrown);
+                await SettleAsync();
+                Save(name, dialog);
+            }
+            catch (Exception exception)
+            {
+                Fail(name, exception);
+            }
+            finally
+            {
+                await CloseAsync(dialog);
+            }
+        }
+
+        private async Task CaptureTabsAsync(string prefix, Form captureTarget, Control container, Form popupOwner)
+        {
+            Control tabs = container == null ? null : FindChildOfType(container, "Tabs");
+
+            if (tabs == null)
+            {
+                _log.Info(prefix + ": no tabs found.");
+                return;
+            }
+
+            IList pages = (IList)AppHost.Get(tabs, "Pages");
+
+            for (int index = 1; index < pages.Count; index++)
+            {
+                object page = pages[index];
+                string name = prefix + "-" + Slug((string)AppHost.Get(page, "Text"));
+                await RunStepAsync(name, captureTarget, () => SetProperty(tabs, "SelectedTab", page));
+            }
+
+            SetProperty(tabs, "SelectedTab", pages[0]);
+            await CapturePopupsAsync(prefix, popupOwner);
         }
 
         // Unexpected windows (message boxes, errors) are captured too: they are
@@ -216,7 +573,8 @@ namespace c2flux.Screenshots
                 // Forms embedded in another window (TopLevel = false, like the
                 // main window's analysis and storage history panels) are part of
                 // that window's capture, not popups.
-                if (popup == expected || popup.IsDisposed || IsMainForm(popup) || !popup.Visible || !popup.TopLevel)
+                if (popup == expected || popup.IsDisposed || IsMainForm(popup) || !popup.Visible || !popup.TopLevel ||
+                    (expected != null && popup == expected.Owner))
                 {
                     continue;
                 }
@@ -234,20 +592,121 @@ namespace c2flux.Screenshots
             return form.GetType().Name == "MainForm";
         }
 
-        private void Save(string name, Form form)
+        private static Form ShowAt(Form form)
+        {
+            form.StartPosition = FormStartPosition.Manual;
+            form.Location = new Point(40, 40);
+            form.Show();
+            return form;
+        }
+
+        private static HashSet<Form> OpenForms()
+        {
+            return new HashSet<Form>(Application.OpenForms.Cast<Form>());
+        }
+
+        private static async Task<Form> WaitForNewFormAsync(HashSet<Form> before, Func<Exception> failure = null)
+        {
+            Form found = null;
+
+            await WaitUntilAsync(() =>
+            {
+                if (failure?.Invoke() != null)
+                {
+                    return true;
+                }
+
+                found = Application.OpenForms.Cast<Form>().FirstOrDefault(form => !before.Contains(form) && form.Visible);
+                return found != null;
+            }, WindowTimeout);
+
+            Exception thrown = failure?.Invoke();
+
+            if (thrown != null)
+            {
+                throw new InvalidOperationException("Opening the window failed.", Program.Unwrap(thrown));
+            }
+
+            return found ?? throw new TimeoutException("The window did not open.");
+        }
+
+        private static Control FindChild(Control root, string typeName)
+        {
+            return Descendants(root).FirstOrDefault(control => control.GetType().Name == typeName);
+        }
+
+        private static Control FindChildOfType(Control root, string typeName)
+        {
+            return FindChild(root, typeName);
+        }
+
+        private static IEnumerable<Control> Descendants(Control root)
+        {
+            foreach (Control child in root.Controls)
+            {
+                yield return child;
+
+                foreach (Control descendant in Descendants(child))
+                {
+                    yield return descendant;
+                }
+            }
+        }
+
+        private static void SetProperty(object instance, string name, object value)
+        {
+            PropertyInfo property = instance.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+            if (property == null)
+            {
+                throw new InvalidOperationException(instance.GetType().Name + "." + name + " not found.");
+            }
+
+            property.SetValue(instance, value);
+        }
+
+        private static void SetField(object instance, string name, object value)
+        {
+            FieldInfo field = instance.GetType().GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+            if (field == null)
+            {
+                throw new InvalidOperationException(instance.GetType().Name + "." + name + " not found.");
+            }
+
+            field.SetValue(instance, value);
+        }
+
+        private static string Slug(string text)
+        {
+            string slug = new string((text ?? string.Empty)
+                .Replace("&", string.Empty)
+                .ToLowerInvariant()
+                .Select(character => char.IsLetterOrDigit(character) ? character : '-')
+                .ToArray());
+
+            while (slug.Contains("--"))
+            {
+                slug = slug.Replace("--", "-");
+            }
+
+            return slug.Trim('-');
+        }
+
+        private void Save(string name, Control window)
         {
             string file = name + ".png";
             CaptureRecord record = new CaptureRecord
             {
                 Name = name,
                 File = file,
-                FormType = form.GetType().Name,
-                Title = form.Text,
+                FormType = window.GetType().Name,
+                Title = window.Text,
             };
 
             try
             {
-                using (Bitmap bitmap = WindowCapture.Capture(form, out string method))
+                using (Bitmap bitmap = WindowCapture.Capture(window, out string method))
                 {
                     bitmap.Save(Path.Combine(_options.OutputDirectory, file), ImageFormat.Png);
                     record.Method = method;
@@ -257,7 +716,7 @@ namespace c2flux.Screenshots
 
                 // WinForms shows this dialog for exceptions the app did not
                 // handle: the capture worked, but it documents an app bug.
-                record.Status = form.GetType().Name == "ThreadExceptionDialog" ? "app-error" : "ok";
+                record.Status = window.GetType().Name == "ThreadExceptionDialog" ? "app-error" : "ok";
                 _log.Info(string.Format("{0}: {1}x{2} via {3}", name, record.Width, record.Height, record.Method));
             }
             catch (Exception exception)
@@ -268,6 +727,29 @@ namespace c2flux.Screenshots
             }
 
             _log.Captures.Add(record);
+        }
+
+        private void SaveScreen(string name, Rectangle area, string type, string title)
+        {
+            string file = name + ".png";
+
+            using (Bitmap bitmap = WindowCapture.CaptureScreen(area))
+            {
+                bitmap.Save(Path.Combine(_options.OutputDirectory, file), ImageFormat.Png);
+            }
+
+            _log.Captures.Add(new CaptureRecord
+            {
+                Name = name,
+                File = file,
+                Status = "ok",
+                Method = "CopyFromScreen",
+                FormType = type,
+                Title = title,
+                Width = area.Width,
+                Height = area.Height,
+            });
+            _log.Info(string.Format("{0}: {1}x{2} via CopyFromScreen", name, area.Width, area.Height));
         }
 
         private void Fail(string name, Exception exception)
@@ -311,7 +793,7 @@ namespace c2flux.Screenshots
                 form.Close();
                 await Task.Delay(300);
 
-                if (!form.IsDisposed)
+                if (!form.IsDisposed && !form.Modal)
                 {
                     form.Dispose();
                 }

@@ -15,7 +15,21 @@ namespace c2flux.Screenshots
         // window is partly off screen or covered. Falls back to copying the
         // screen area when the result is a blank image, which happens with
         // some drivers.
-        public static Bitmap Capture(Form form, out string method)
+        // A screen area as the user sees it, for things that only make sense in
+        // context (a menu open over the main window).
+        public static Bitmap CaptureScreen(Rectangle area)
+        {
+            Bitmap bitmap = new Bitmap(area.Width, area.Height, PixelFormat.Format32bppArgb);
+
+            using (Graphics graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.CopyFromScreen(area.Location, Point.Empty, area.Size);
+            }
+
+            return bitmap;
+        }
+
+        public static Bitmap Capture(Control form, out string method)
         {
             form.Refresh();
 

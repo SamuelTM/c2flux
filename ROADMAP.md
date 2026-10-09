@@ -157,11 +157,16 @@ O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows
   - [x] Primeira execução no GitHub: as 19 capturas funcionaram (resolução trocada de 1024×768 para 1920×1080, DPI 96), com imagens nítidas e completas
   - [x] **Bug pré-existente no gráfico de pizza, corrigido** (encontrado na 0.3): itens de 0 bytes viram fatias de ângulo zero, e a fatia no topo do círculo (270°) tem largura 0. O `LinearGradientBrush` de [Chart_PieChart.cs:242](Chart_PieChart.cs#L242) lança `ArgumentException` e o app mostra a janela de exceção não tratada. Acontece com o `T:` de teste (`$BadClus`, `$Secure` e `$Volume` têm 0 B) e, provavelmente, com qualquer pasta cujos últimos itens tenham 0 bytes. Corrigido: fatias com área zero não são preenchidas. As referências passam a ser capturadas do `cross-platform` (original + correções de bugs, mesma interface)
   - [x] Capturas revisadas e salvas em `docs/fidelity/reference/` (16 telas, 796 KB), com descrição e limitações em `docs/fidelity/README.md`
-  - [ ] Cobrir as telas restantes (detalhes do histórico de armazenamento, aviso de atualização, diálogos de `AppDialogs`, menus de contexto)
+  - [ ] Cobrir as telas restantes. Implementado, falta rodar no CI e revisar:
+    - Menus da janela principal (File, View, Tools, Help) e menus de contexto da árvore e da barra de ferramentas, capturados sobre a janela principal. O da árvore é o menu próprio do app; o menu nativo do Explorer, usado normalmente no Windows, não será replicado (Fase 4)
+    - Abas: as 6 das Configurações, as 4 da Análise e as 7 do Histórico de varreduras
+    - Telas com dados: busca com resultados, histórico de alertas com entradas de exemplo, histórico de varreduras com duas varreduras comparadas (o volume é alterado entre elas) e histórico de armazenamento com dois registros
+    - Detalhes do histórico de armazenamento, aviso de atualização (dados de exemplo) e os diálogos de `AppDialogs` (aviso, sim/não, pedido de administrador)
+    - Fora: diálogos de arquivo (`AppFileDialog`), que serão substituídos pelos nativos (decisão da seção 9)
 
 **Entregável:** workflow de benchmark comparativo funcionando no CI, números de referência e capturas de tela registrados.
 
-**Situação:** ✅ concluída em 09/10/2026. Ficaram adiados só os ambientes locais (VM e hardware real). De quebra, foram encontrados e corrigidos três bugs do original: gráfico de pizza com itens de 0 B, `DirectoryScanner` sempre quebrando e `DirectoryScanner` sem caminhos longos
+**Situação:** falta cobrir as telas restantes da 0.3. Os ambientes locais (VM e hardware real) ficaram adiados. De quebra, foram encontrados e corrigidos três bugs do original: gráfico de pizza com itens de 0 B, `DirectoryScanner` sempre quebrando e `DirectoryScanner` sem caminhos longos
 
 ---
 

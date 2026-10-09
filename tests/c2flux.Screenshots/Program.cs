@@ -212,7 +212,8 @@ namespace c2flux.Screenshots
                 ["StartElevatedOnStartup"] = false,
                 ["ShellContextMenuEnabled"] = false,
                 ["ShellSearchContextMenuEnabled"] = false,
-                ["SaveScanHistory"] = false,
+                // On, so the second scan of the run fills the scan history.
+                ["SaveScanHistory"] = true,
                 ["SelectedViewMode"] = 0,
                 ["HasMainWindowBounds"] = true,
                 ["MainWindowLeft"] = 0,
