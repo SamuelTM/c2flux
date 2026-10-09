@@ -468,7 +468,8 @@ namespace c2flux
 
             HasShownWarning = true;
 
-            AppDialogs.ShowWarningOk(
+            AppNotifications.ShowWarning(
+                null,
                 message,
                 AppConstants.ApplicationName,
                 LocalizationService.GetText("Common.OK"));

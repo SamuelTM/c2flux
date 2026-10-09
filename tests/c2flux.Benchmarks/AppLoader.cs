@@ -115,11 +115,41 @@ namespace c2flux.Benchmarks
             return new AppLoader(loadContext.LoadFromAssemblyPath(mainAssemblyPath));
         }
 
+        // The app's own assembly first, then the c2flux.* assemblies it
+        // references (c2flux.Core since phase 1). Older versions, such as
+        // baseline-winforms, have everything in c2flux.dll.
+        private Type FindAppType(string fullName)
+        {
+            Type type = _assembly.GetType(fullName, false);
+
+            if (type != null)
+            {
+                return type;
+            }
+
+            foreach (AssemblyName reference in _assembly.GetReferencedAssemblies())
+            {
+                if (!reference.Name.StartsWith("c2flux", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                type = AssemblyLoadContext.GetLoadContext(_assembly).LoadFromAssemblyName(reference).GetType(fullName, false);
+
+                if (type != null)
+                {
+                    return type;
+                }
+            }
+
+            return null;
+        }
+
         public Type FindScannerType(ScannerDefinition definition)
         {
             foreach (string typeName in definition.TypeNames)
             {
-                Type type = _assembly.GetType(typeName, false);
+                Type type = FindAppType(typeName);
 
                 if (type != null)
                 {
@@ -153,7 +183,7 @@ namespace c2flux.Benchmarks
                 return "MFT scanners only accept a drive root such as C:\\";
             }
 
-            Type supportType = _assembly.GetType(MftSupportTypeName, false);
+            Type supportType = FindAppType(MftSupportTypeName);
             MethodInfo isSupported = supportType?.GetMethod(
                 "IsSupported",
                 BindingFlags.Public | BindingFlags.Static,

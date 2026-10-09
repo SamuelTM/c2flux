@@ -284,9 +284,39 @@ namespace c2flux.Screenshots
             return System.Runtime.InteropServices.NativeLibrary.Load(path);
         }
 
+        // The app's own assembly first, then the c2flux.* assemblies it
+        // references (c2flux.Core since phase 1). Older versions, such as
+        // baseline-winforms, have everything in c2flux.dll.
+        private Type FindAppType(string fullName)
+        {
+            Type type = _assembly.GetType(fullName, false);
+
+            if (type != null)
+            {
+                return type;
+            }
+
+            foreach (AssemblyName reference in _assembly.GetReferencedAssemblies())
+            {
+                if (!reference.Name.StartsWith("c2flux", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                type = AssemblyLoadContext.Default.LoadFromAssemblyName(reference).GetType(fullName, false);
+
+                if (type != null)
+                {
+                    return type;
+                }
+            }
+
+            return null;
+        }
+
         public Type GetType(string name)
         {
-            Type type = _assembly.GetType("c2flux." + name, false);
+            Type type = FindAppType("c2flux." + name);
 
             if (type == null)
             {

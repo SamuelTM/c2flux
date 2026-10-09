@@ -35,13 +35,12 @@
 
 	<ItemGroup>
 		<PackageReference Include="AntdUI" Version="2.4.3" />
-		<PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.22" />
-		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
 	</ItemGroup>
 
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\libs\NtfsReader\NtfsReader.csproj" />
+		<ProjectReference Include="..\c2flux.Core\c2flux.Core.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

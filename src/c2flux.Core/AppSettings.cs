@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -519,7 +519,7 @@ namespace c2flux
                     Environment.NewLine +
                     exception);
 
-                AppDialogs.ShowWarningOk(
+                AppNotifications.ShowWarning(
                     this,
                     message,
                     AppConstants.ApplicationName,
@@ -539,7 +539,7 @@ namespace c2flux
                     Environment.NewLine +
                     exception);
 
-                AppDialogs.ShowWarningOk(
+                AppNotifications.ShowWarning(
                     this,
                     message,
                     AppConstants.ApplicationName,

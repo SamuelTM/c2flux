@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+		Everything in c2flux that does not depend on a UI toolkit: data model,
+		settings, localization, scan history, storage history, search, export.
+		Plain net10.0, so it builds and runs on Windows, macOS and Linux.
+		See ROADMAP.md, phase 1.
+	-->
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>disable</Nullable>
+		<ImplicitUsings>disable</ImplicitUsings>
+		<AssemblyName>c2flux.Core</AssemblyName>
+		<RootNamespace>c2flux</RootNamespace>
+
+		<Authors>Daniel Capilla</Authors>
+		<Company>Daniel Capilla</Company>
+		<Product>c² flux - Tree Scanner</Product>
+		<Copyright>Copyright © Daniel Capilla</Copyright>
+
+		<Version>1.4.1</Version>
+		<AssemblyVersion>1.4.1</AssemblyVersion>
+		<FileVersion>1.4.1</FileVersion>
+		<InformationalVersion>1.4.1</InformationalVersion>
+		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.22" />
+		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
+	</ItemGroup>
+
+	<!-- Some Core types are internal (FileSystemEntry.ParentEntry, the
+	     redundancy hash cache, storage history details) and used by the app. -->
+	<ItemGroup>
+		<InternalsVisibleTo Include="c2flux" />
+		<InternalsVisibleTo Include="c2flux.Core.Tests" />
+	</ItemGroup>
+
+</Project>

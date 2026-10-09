@@ -12,6 +12,9 @@ namespace c2flux
         [STAThread]
         private static void Main(string[] args)
         {
+            // Before anything else, so Core services can warn through the UI.
+            AppNotifications.WarningHandler = ShowCoreWarning;
+
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
@@ -135,6 +138,22 @@ namespace c2flux
                 return false;
 
             return !IsRunningAsAdministrator();
+        }
+
+        private static void ShowCoreWarning(
+            AppSettings settings,
+            string messageText,
+            string title,
+            string okButtonText)
+        {
+            if (settings == null)
+            {
+                AppDialogs.ShowWarningOk(messageText, title, okButtonText);
+            }
+            else
+            {
+                AppDialogs.ShowWarningOk(settings, messageText, title, okButtonText);
+            }
         }
 
         private static bool IsRunningAsAdministrator()
