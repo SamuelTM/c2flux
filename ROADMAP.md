@@ -96,14 +96,14 @@ c2flux.sln
 #### 0.1 Estrutura
 
 - [x] Criar branch de longa duração `cross-platform` no fork `SamuelTM/c2flux`
-- [ ] Garantir que o build atual do Windows passa no CI (`dotnet build` em `windows-latest`). Workflow criado em `.github/workflows/ci.yml`, falta confirmar a primeira execução no GitHub. O build também funciona no macOS com `-p:EnableWindowsTargeting=true`, útil para checagem local rápida
+- [x] Garantir que o build atual do Windows passa no CI (`dotnet build` em `windows-latest`): `.github/workflows/ci.yml`, verde no GitHub. O build também funciona no macOS com `-p:EnableWindowsTargeting=true`, útil para checagem local rápida
 - [x] Marcar o commit atual com a tag `baseline-winforms` (`92ecc38`, upstream v1.4.1), a referência fixa para todas as comparações de desempenho e fidelidade
 - [x] Criar uma **árvore de teste sintética** reproduzível: `tests/fixtures/generate_test_tree.py`
   - Cobre limites de tamanho, pasta muito larga, pasta muito profunda, caminhos com mais de 260 caracteres, nomes Unicode (NFC e NFD) e especiais, hardlinks, symlinks (inclusive quebrados e em loop), conteúdo duplicado, arquivo esparso, datas extremas, pastas vazias e itens sem permissão
   - Perfis `small` (cerca de 800 arquivos), `medium` (cerca de 15 mil) e `large` (cerca de 200 mil), todos determinísticos a partir de uma semente
   - Gera um manifesto JSON com cada entrada e os totais esperados, com e sem as pastas ilegíveis, para os testes de conformidade. O que o SO não suporta vai para `skipped_features`
   - Só apaga ou sobrescreve pastas que ele mesmo criou (arquivo marcador `.c2flux-test-tree`)
-  - Testado localmente no macOS. O job `test-tree` do CI valida nos três SOs (pendente da primeira execução)
+  - Validado no CI nos três SOs (job `test-tree`)
 - [x] Decidir as questões da seção 9 que afetam o início do trabalho (fork, diálogo de arquivos, assinatura no macOS). As demais ficam para as fases em que se tornam relevantes
 
 #### 0.2 Estratégia de medição de desempenho no Windows
