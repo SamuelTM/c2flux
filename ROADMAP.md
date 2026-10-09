@@ -126,13 +126,15 @@ O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows
 - [x] Alvos:
   - **Estáticos:** um disco virtual NTFS (`T:`, VHDX criado no job) com a árvore sintética. Nada mais escreve nele, então **os quatro scanners, inclusive os de MFT, precisam produzir árvores idênticas** entre referência e nova versão
   - **Reais:** `C:\` inteiro (MFT) e `C:\Program Files` (NtQuery e FindFirstFile). Só tempo e memória, porque os arquivos mudam enquanto o runner trabalha
-- [x] Compara **medianas** e falha se a versão nova for mais de 10% mais lenta ou tiver pico de memória 15% maior (ajustáveis no `workflow_dispatch`)
+- [x] Falha se o **melhor tempo** (mínimo das rodadas) da versão nova for mais de 10% pior, ou se a **mediana** do pico de memória for 15% maior (limites ajustáveis no `workflow_dispatch`). O relatório também mostra a mediana do tempo e a dispersão
 - [x] Veredictos: ✅ ok · ❌ regressão · 🟢 corrigido (falhava só na referência) · ⚠️ quebrado nas duas versões (não falha o job) · ⏭️ sem suporte no ambiente
 - [x] Limpa o cache de varredura (`%LOCALAPPDATA%\WTF\ScanCache`) antes de cada execução, para uma versão não aproveitar o cache da outra
 - [x] Relatório no resumo do job (`$GITHUB_STEP_SUMMARY`) e artefato JSON com todas as medições brutas
 - [x] Dispara em PRs e pushes no `cross-platform` que alterem arquivos de varredura, e manualmente via `workflow_dispatch` (com opção de medir só a referência)
-- [ ] Confirmar a primeira execução no GitHub. Localmente só foi possível validar o carregamento por reflexão (no macOS, os scanners falham nas chamadas nativas do Windows, como esperado) e a lógica de comparação (com um `c2flux-bench` simulado)
-- [ ] Observar o ruído real das primeiras execuções e ajustar os limites de 10% / 15%, se necessário
+- [x] Primeiras execuções no GitHub confirmadas: as medições funcionam de ponta a ponta, o disco virtual `T:` é criado e os três scanners que funcionam produzem árvores idênticas nas duas versões
+- [x] Ruído real observado e tratado:
+  - O mesmo `C:\` levou 4,3 s numa execução e 12 s em outra (hardware diferente entre runners). Isso confirma que só vale comparar dentro do mesmo job
+  - No `C:\`, o `ntfsmft` alterna entre dois patamares (cerca de 13 s e 25–31 s) nas duas versões. Com a mediana, isso gerou um falso positivo de +65,8% com código idêntico. Como a interferência do runner só soma tempo, o critério passou a ser o melhor tempo, e a mesma sequência real fica em +0,2%
 
 **Ambiente local:**
 

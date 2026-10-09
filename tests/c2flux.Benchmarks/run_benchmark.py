@@ -8,7 +8,10 @@ For every target (scanner + path):
   * runs warm-up rounds (discarded: they fill the OS file system cache),
   * then N measured rounds, alternating the order (B,C then C,B ...) so that
     neither version always benefits from running second,
-  * compares medians of elapsed time and peak working set against thresholds,
+  * compares the best (minimum) elapsed time and the median peak working set
+    against thresholds. Interference on a shared runner (antivirus, other
+    disk activity) only ever adds time, so the fastest run is the most
+    stable estimate of the code's own cost; medians are still reported,
   * on static targets, also requires identical tree fingerprints.
 
 Without --candidate-app it only measures the baseline (to record reference
@@ -117,6 +120,7 @@ def summarize_version(results):
     if ok:
         summary.update({
             "elapsed_ms": median_of(ok, "elapsed_ms"),
+            "elapsed_min_ms": min(result["elapsed_ms"] for result in ok),
             "elapsed_spread": spread_of(ok, "elapsed_ms"),
             "peak_working_set_bytes": median_of(ok, "peak_working_set_bytes"),
             "allocated_bytes": median_of(ok, "allocated_bytes"),
@@ -153,7 +157,7 @@ def compare(target, baseline, candidate, arguments):
 
     verdict = "ok"
 
-    slowdown = ratio(candidate["elapsed_ms"], baseline["elapsed_ms"])
+    slowdown = ratio(candidate["elapsed_min_ms"], baseline["elapsed_min_ms"])
     if slowdown is not None and slowdown > 1 + arguments.max_slowdown:
         verdict = "regression"
         notes.append("{:+.1%} time (limit {:+.0%})".format(slowdown - 1, arguments.max_slowdown))
@@ -205,8 +209,8 @@ VERDICT_ICONS = {
 def markdown_report(report):
     has_candidate = report["candidate_app"] is not None
     lines = ["## Scanner benchmark", ""]
-    lines.append("Runs per version: {} measured + {} warm-up. Medians shown; spread = (max − min) / median."
-                 .format(report["runs"], report["warmup"]))
+    lines.append("Runs per version: {} measured + {} warm-up. Time: best run (median ±half spread); "
+                 "Δ time compares best runs. Memory: medians.".format(report["runs"], report["warmup"]))
     lines.append("")
 
     if has_candidate:
@@ -226,7 +230,7 @@ def markdown_report(report):
             lines.append("| {} | {} | `{}` | {} | {} | {} | {} | {} |".format(
                 icon, item["scanner"], path,
                 format_time(baseline), format_time(candidate),
-                format_delta(candidate, baseline, "elapsed_ms"),
+                format_delta(candidate, baseline, "elapsed_min_ms"),
                 format_delta(candidate, baseline, "peak_working_set_bytes"),
                 escape("; ".join(item["notes"])) or item["verdict"]))
         else:
@@ -251,10 +255,10 @@ def markdown_report(report):
 def format_time(summary):
     if not summary or summary.get("elapsed_ms") is None:
         return summary["status"] if summary else "—"
-    text = "{:,.0f} ms".format(summary["elapsed_ms"])
+    text = "{:,.0f} ms (median {:,.0f}".format(summary["elapsed_min_ms"], summary["elapsed_ms"])
     if summary.get("elapsed_spread") is not None:
         text += " ±{:.0%}".format(summary["elapsed_spread"] / 2)
-    return text
+    return text + ")"
 
 
 def format_delta(candidate, baseline, key):
