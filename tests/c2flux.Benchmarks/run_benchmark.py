@@ -134,13 +134,15 @@ def summarize_version(results):
 
 def compare(target, baseline, candidate, arguments):
     """Returns (verdict, notes). Verdicts: ok, regression, fixed, broken-in-both,
-    unsupported, error, baseline-only."""
+    unsupported, error, baseline-only, baseline-error."""
     notes = []
 
     if candidate is None:
-        if baseline["status"] == "ok":
-            return "baseline-only", notes
-        return baseline["status"], baseline["errors"]
+        if baseline["status"] in ("ok", "unsupported"):
+            return "baseline-only" if baseline["status"] == "ok" else "unsupported", baseline["errors"]
+        # Recording reference numbers: a scanner that is already broken in the
+        # baseline is reported, but there is nothing to regress against.
+        return "baseline-error", baseline["errors"]
 
     if baseline["status"] == "unsupported" and candidate["status"] == "unsupported":
         return "unsupported", baseline["errors"]
@@ -202,7 +204,7 @@ def ratio(candidate_value, baseline_value):
 
 VERDICT_ICONS = {
     "ok": "✅", "fixed": "🟢", "baseline-only": "📏", "unsupported": "⏭️",
-    "broken-in-both": "⚠️", "regression": "❌", "error": "❌", "mixed": "❌",
+    "broken-in-both": "⚠️", "baseline-error": "⚠️", "regression": "❌", "error": "❌", "mixed": "❌",
 }
 
 
@@ -244,7 +246,7 @@ def markdown_report(report):
 
     lines.append("")
     lines.append("Legend: ✅ ok · 🟢 fixed (failed only in baseline) · 📏 baseline only · "
-                 "⏭️ unsupported here · ⚠️ fails in both versions · ❌ regression")
+                 "⏭️ unsupported here · ⚠️ fails in both versions (or in the baseline, when measuring it alone) · ❌ regression")
 
     failing = [item for item in report["targets"] if item["verdict"] in ("regression", "error", "mixed")]
     lines.append("")

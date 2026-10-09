@@ -1,0 +1,1680 @@
+{
+  "description": "Reference numbers for the baseline-winforms tag (c2flux v1.4.1), measured alone on a GitHub-hosted windows-latest runner. Historical record only: runner hardware changes between runs, so regressions are always checked by comparing both versions in the same job.",
+  "measured_at": "2026-10-09",
+  "run_url": "https://github.com/SamuelTM/c2flux/actions/runs/37971977043",
+  "baseline_ref": "baseline-winforms (92ecc38)",
+  "tool_commit": "0d23bee",
+  "test_tree": "tests/fixtures/generate_test_tree.py --profile medium, on a 4 GiB NTFS VHDX mounted as T:",
+  "baseline_app": "D:\\a\\_temp\\apps\\baseline",
+  "candidate_app": null,
+  "runs": 7,
+  "warmup": 1,
+  "max_slowdown": 0.1,
+  "max_memory_increase": 0.15,
+  "targets": [
+    {
+      "scanner": "c2flux",
+      "path": "T:\\",
+      "static": true,
+      "verdict": "baseline-only",
+      "notes": [],
+      "baseline": {
+        "status": "ok",
+        "runs": 7,
+        "ok_runs": 7,
+        "errors": [],
+        "elapsed_ms": 117.3155,
+        "elapsed_min_ms": 113.7588,
+        "elapsed_spread": 0.08369652773930128,
+        "peak_working_set_bytes": 52187136,
+        "allocated_bytes": 13772240,
+        "retained_bytes": 6070632,
+        "digests": [
+          "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+        ],
+        "tree": {
+          "directories": 313,
+          "files": 15147,
+          "root_size_bytes": 718544683,
+          "file_bytes": 718544683,
+          "all_files_count": 15147,
+          "max_depth": 62,
+          "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+        },
+        "app_version": "1.4.1"
+      },
+      "candidate": null,
+      "raw": {
+        "baseline": [
+          {
+            "status": "ok",
+            "scanner": "c2flux",
+            "scanner_type": "c2flux.C2FluxScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 117.3155,
+            "allocated_bytes": 13772240,
+            "retained_bytes": 6070632,
+            "peak_working_set_bytes": 52170752,
+            "gc_collections": [
+              1,
+              1,
+              1
+            ],
+            "progress_reports": 1,
+            "tree": {
+              "directories": 313,
+              "files": 15147,
+              "root_size_bytes": 718544683,
+              "file_bytes": 718544683,
+              "all_files_count": 15147,
+              "max_depth": 62,
+              "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+            },
+            "process_wall_seconds": 0.2809999999999775
+          },
+          {
+            "status": "ok",
+            "scanner": "c2flux",
+            "scanner_type": "c2flux.C2FluxScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 118.8611,
+            "allocated_bytes": 13778432,
+            "retained_bytes": 6073704,
+            "peak_working_set_bytes": 52166656,
+            "gc_collections": [
+              1,
+              1,
+              1
+            ],
+            "progress_reports": 1,
+            "tree": {
+              "directories": 313,
+              "files": 15147,
+              "root_size_bytes": 718544683,
+              "file_bytes": 718544683,
+              "all_files_count": 15147,
+              "max_depth": 62,
+              "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+            },
+            "process_wall_seconds": 0.2810000000000059
+          },
+          {
+            "status": "ok",
+            "scanner": "c2flux",
+            "scanner_type": "c2flux.C2FluxScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 113.7588,
+            "allocated_bytes": 13772240,
+            "retained_bytes": 6070632,
+            "peak_working_set_bytes": 52264960,
+            "gc_collections": [
+              1,
+              1,
+              1
+            ],
+            "progress_reports": 1,
+            "tree": {
+              "directories": 313,
+              "files": 15147,
+              "root_size_bytes": 718544683,
+              "file_bytes": 718544683,
+              "all_files_count": 15147,
+              "max_depth": 62,
+              "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+            },
+            "process_wall_seconds": 0.26600000000001955
+          },
+          {
+            "status": "ok",
+            "scanner": "c2flux",
+            "scanner_type": "c2flux.C2FluxScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 115.4738,
+            "allocated_bytes": 13772240,
+            "retained_bytes": 6070632,
+            "peak_working_set_bytes": 52404224,
+            "gc_collections": [
+              1,
+              1,
+              1
+            ],
+            "progress_reports": 1,
+            "tree": {
+              "directories": 313,
+              "files": 15147,
+              "root_size_bytes": 718544683,
+              "file_bytes": 718544683,
+              "all_files_count": 15147,
+              "max_depth": 62,
+              "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+            },
+            "process_wall_seconds": 0.2809999999999775
+          },
+          {
+            "status": "ok",
+            "scanner": "c2flux",
+            "scanner_type": "c2flux.C2FluxScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 121.7526,
+            "allocated_bytes": 13772248,
+            "retained_bytes": 6070632,
+            "peak_working_set_bytes": 52207616,
+            "gc_collections": [
+              1,
+              1,
+              1
+            ],
+            "progress_reports": 1,
+            "tree": {
+              "directories": 313,
+              "files": 15147,
+              "root_size_bytes": 718544683,
+              "file_bytes": 718544683,
+              "all_files_count": 15147,
+              "max_depth": 62,
+              "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+            },
+            "process_wall_seconds": 0.26600000000001955
+          },
+          {
+            "status": "ok",
+            "scanner": "c2flux",
+            "scanner_type": "c2flux.C2FluxScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 115.0119,
+            "allocated_bytes": 13772240,
+            "retained_bytes": 6070632,
+            "peak_working_set_bytes": 52187136,
+            "gc_collections": [
+              1,
+              1,
+              1
+            ],
+            "progress_reports": 1,
+            "tree": {
+              "directories": 313,
+              "files": 15147,
+              "root_size_bytes": 718544683,
+              "file_bytes": 718544683,
+              "all_files_count": 15147,
+              "max_depth": 62,
+              "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+            },
+            "process_wall_seconds": 0.2809999999999775
+          },
+          {
+            "status": "ok",
+            "scanner": "c2flux",
+            "scanner_type": "c2flux.C2FluxScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 123.5777,
+            "allocated_bytes": 13772248,
+            "retained_bytes": 6070632,
+            "peak_working_set_bytes": 52158464,
+            "gc_collections": [
+              1,
+              1,
+              1
+            ],
+            "progress_reports": 1,
+            "tree": {
+              "directories": 313,
+              "files": 15147,
+              "root_size_bytes": 718544683,
+              "file_bytes": 718544683,
+              "all_files_count": 15147,
+              "max_depth": 62,
+              "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+            },
+            "process_wall_seconds": 0.2810000000000059
+          }
+        ]
+      }
+    },
+    {
+      "scanner": "ntfsmft",
+      "path": "T:\\",
+      "static": true,
+      "verdict": "baseline-only",
+      "notes": [],
+      "baseline": {
+        "status": "ok",
+        "runs": 7,
+        "ok_runs": 7,
+        "errors": [],
+        "elapsed_ms": 136.2376,
+        "elapsed_min_ms": 134.1233,
+        "elapsed_spread": 0.04751404898500849,
+        "peak_working_set_bytes": 50675712,
+        "allocated_bytes": 12821088,
+        "retained_bytes": 4338864,
+        "digests": [
+          "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+        ],
+        "tree": {
+          "directories": 313,
+          "files": 15147,
+          "root_size_bytes": 718544683,
+          "file_bytes": 718544683,
+          "all_files_count": 15147,
+          "max_depth": 62,
+          "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+        },
+        "app_version": "1.4.1"
+      },
+      "candidate": null,
+      "raw": {
+        "baseline": [
+          {
+            "status": "ok",
+            "scanner": "ntfsmft",
+            "scanner_type": "c2flux.NtfsMftScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 137.2922,
+            "allocated_bytes": 12821088,
+            "retained_bytes": 4338864,
+            "peak_working_set_bytes": 50905088,
+            "gc_collections": [
+              1,
+              1,
+              1
+            ],
+            "progress_reports": 1,
+            "tree": {
+              "directories": 313,
+              "files": 15147,
+              "root_size_bytes": 718544683,
+              "file_bytes": 718544683,
+              "all_files_count": 15147,
+              "max_depth": 62,
+              "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+            },
+            "process_wall_seconds": 0.2820000000000107
+          },
+          {
+            "status": "ok",
+            "scanner": "ntfsmft",
+            "scanner_type": "c2flux.NtfsMftScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 136.2376,
+            "allocated_bytes": 12821088,
+            "retained_bytes": 4338864,
+            "peak_working_set_bytes": 50708480,
+            "gc_collections": [
+              1,
+              1,
+              1
+            ],
+            "progress_reports": 1,
+            "tree": {
+              "directories": 313,
+              "files": 15147,
+              "root_size_bytes": 718544683,
+              "file_bytes": 718544683,
+              "all_files_count": 15147,
+              "max_depth": 62,
+              "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+            },
+            "process_wall_seconds": 0.29599999999999227
+          },
+          {
+            "status": "ok",
+            "scanner": "ntfsmft",
+            "scanner_type": "c2flux.NtfsMftScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 135.3437,
+            "allocated_bytes": 12821088,
+            "retained_bytes": 4338864,
+            "peak_working_set_bytes": 50679808,
+            "gc_collections": [
+              1,
+              1,
+              1
+            ],
+            "progress_reports": 1,
+            "tree": {
+              "directories": 313,
+              "files": 15147,
+              "root_size_bytes": 718544683,
+              "file_bytes": 718544683,
+              "all_files_count": 15147,
+              "max_depth": 62,
+              "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+            },
+            "process_wall_seconds": 0.2820000000000107
+          },
+          {
+            "status": "ok",
+            "scanner": "ntfsmft",
+            "scanner_type": "c2flux.NtfsMftScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 134.1598,
+            "allocated_bytes": 12821088,
+            "retained_bytes": 4338864,
+            "peak_working_set_bytes": 50671616,
+            "gc_collections": [
+              1,
+              1,
+              1
+            ],
+            "progress_reports": 1,
+            "tree": {
+              "directories": 313,
+              "files": 15147,
+              "root_size_bytes": 718544683,
+              "file_bytes": 718544683,
+              "all_files_count": 15147,
+              "max_depth": 62,
+              "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+            },
+            "process_wall_seconds": 0.29699999999999704
+          },
+          {
+            "status": "ok",
+            "scanner": "ntfsmft",
+            "scanner_type": "c2flux.NtfsMftScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 134.1233,
+            "allocated_bytes": 12821088,
+            "retained_bytes": 4338864,
+            "peak_working_set_bytes": 50675712,
+            "gc_collections": [
+              1,
+              1,
+              1
+            ],
+            "progress_reports": 1,
+            "tree": {
+              "directories": 313,
+              "files": 15147,
+              "root_size_bytes": 718544683,
+              "file_bytes": 718544683,
+              "all_files_count": 15147,
+              "max_depth": 62,
+              "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+            },
+            "process_wall_seconds": 0.2810000000000059
+          },
+          {
+            "status": "ok",
+            "scanner": "ntfsmft",
+            "scanner_type": "c2flux.NtfsMftScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 137.0776,
+            "allocated_bytes": 12821088,
+            "retained_bytes": 4338864,
+            "peak_working_set_bytes": 50659328,
+            "gc_collections": [
+              1,
+              1,
+              1
+            ],
+            "progress_reports": 1,
+            "tree": {
+              "directories": 313,
+              "files": 15147,
+              "root_size_bytes": 718544683,
+              "file_bytes": 718544683,
+              "all_files_count": 15147,
+              "max_depth": 62,
+              "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+            },
+            "process_wall_seconds": 0.2969999999999686
+          },
+          {
+            "status": "ok",
+            "scanner": "ntfsmft",
+            "scanner_type": "c2flux.NtfsMftScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 140.5965,
+            "allocated_bytes": 12821088,
+            "retained_bytes": 4338864,
+            "peak_working_set_bytes": 50642944,
+            "gc_collections": [
+              1,
+              1,
+              1
+            ],
+            "progress_reports": 1,
+            "tree": {
+              "directories": 313,
+              "files": 15147,
+              "root_size_bytes": 718544683,
+              "file_bytes": 718544683,
+              "all_files_count": 15147,
+              "max_depth": 62,
+              "digest": "a5ba97d5c3c32c4472ca759a66e83e2c9f346928df7c06aa59378fdf0644b107"
+            },
+            "process_wall_seconds": 0.29700000000002547
+          }
+        ]
+      }
+    },
+    {
+      "scanner": "ntquery",
+      "path": "T:\\",
+      "static": true,
+      "verdict": "baseline-only",
+      "notes": [],
+      "baseline": {
+        "status": "ok",
+        "runs": 7,
+        "ok_runs": 7,
+        "errors": [],
+        "elapsed_ms": 42.5389,
+        "elapsed_min_ms": 41.737,
+        "elapsed_spread": 0.05589472224246507,
+        "peak_working_set_bytes": 38596608,
+        "allocated_bytes": 5898384,
+        "retained_bytes": 4466800,
+        "digests": [
+          "a03f17fb1200ba03ff27e46155ecb0928304d1005a6bee07d346636b594c81bf"
+        ],
+        "tree": {
+          "directories": 304,
+          "files": 15127,
+          "root_size_bytes": 687069899,
+          "file_bytes": 687069899,
+          "all_files_count": 15127,
+          "max_depth": 62,
+          "digest": "a03f17fb1200ba03ff27e46155ecb0928304d1005a6bee07d346636b594c81bf"
+        },
+        "app_version": "1.4.1"
+      },
+      "candidate": null,
+      "raw": {
+        "baseline": [
+          {
+            "status": "ok",
+            "scanner": "ntquery",
+            "scanner_type": "c2flux.NtQueryDirectoryScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 42.4284,
+            "allocated_bytes": 5898344,
+            "retained_bytes": 4466800,
+            "peak_working_set_bytes": 38621184,
+            "gc_collections": [
+              0,
+              0,
+              0
+            ],
+            "progress_reports": 3,
+            "tree": {
+              "directories": 304,
+              "files": 15127,
+              "root_size_bytes": 687069899,
+              "file_bytes": 687069899,
+              "all_files_count": 15127,
+              "max_depth": 62,
+              "digest": "a03f17fb1200ba03ff27e46155ecb0928304d1005a6bee07d346636b594c81bf"
+            },
+            "process_wall_seconds": 0.20300000000003138
+          },
+          {
+            "status": "ok",
+            "scanner": "ntquery",
+            "scanner_type": "c2flux.NtQueryDirectoryScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 43.6039,
+            "allocated_bytes": 5898344,
+            "retained_bytes": 4466800,
+            "peak_working_set_bytes": 38596608,
+            "gc_collections": [
+              0,
+              0,
+              0
+            ],
+            "progress_reports": 3,
+            "tree": {
+              "directories": 304,
+              "files": 15127,
+              "root_size_bytes": 687069899,
+              "file_bytes": 687069899,
+              "all_files_count": 15127,
+              "max_depth": 62,
+              "digest": "a03f17fb1200ba03ff27e46155ecb0928304d1005a6bee07d346636b594c81bf"
+            },
+            "process_wall_seconds": 0.20299999999997453
+          },
+          {
+            "status": "ok",
+            "scanner": "ntquery",
+            "scanner_type": "c2flux.NtQueryDirectoryScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 41.737,
+            "allocated_bytes": 5904536,
+            "retained_bytes": 4469872,
+            "peak_working_set_bytes": 38563840,
+            "gc_collections": [
+              0,
+              0,
+              0
+            ],
+            "progress_reports": 3,
+            "tree": {
+              "directories": 304,
+              "files": 15127,
+              "root_size_bytes": 687069899,
+              "file_bytes": 687069899,
+              "all_files_count": 15127,
+              "max_depth": 62,
+              "digest": "a03f17fb1200ba03ff27e46155ecb0928304d1005a6bee07d346636b594c81bf"
+            },
+            "process_wall_seconds": 0.20300000000003138
+          },
+          {
+            "status": "ok",
+            "scanner": "ntquery",
+            "scanner_type": "c2flux.NtQueryDirectoryScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 42.5389,
+            "allocated_bytes": 5898384,
+            "retained_bytes": 4466840,
+            "peak_working_set_bytes": 38756352,
+            "gc_collections": [
+              0,
+              0,
+              0
+            ],
+            "progress_reports": 3,
+            "tree": {
+              "directories": 304,
+              "files": 15127,
+              "root_size_bytes": 687069899,
+              "file_bytes": 687069899,
+              "all_files_count": 15127,
+              "max_depth": 62,
+              "digest": "a03f17fb1200ba03ff27e46155ecb0928304d1005a6bee07d346636b594c81bf"
+            },
+            "process_wall_seconds": 0.2189999999999941
+          },
+          {
+            "status": "ok",
+            "scanner": "ntquery",
+            "scanner_type": "c2flux.NtQueryDirectoryScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 44.1147,
+            "allocated_bytes": 5898408,
+            "retained_bytes": 4466800,
+            "peak_working_set_bytes": 38416384,
+            "gc_collections": [
+              0,
+              0,
+              0
+            ],
+            "progress_reports": 3,
+            "tree": {
+              "directories": 304,
+              "files": 15127,
+              "root_size_bytes": 687069899,
+              "file_bytes": 687069899,
+              "all_files_count": 15127,
+              "max_depth": 62,
+              "digest": "a03f17fb1200ba03ff27e46155ecb0928304d1005a6bee07d346636b594c81bf"
+            },
+            "process_wall_seconds": 0.2189999999999941
+          },
+          {
+            "status": "ok",
+            "scanner": "ntquery",
+            "scanner_type": "c2flux.NtQueryDirectoryScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 43.7764,
+            "allocated_bytes": 5865592,
+            "retained_bytes": 4434048,
+            "peak_working_set_bytes": 38600704,
+            "gc_collections": [
+              0,
+              0,
+              0
+            ],
+            "progress_reports": 3,
+            "tree": {
+              "directories": 304,
+              "files": 15127,
+              "root_size_bytes": 687069899,
+              "file_bytes": 687069899,
+              "all_files_count": 15127,
+              "max_depth": 62,
+              "digest": "a03f17fb1200ba03ff27e46155ecb0928304d1005a6bee07d346636b594c81bf"
+            },
+            "process_wall_seconds": 0.20299999999997453
+          },
+          {
+            "status": "ok",
+            "scanner": "ntquery",
+            "scanner_type": "c2flux.NtQueryDirectoryScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 41.9199,
+            "allocated_bytes": 5906560,
+            "retained_bytes": 4475016,
+            "peak_working_set_bytes": 38522880,
+            "gc_collections": [
+              0,
+              0,
+              0
+            ],
+            "progress_reports": 3,
+            "tree": {
+              "directories": 304,
+              "files": 15127,
+              "root_size_bytes": 687069899,
+              "file_bytes": 687069899,
+              "all_files_count": 15127,
+              "max_depth": 62,
+              "digest": "a03f17fb1200ba03ff27e46155ecb0928304d1005a6bee07d346636b594c81bf"
+            },
+            "process_wall_seconds": 0.20300000000003138
+          }
+        ]
+      }
+    },
+    {
+      "scanner": "win32find",
+      "path": "T:\\",
+      "static": true,
+      "verdict": "error",
+      "notes": [
+        "System.NullReferenceException: Object reference not set to an instance of an object."
+      ],
+      "baseline": {
+        "status": "error",
+        "runs": 7,
+        "ok_runs": 0,
+        "errors": [
+          "System.NullReferenceException: Object reference not set to an instance of an object."
+        ]
+      },
+      "candidate": null,
+      "raw": {
+        "baseline": [
+          {
+            "status": "error",
+            "error": "System.NullReferenceException: Object reference not set to an instance of an object.",
+            "error_detail": "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at c2flux.DirectoryScanner.ScanDirectoryContents(FileSystemEntry entry, IProgress`1 progress, CancellationToken cancellationToken, PauseToken pauseToken, Action`1 addSizeToAncestors) in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 248\r\n   at c2flux.DirectoryScanner.<>c__DisplayClass38_0.<ScanAsync>b__0() in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 223\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)\r\n--- End of stack trace from previous location ---\r\n   at c2flux.Benchmarks.ScanInvocation.RunAsync() in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\AppLoader.cs:line 260\r\n   at c2flux.Benchmarks.Program.RunAsync(Options options, BenchmarkResult result) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 108\r\n   at c2flux.Benchmarks.Program.Main(String[] args) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 65",
+            "scanner": "win32find",
+            "scanner_type": "c2flux.DirectoryScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "process_wall_seconds": 0.1409999999999627
+          },
+          {
+            "status": "error",
+            "error": "System.NullReferenceException: Object reference not set to an instance of an object.",
+            "error_detail": "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at c2flux.DirectoryScanner.ScanDirectoryContents(FileSystemEntry entry, IProgress`1 progress, CancellationToken cancellationToken, PauseToken pauseToken, Action`1 addSizeToAncestors) in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 248\r\n   at c2flux.DirectoryScanner.<>c__DisplayClass38_0.<ScanAsync>b__0() in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 223\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)\r\n--- End of stack trace from previous location ---\r\n   at c2flux.Benchmarks.ScanInvocation.RunAsync() in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\AppLoader.cs:line 260\r\n   at c2flux.Benchmarks.Program.RunAsync(Options options, BenchmarkResult result) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 108\r\n   at c2flux.Benchmarks.Program.Main(String[] args) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 65",
+            "scanner": "win32find",
+            "scanner_type": "c2flux.DirectoryScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "process_wall_seconds": 0.14100000000001955
+          },
+          {
+            "status": "error",
+            "error": "System.NullReferenceException: Object reference not set to an instance of an object.",
+            "error_detail": "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at c2flux.DirectoryScanner.ScanDirectoryContents(FileSystemEntry entry, IProgress`1 progress, CancellationToken cancellationToken, PauseToken pauseToken, Action`1 addSizeToAncestors) in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 248\r\n   at c2flux.DirectoryScanner.<>c__DisplayClass38_0.<ScanAsync>b__0() in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 223\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)\r\n--- End of stack trace from previous location ---\r\n   at c2flux.Benchmarks.ScanInvocation.RunAsync() in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\AppLoader.cs:line 260\r\n   at c2flux.Benchmarks.Program.RunAsync(Options options, BenchmarkResult result) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 108\r\n   at c2flux.Benchmarks.Program.Main(String[] args) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 65",
+            "scanner": "win32find",
+            "scanner_type": "c2flux.DirectoryScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "process_wall_seconds": 0.13999999999998636
+          },
+          {
+            "status": "error",
+            "error": "System.NullReferenceException: Object reference not set to an instance of an object.",
+            "error_detail": "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at c2flux.DirectoryScanner.ScanDirectoryContents(FileSystemEntry entry, IProgress`1 progress, CancellationToken cancellationToken, PauseToken pauseToken, Action`1 addSizeToAncestors) in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 248\r\n   at c2flux.DirectoryScanner.<>c__DisplayClass38_0.<ScanAsync>b__0() in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 223\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)\r\n--- End of stack trace from previous location ---\r\n   at c2flux.Benchmarks.ScanInvocation.RunAsync() in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\AppLoader.cs:line 260\r\n   at c2flux.Benchmarks.Program.RunAsync(Options options, BenchmarkResult result) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 108\r\n   at c2flux.Benchmarks.Program.Main(String[] args) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 65",
+            "scanner": "win32find",
+            "scanner_type": "c2flux.DirectoryScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "process_wall_seconds": 0.125
+          },
+          {
+            "status": "error",
+            "error": "System.NullReferenceException: Object reference not set to an instance of an object.",
+            "error_detail": "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at c2flux.DirectoryScanner.ScanDirectoryContents(FileSystemEntry entry, IProgress`1 progress, CancellationToken cancellationToken, PauseToken pauseToken, Action`1 addSizeToAncestors) in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 248\r\n   at c2flux.DirectoryScanner.<>c__DisplayClass38_0.<ScanAsync>b__0() in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 223\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)\r\n--- End of stack trace from previous location ---\r\n   at c2flux.Benchmarks.ScanInvocation.RunAsync() in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\AppLoader.cs:line 260\r\n   at c2flux.Benchmarks.Program.RunAsync(Options options, BenchmarkResult result) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 108\r\n   at c2flux.Benchmarks.Program.Main(String[] args) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 65",
+            "scanner": "win32find",
+            "scanner_type": "c2flux.DirectoryScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "process_wall_seconds": 0.14100000000001955
+          },
+          {
+            "status": "error",
+            "error": "System.NullReferenceException: Object reference not set to an instance of an object.",
+            "error_detail": "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at c2flux.DirectoryScanner.ScanDirectoryContents(FileSystemEntry entry, IProgress`1 progress, CancellationToken cancellationToken, PauseToken pauseToken, Action`1 addSizeToAncestors) in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 248\r\n   at c2flux.DirectoryScanner.<>c__DisplayClass38_0.<ScanAsync>b__0() in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 223\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)\r\n--- End of stack trace from previous location ---\r\n   at c2flux.Benchmarks.ScanInvocation.RunAsync() in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\AppLoader.cs:line 260\r\n   at c2flux.Benchmarks.Program.RunAsync(Options options, BenchmarkResult result) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 108\r\n   at c2flux.Benchmarks.Program.Main(String[] args) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 65",
+            "scanner": "win32find",
+            "scanner_type": "c2flux.DirectoryScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "process_wall_seconds": 0.125
+          },
+          {
+            "status": "error",
+            "error": "System.NullReferenceException: Object reference not set to an instance of an object.",
+            "error_detail": "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at c2flux.DirectoryScanner.ScanDirectoryContents(FileSystemEntry entry, IProgress`1 progress, CancellationToken cancellationToken, PauseToken pauseToken, Action`1 addSizeToAncestors) in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 248\r\n   at c2flux.DirectoryScanner.<>c__DisplayClass38_0.<ScanAsync>b__0() in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 223\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)\r\n--- End of stack trace from previous location ---\r\n   at c2flux.Benchmarks.ScanInvocation.RunAsync() in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\AppLoader.cs:line 260\r\n   at c2flux.Benchmarks.Program.RunAsync(Options options, BenchmarkResult result) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 108\r\n   at c2flux.Benchmarks.Program.Main(String[] args) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 65",
+            "scanner": "win32find",
+            "scanner_type": "c2flux.DirectoryScanner",
+            "path": "T:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "process_wall_seconds": 0.13999999999998636
+          }
+        ]
+      }
+    },
+    {
+      "scanner": "c2flux",
+      "path": "C:\\",
+      "static": false,
+      "verdict": "baseline-only",
+      "notes": [],
+      "baseline": {
+        "status": "ok",
+        "runs": 7,
+        "ok_runs": 7,
+        "errors": [],
+        "elapsed_ms": 4616.0017,
+        "elapsed_min_ms": 4216.1738,
+        "elapsed_spread": 0.39567819049979996,
+        "peak_working_set_bytes": 463114240,
+        "allocated_bytes": 619661488,
+        "retained_bytes": 195661688,
+        "digests": [
+          "64108d67096a729a0dcd3697edb6dfe045eabc6f5ebf9377e1d002947850022e",
+          "8fd66c2b2614aebdb0669176c1c99a88c7aaf18471e6134243d16aa0de333bcb",
+          "a8f3eac5da28a29141d5ff5e4890d36dfe9231ff847833a4e3287758e83db339",
+          "b044c60d02a25ecd6c3e923a0865fd7e05c5a949ed34c07b510fc56636846284",
+          "c25247e18a6ff4efad64a5232b1ed4cccb84d7b63e742c1e06eef2f54a709aaf",
+          "c5a3b7da3921969ceeca8baed95468d8fe9ec1327e8efbaf0dfb67219e842103",
+          "cbf0e815cab20ab65c7c910fb68f49db1566f7b36ebb9728d3910d18fa9e743a"
+        ],
+        "tree": {
+          "directories": 206957,
+          "files": 1127598,
+          "root_size_bytes": 149010327145,
+          "file_bytes": 149010327145,
+          "all_files_count": 1127598,
+          "max_depth": 23,
+          "digest": "cbf0e815cab20ab65c7c910fb68f49db1566f7b36ebb9728d3910d18fa9e743a"
+        },
+        "app_version": "1.4.1"
+      },
+      "candidate": null,
+      "raw": {
+        "baseline": [
+          {
+            "status": "ok",
+            "scanner": "c2flux",
+            "scanner_type": "c2flux.C2FluxScanner",
+            "path": "C:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 6042.625,
+            "allocated_bytes": 619667664,
+            "retained_bytes": 195664896,
+            "peak_working_set_bytes": 463114240,
+            "gc_collections": [
+              31,
+              25,
+              6
+            ],
+            "progress_reports": 14,
+            "tree": {
+              "directories": 206957,
+              "files": 1127600,
+              "root_size_bytes": 149206628183,
+              "file_bytes": 149206628183,
+              "all_files_count": 1127600,
+              "max_depth": 23,
+              "digest": "8fd66c2b2614aebdb0669176c1c99a88c7aaf18471e6134243d16aa0de333bcb"
+            },
+            "process_wall_seconds": 8.593999999999994
+          },
+          {
+            "status": "ok",
+            "scanner": "c2flux",
+            "scanner_type": "c2flux.C2FluxScanner",
+            "path": "C:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 4616.0017,
+            "allocated_bytes": 619667584,
+            "retained_bytes": 195664896,
+            "peak_working_set_bytes": 462053376,
+            "gc_collections": [
+              31,
+              25,
+              6
+            ],
+            "progress_reports": 14,
+            "tree": {
+              "directories": 206957,
+              "files": 1127600,
+              "root_size_bytes": 149206679685,
+              "file_bytes": 149206679685,
+              "all_files_count": 1127600,
+              "max_depth": 23,
+              "digest": "c25247e18a6ff4efad64a5232b1ed4cccb84d7b63e742c1e06eef2f54a709aaf"
+            },
+            "process_wall_seconds": 7.25
+          },
+          {
+            "status": "ok",
+            "scanner": "c2flux",
+            "scanner_type": "c2flux.C2FluxScanner",
+            "path": "C:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 5968.2143,
+            "allocated_bytes": 619661488,
+            "retained_bytes": 195661688,
+            "peak_working_set_bytes": 460955648,
+            "gc_collections": [
+              31,
+              25,
+              6
+            ],
+            "progress_reports": 14,
+            "tree": {
+              "directories": 206957,
+              "files": 1127599,
+              "root_size_bytes": 149207016297,
+              "file_bytes": 149207016297,
+              "all_files_count": 1127599,
+              "max_depth": 23,
+              "digest": "b044c60d02a25ecd6c3e923a0865fd7e05c5a949ed34c07b510fc56636846284"
+            },
+            "process_wall_seconds": 8.531000000000006
+          },
+          {
+            "status": "ok",
+            "scanner": "c2flux",
+            "scanner_type": "c2flux.C2FluxScanner",
+            "path": "C:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 4767.7003,
+            "allocated_bytes": 619661480,
+            "retained_bytes": 195661688,
+            "peak_working_set_bytes": 462528512,
+            "gc_collections": [
+              31,
+              25,
+              6
+            ],
+            "progress_reports": 14,
+            "tree": {
+              "directories": 206957,
+              "files": 1127599,
+              "root_size_bytes": 149015371010,
+              "file_bytes": 149015371010,
+              "all_files_count": 1127599,
+              "max_depth": 23,
+              "digest": "c5a3b7da3921969ceeca8baed95468d8fe9ec1327e8efbaf0dfb67219e842103"
+            },
+            "process_wall_seconds": 7.4220000000000255
+          },
+          {
+            "status": "ok",
+            "scanner": "c2flux",
+            "scanner_type": "c2flux.C2FluxScanner",
+            "path": "C:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 4503.6333,
+            "allocated_bytes": 619667704,
+            "retained_bytes": 195664760,
+            "peak_working_set_bytes": 463118336,
+            "gc_collections": [
+              31,
+              25,
+              6
+            ],
+            "progress_reports": 14,
+            "tree": {
+              "directories": 206957,
+              "files": 1127599,
+              "root_size_bytes": 149015398155,
+              "file_bytes": 149015398155,
+              "all_files_count": 1127599,
+              "max_depth": 23,
+              "digest": "64108d67096a729a0dcd3697edb6dfe045eabc6f5ebf9377e1d002947850022e"
+            },
+            "process_wall_seconds": 7.062999999999988
+          },
+          {
+            "status": "ok",
+            "scanner": "c2flux",
+            "scanner_type": "c2flux.C2FluxScanner",
+            "path": "C:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 4433.9017,
+            "allocated_bytes": 619659616,
+            "retained_bytes": 195661400,
+            "peak_working_set_bytes": 464691200,
+            "gc_collections": [
+              31,
+              25,
+              6
+            ],
+            "progress_reports": 14,
+            "tree": {
+              "directories": 206957,
+              "files": 1127598,
+              "root_size_bytes": 149010300599,
+              "file_bytes": 149010300599,
+              "all_files_count": 1127598,
+              "max_depth": 23,
+              "digest": "a8f3eac5da28a29141d5ff5e4890d36dfe9231ff847833a4e3287758e83db339"
+            },
+            "process_wall_seconds": 6.9529999999999745
+          },
+          {
+            "status": "ok",
+            "scanner": "c2flux",
+            "scanner_type": "c2flux.C2FluxScanner",
+            "path": "C:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 4216.1738,
+            "allocated_bytes": 619660960,
+            "retained_bytes": 195661400,
+            "peak_working_set_bytes": 464777216,
+            "gc_collections": [
+              31,
+              25,
+              6
+            ],
+            "progress_reports": 14,
+            "tree": {
+              "directories": 206957,
+              "files": 1127598,
+              "root_size_bytes": 149010327145,
+              "file_bytes": 149010327145,
+              "all_files_count": 1127598,
+              "max_depth": 23,
+              "digest": "cbf0e815cab20ab65c7c910fb68f49db1566f7b36ebb9728d3910d18fa9e743a"
+            },
+            "process_wall_seconds": 6.781000000000006
+          }
+        ]
+      }
+    },
+    {
+      "scanner": "ntfsmft",
+      "path": "C:\\",
+      "static": false,
+      "verdict": "baseline-only",
+      "notes": [],
+      "baseline": {
+        "status": "ok",
+        "runs": 7,
+        "ok_runs": 7,
+        "errors": [],
+        "elapsed_ms": 11015.0664,
+        "elapsed_min_ms": 8995.226,
+        "elapsed_spread": 0.6390994338445386,
+        "peak_working_set_bytes": 933781504,
+        "allocated_bytes": 1267434416,
+        "retained_bytes": 568758232,
+        "digests": [
+          "082068b0e3d27eb99cb33b6ba30235a6a69f81e0984705667ecc48ae4fe9e09e",
+          "1ce9d96a8c0424942334f2010f043255fdfa483ec28bf7fa0bc9bea38cca265c",
+          "61a8c9e878c5bd8de573fcdb96a968cde67d457ab372d69d3bf7bb526a2cf5f6",
+          "669c268fc36f179b9afb9c4edc439cf8811071b16d12b22af1776b434dd45433",
+          "781724c2385d928a776511dc27940d74a9949d98e7a2ba9cbd9fb880706b93ef",
+          "9779b611a495ecc03c73c93535a2ec67c8c1286ce7d54755fcefc4d5b60daabd",
+          "edea39b601e5fa2edc705a1903c6d0af53399dd31c3bc777cb5f1c22cb739c1a"
+        ],
+        "tree": {
+          "directories": 206957,
+          "files": 1127598,
+          "root_size_bytes": 149008400593,
+          "file_bytes": 149008400593,
+          "all_files_count": 1127598,
+          "max_depth": 23,
+          "digest": "082068b0e3d27eb99cb33b6ba30235a6a69f81e0984705667ecc48ae4fe9e09e"
+        },
+        "app_version": "1.4.1"
+      },
+      "candidate": null,
+      "raw": {
+        "baseline": [
+          {
+            "status": "ok",
+            "scanner": "ntfsmft",
+            "scanner_type": "c2flux.NtfsMftScanner",
+            "path": "C:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 10443.9556,
+            "allocated_bytes": 1267434448,
+            "retained_bytes": 568758232,
+            "peak_working_set_bytes": 937885696,
+            "gc_collections": [
+              69,
+              63,
+              7
+            ],
+            "progress_reports": 54,
+            "tree": {
+              "directories": 206957,
+              "files": 1127598,
+              "root_size_bytes": 149011545183,
+              "file_bytes": 149011545183,
+              "all_files_count": 1127598,
+              "max_depth": 23,
+              "digest": "61a8c9e878c5bd8de573fcdb96a968cde67d457ab372d69d3bf7bb526a2cf5f6"
+            },
+            "process_wall_seconds": 13.171999999999969
+          },
+          {
+            "status": "ok",
+            "scanner": "ntfsmft",
+            "scanner_type": "c2flux.NtfsMftScanner",
+            "path": "C:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 10832.8356,
+            "allocated_bytes": 1267431848,
+            "retained_bytes": 568758232,
+            "peak_working_set_bytes": 933617664,
+            "gc_collections": [
+              69,
+              63,
+              7
+            ],
+            "progress_reports": 54,
+            "tree": {
+              "directories": 206957,
+              "files": 1127598,
+              "root_size_bytes": 149011702935,
+              "file_bytes": 149011702935,
+              "all_files_count": 1127598,
+              "max_depth": 23,
+              "digest": "edea39b601e5fa2edc705a1903c6d0af53399dd31c3bc777cb5f1c22cb739c1a"
+            },
+            "process_wall_seconds": 13.422000000000025
+          },
+          {
+            "status": "ok",
+            "scanner": "ntfsmft",
+            "scanner_type": "c2flux.NtfsMftScanner",
+            "path": "C:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 11015.0664,
+            "allocated_bytes": 1267437248,
+            "retained_bytes": 568758232,
+            "peak_working_set_bytes": 933756928,
+            "gc_collections": [
+              69,
+              63,
+              7
+            ],
+            "progress_reports": 54,
+            "tree": {
+              "directories": 206957,
+              "files": 1127598,
+              "root_size_bytes": 149011746604,
+              "file_bytes": 149011746604,
+              "all_files_count": 1127598,
+              "max_depth": 23,
+              "digest": "1ce9d96a8c0424942334f2010f043255fdfa483ec28bf7fa0bc9bea38cca265c"
+            },
+            "process_wall_seconds": 13.639999999999986
+          },
+          {
+            "status": "ok",
+            "scanner": "ntfsmft",
+            "scanner_type": "c2flux.NtfsMftScanner",
+            "path": "C:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 11620.122,
+            "allocated_bytes": 1267427304,
+            "retained_bytes": 568758232,
+            "peak_working_set_bytes": 942018560,
+            "gc_collections": [
+              69,
+              63,
+              7
+            ],
+            "progress_reports": 54,
+            "tree": {
+              "directories": 206957,
+              "files": 1127598,
+              "root_size_bytes": 149008466097,
+              "file_bytes": 149008466097,
+              "all_files_count": 1127598,
+              "max_depth": 23,
+              "digest": "781724c2385d928a776511dc27940d74a9949d98e7a2ba9cbd9fb880706b93ef"
+            },
+            "process_wall_seconds": 14.25
+          },
+          {
+            "status": "ok",
+            "scanner": "ntfsmft",
+            "scanner_type": "c2flux.NtfsMftScanner",
+            "path": "C:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 16034.9487,
+            "allocated_bytes": 1267433496,
+            "retained_bytes": 568758232,
+            "peak_working_set_bytes": 933781504,
+            "gc_collections": [
+              69,
+              63,
+              7
+            ],
+            "progress_reports": 54,
+            "tree": {
+              "directories": 206957,
+              "files": 1127598,
+              "root_size_bytes": 149008337671,
+              "file_bytes": 149008337671,
+              "all_files_count": 1127598,
+              "max_depth": 23,
+              "digest": "669c268fc36f179b9afb9c4edc439cf8811071b16d12b22af1776b434dd45433"
+            },
+            "process_wall_seconds": 18.64100000000002
+          },
+          {
+            "status": "ok",
+            "scanner": "ntfsmft",
+            "scanner_type": "c2flux.NtfsMftScanner",
+            "path": "C:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 11723.5623,
+            "allocated_bytes": 1267434416,
+            "retained_bytes": 568758232,
+            "peak_working_set_bytes": 937959424,
+            "gc_collections": [
+              69,
+              63,
+              7
+            ],
+            "progress_reports": 54,
+            "tree": {
+              "directories": 206957,
+              "files": 1127598,
+              "root_size_bytes": 149008373241,
+              "file_bytes": 149008373241,
+              "all_files_count": 1127598,
+              "max_depth": 23,
+              "digest": "9779b611a495ecc03c73c93535a2ec67c8c1286ce7d54755fcefc4d5b60daabd"
+            },
+            "process_wall_seconds": 14.312000000000012
+          },
+          {
+            "status": "ok",
+            "scanner": "ntfsmft",
+            "scanner_type": "c2flux.NtfsMftScanner",
+            "path": "C:\\",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 8995.226,
+            "allocated_bytes": 1267434808,
+            "retained_bytes": 568758232,
+            "peak_working_set_bytes": 933666816,
+            "gc_collections": [
+              69,
+              63,
+              7
+            ],
+            "progress_reports": 54,
+            "tree": {
+              "directories": 206957,
+              "files": 1127598,
+              "root_size_bytes": 149008400593,
+              "file_bytes": 149008400593,
+              "all_files_count": 1127598,
+              "max_depth": 23,
+              "digest": "082068b0e3d27eb99cb33b6ba30235a6a69f81e0984705667ecc48ae4fe9e09e"
+            },
+            "process_wall_seconds": 11.640999999999963
+          }
+        ]
+      }
+    },
+    {
+      "scanner": "ntquery",
+      "path": "C:\\Program Files",
+      "static": false,
+      "verdict": "baseline-only",
+      "notes": [],
+      "baseline": {
+        "status": "ok",
+        "runs": 7,
+        "ok_runs": 7,
+        "errors": [],
+        "elapsed_ms": 1180.0418,
+        "elapsed_min_ms": 1101.9278,
+        "elapsed_spread": 0.16981245918576784,
+        "peak_working_set_bytes": 200622080,
+        "allocated_bytes": 188310632,
+        "retained_bytes": 139679512,
+        "digests": [
+          "9b72e74127c516d267efdd6fe1e4fdfa7dd8c97e60dea37041b82f684644eb05"
+        ],
+        "tree": {
+          "directories": 38286,
+          "files": 265774,
+          "root_size_bytes": 64867286991,
+          "file_bytes": 64867286991,
+          "all_files_count": 265774,
+          "max_depth": 19,
+          "digest": "9b72e74127c516d267efdd6fe1e4fdfa7dd8c97e60dea37041b82f684644eb05"
+        },
+        "app_version": "1.4.1"
+      },
+      "candidate": null,
+      "raw": {
+        "baseline": [
+          {
+            "status": "ok",
+            "scanner": "ntquery",
+            "scanner_type": "c2flux.NtQueryDirectoryScanner",
+            "path": "C:\\Program Files",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 1302.3136,
+            "allocated_bytes": 189306072,
+            "retained_bytes": 138789216,
+            "peak_working_set_bytes": 197804032,
+            "gc_collections": [
+              12,
+              11,
+              2
+            ],
+            "progress_reports": 7,
+            "tree": {
+              "directories": 38286,
+              "files": 265774,
+              "root_size_bytes": 64867286991,
+              "file_bytes": 64867286991,
+              "all_files_count": 265774,
+              "max_depth": 19,
+              "digest": "9b72e74127c516d267efdd6fe1e4fdfa7dd8c97e60dea37041b82f684644eb05"
+            },
+            "process_wall_seconds": 2.171999999999912
+          },
+          {
+            "status": "ok",
+            "scanner": "ntquery",
+            "scanner_type": "c2flux.NtQueryDirectoryScanner",
+            "path": "C:\\Program Files",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 1224.0562,
+            "allocated_bytes": 188642888,
+            "retained_bytes": 139679512,
+            "peak_working_set_bytes": 200339456,
+            "gc_collections": [
+              12,
+              11,
+              2
+            ],
+            "progress_reports": 7,
+            "tree": {
+              "directories": 38286,
+              "files": 265774,
+              "root_size_bytes": 64867286991,
+              "file_bytes": 64867286991,
+              "all_files_count": 265774,
+              "max_depth": 19,
+              "digest": "9b72e74127c516d267efdd6fe1e4fdfa7dd8c97e60dea37041b82f684644eb05"
+            },
+            "process_wall_seconds": 1.969000000000051
+          },
+          {
+            "status": "ok",
+            "scanner": "ntquery",
+            "scanner_type": "c2flux.NtQueryDirectoryScanner",
+            "path": "C:\\Program Files",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 1183.214,
+            "allocated_bytes": 188310632,
+            "retained_bytes": 139681616,
+            "peak_working_set_bytes": 200425472,
+            "gc_collections": [
+              12,
+              11,
+              2
+            ],
+            "progress_reports": 7,
+            "tree": {
+              "directories": 38286,
+              "files": 265774,
+              "root_size_bytes": 64867286991,
+              "file_bytes": 64867286991,
+              "all_files_count": 265774,
+              "max_depth": 19,
+              "digest": "9b72e74127c516d267efdd6fe1e4fdfa7dd8c97e60dea37041b82f684644eb05"
+            },
+            "process_wall_seconds": 1.9529999999999745
+          },
+          {
+            "status": "ok",
+            "scanner": "ntquery",
+            "scanner_type": "c2flux.NtQueryDirectoryScanner",
+            "path": "C:\\Program Files",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 1110.2582,
+            "allocated_bytes": 187403776,
+            "retained_bytes": 139688832,
+            "peak_working_set_bytes": 205512704,
+            "gc_collections": [
+              12,
+              11,
+              2
+            ],
+            "progress_reports": 7,
+            "tree": {
+              "directories": 38286,
+              "files": 265774,
+              "root_size_bytes": 64867286991,
+              "file_bytes": 64867286991,
+              "all_files_count": 265774,
+              "max_depth": 19,
+              "digest": "9b72e74127c516d267efdd6fe1e4fdfa7dd8c97e60dea37041b82f684644eb05"
+            },
+            "process_wall_seconds": 1.875
+          },
+          {
+            "status": "ok",
+            "scanner": "ntquery",
+            "scanner_type": "c2flux.NtQueryDirectoryScanner",
+            "path": "C:\\Program Files",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 1101.9278,
+            "allocated_bytes": 186580304,
+            "retained_bytes": 139162696,
+            "peak_working_set_bytes": 205111296,
+            "gc_collections": [
+              12,
+              11,
+              2
+            ],
+            "progress_reports": 7,
+            "tree": {
+              "directories": 38286,
+              "files": 265774,
+              "root_size_bytes": 64867286991,
+              "file_bytes": 64867286991,
+              "all_files_count": 265774,
+              "max_depth": 19,
+              "digest": "9b72e74127c516d267efdd6fe1e4fdfa7dd8c97e60dea37041b82f684644eb05"
+            },
+            "process_wall_seconds": 1.8590000000000373
+          },
+          {
+            "status": "ok",
+            "scanner": "ntquery",
+            "scanner_type": "c2flux.NtQueryDirectoryScanner",
+            "path": "C:\\Program Files",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 1106.3786,
+            "allocated_bytes": 187037056,
+            "retained_bytes": 139692808,
+            "peak_working_set_bytes": 204902400,
+            "gc_collections": [
+              12,
+              11,
+              2
+            ],
+            "progress_reports": 7,
+            "tree": {
+              "directories": 38286,
+              "files": 265774,
+              "root_size_bytes": 64867286991,
+              "file_bytes": 64867286991,
+              "all_files_count": 265774,
+              "max_depth": 19,
+              "digest": "9b72e74127c516d267efdd6fe1e4fdfa7dd8c97e60dea37041b82f684644eb05"
+            },
+            "process_wall_seconds": 1.8899999999999864
+          },
+          {
+            "status": "ok",
+            "scanner": "ntquery",
+            "scanner_type": "c2flux.NtQueryDirectoryScanner",
+            "path": "C:\\Program Files",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "elapsed_ms": 1180.0418,
+            "allocated_bytes": 189663912,
+            "retained_bytes": 139676920,
+            "peak_working_set_bytes": 200622080,
+            "gc_collections": [
+              12,
+              11,
+              2
+            ],
+            "progress_reports": 7,
+            "tree": {
+              "directories": 38286,
+              "files": 265774,
+              "root_size_bytes": 64867286991,
+              "file_bytes": 64867286991,
+              "all_files_count": 265774,
+              "max_depth": 19,
+              "digest": "9b72e74127c516d267efdd6fe1e4fdfa7dd8c97e60dea37041b82f684644eb05"
+            },
+            "process_wall_seconds": 1.9530000000000882
+          }
+        ]
+      }
+    },
+    {
+      "scanner": "win32find",
+      "path": "C:\\Program Files",
+      "static": false,
+      "verdict": "error",
+      "notes": [
+        "System.NullReferenceException: Object reference not set to an instance of an object."
+      ],
+      "baseline": {
+        "status": "error",
+        "runs": 7,
+        "ok_runs": 0,
+        "errors": [
+          "System.NullReferenceException: Object reference not set to an instance of an object."
+        ]
+      },
+      "candidate": null,
+      "raw": {
+        "baseline": [
+          {
+            "status": "error",
+            "error": "System.NullReferenceException: Object reference not set to an instance of an object.",
+            "error_detail": "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at c2flux.DirectoryScanner.ScanDirectoryContents(FileSystemEntry entry, IProgress`1 progress, CancellationToken cancellationToken, PauseToken pauseToken, Action`1 addSizeToAncestors) in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 248\r\n   at c2flux.DirectoryScanner.<>c__DisplayClass38_0.<ScanAsync>b__0() in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 223\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)\r\n--- End of stack trace from previous location ---\r\n   at c2flux.Benchmarks.ScanInvocation.RunAsync() in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\AppLoader.cs:line 260\r\n   at c2flux.Benchmarks.Program.RunAsync(Options options, BenchmarkResult result) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 108\r\n   at c2flux.Benchmarks.Program.Main(String[] args) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 65",
+            "scanner": "win32find",
+            "scanner_type": "c2flux.DirectoryScanner",
+            "path": "C:\\Program Files",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "process_wall_seconds": 0.1409999999999627
+          },
+          {
+            "status": "error",
+            "error": "System.NullReferenceException: Object reference not set to an instance of an object.",
+            "error_detail": "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at c2flux.DirectoryScanner.ScanDirectoryContents(FileSystemEntry entry, IProgress`1 progress, CancellationToken cancellationToken, PauseToken pauseToken, Action`1 addSizeToAncestors) in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 248\r\n   at c2flux.DirectoryScanner.<>c__DisplayClass38_0.<ScanAsync>b__0() in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 223\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)\r\n--- End of stack trace from previous location ---\r\n   at c2flux.Benchmarks.ScanInvocation.RunAsync() in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\AppLoader.cs:line 260\r\n   at c2flux.Benchmarks.Program.RunAsync(Options options, BenchmarkResult result) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 108\r\n   at c2flux.Benchmarks.Program.Main(String[] args) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 65",
+            "scanner": "win32find",
+            "scanner_type": "c2flux.DirectoryScanner",
+            "path": "C:\\Program Files",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "process_wall_seconds": 0.13999999999998636
+          },
+          {
+            "status": "error",
+            "error": "System.NullReferenceException: Object reference not set to an instance of an object.",
+            "error_detail": "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at c2flux.DirectoryScanner.ScanDirectoryContents(FileSystemEntry entry, IProgress`1 progress, CancellationToken cancellationToken, PauseToken pauseToken, Action`1 addSizeToAncestors) in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 248\r\n   at c2flux.DirectoryScanner.<>c__DisplayClass38_0.<ScanAsync>b__0() in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 223\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)\r\n--- End of stack trace from previous location ---\r\n   at c2flux.Benchmarks.ScanInvocation.RunAsync() in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\AppLoader.cs:line 260\r\n   at c2flux.Benchmarks.Program.RunAsync(Options options, BenchmarkResult result) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 108\r\n   at c2flux.Benchmarks.Program.Main(String[] args) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 65",
+            "scanner": "win32find",
+            "scanner_type": "c2flux.DirectoryScanner",
+            "path": "C:\\Program Files",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "process_wall_seconds": 0.1410000000000764
+          },
+          {
+            "status": "error",
+            "error": "System.NullReferenceException: Object reference not set to an instance of an object.",
+            "error_detail": "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at c2flux.DirectoryScanner.ScanDirectoryContents(FileSystemEntry entry, IProgress`1 progress, CancellationToken cancellationToken, PauseToken pauseToken, Action`1 addSizeToAncestors) in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 248\r\n   at c2flux.DirectoryScanner.<>c__DisplayClass38_0.<ScanAsync>b__0() in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 223\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)\r\n--- End of stack trace from previous location ---\r\n   at c2flux.Benchmarks.ScanInvocation.RunAsync() in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\AppLoader.cs:line 260\r\n   at c2flux.Benchmarks.Program.RunAsync(Options options, BenchmarkResult result) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 108\r\n   at c2flux.Benchmarks.Program.Main(String[] args) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 65",
+            "scanner": "win32find",
+            "scanner_type": "c2flux.DirectoryScanner",
+            "path": "C:\\Program Files",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "process_wall_seconds": 0.1409999999999627
+          },
+          {
+            "status": "error",
+            "error": "System.NullReferenceException: Object reference not set to an instance of an object.",
+            "error_detail": "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at c2flux.DirectoryScanner.ScanDirectoryContents(FileSystemEntry entry, IProgress`1 progress, CancellationToken cancellationToken, PauseToken pauseToken, Action`1 addSizeToAncestors) in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 248\r\n   at c2flux.DirectoryScanner.<>c__DisplayClass38_0.<ScanAsync>b__0() in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 223\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)\r\n--- End of stack trace from previous location ---\r\n   at c2flux.Benchmarks.ScanInvocation.RunAsync() in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\AppLoader.cs:line 260\r\n   at c2flux.Benchmarks.Program.RunAsync(Options options, BenchmarkResult result) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 108\r\n   at c2flux.Benchmarks.Program.Main(String[] args) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 65",
+            "scanner": "win32find",
+            "scanner_type": "c2flux.DirectoryScanner",
+            "path": "C:\\Program Files",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "process_wall_seconds": 0.13999999999998636
+          },
+          {
+            "status": "error",
+            "error": "System.NullReferenceException: Object reference not set to an instance of an object.",
+            "error_detail": "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at c2flux.DirectoryScanner.ScanDirectoryContents(FileSystemEntry entry, IProgress`1 progress, CancellationToken cancellationToken, PauseToken pauseToken, Action`1 addSizeToAncestors) in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 248\r\n   at c2flux.DirectoryScanner.<>c__DisplayClass38_0.<ScanAsync>b__0() in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 223\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)\r\n--- End of stack trace from previous location ---\r\n   at c2flux.Benchmarks.ScanInvocation.RunAsync() in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\AppLoader.cs:line 260\r\n   at c2flux.Benchmarks.Program.RunAsync(Options options, BenchmarkResult result) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 108\r\n   at c2flux.Benchmarks.Program.Main(String[] args) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 65",
+            "scanner": "win32find",
+            "scanner_type": "c2flux.DirectoryScanner",
+            "path": "C:\\Program Files",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "process_wall_seconds": 0.1409999999999627
+          },
+          {
+            "status": "error",
+            "error": "System.NullReferenceException: Object reference not set to an instance of an object.",
+            "error_detail": "System.NullReferenceException: Object reference not set to an instance of an object.\r\n   at c2flux.DirectoryScanner.ScanDirectoryContents(FileSystemEntry entry, IProgress`1 progress, CancellationToken cancellationToken, PauseToken pauseToken, Action`1 addSizeToAncestors) in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 248\r\n   at c2flux.DirectoryScanner.<>c__DisplayClass38_0.<ScanAsync>b__0() in D:\\a\\c2flux\\c2flux\\baseline\\DirectoryScanner.cs:line 223\r\n   at System.Threading.Tasks.Task`1.InnerInvoke()\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n--- End of stack trace from previous location ---\r\n   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state)\r\n   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(Task& currentTaskSlot, Thread threadPoolThread)\r\n--- End of stack trace from previous location ---\r\n   at c2flux.Benchmarks.ScanInvocation.RunAsync() in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\AppLoader.cs:line 260\r\n   at c2flux.Benchmarks.Program.RunAsync(Options options, BenchmarkResult result) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 108\r\n   at c2flux.Benchmarks.Program.Main(String[] args) in D:\\a\\c2flux\\c2flux\\candidate\\tests\\c2flux.Benchmarks\\Program.cs:line 65",
+            "scanner": "win32find",
+            "scanner_type": "c2flux.DirectoryScanner",
+            "path": "C:\\Program Files",
+            "app_version": "1.4.1",
+            "os": "Microsoft Windows NT 10.0.26100.0",
+            "processor_count": 4,
+            "process_wall_seconds": 0.14000000000010004
+          }
+        ]
+      }
+    }
+  ]
+}

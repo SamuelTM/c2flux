@@ -143,7 +143,7 @@ O desenvolvimento principal acontece no macOS (Apple Silicon), sem um PC Windows
 
 **Números de referência:**
 
-- [ ] Rodar o workflow uma vez só com a referência e guardar o resultado em `docs/benchmarks/baseline-winforms.json`, como registro histórico (não como limite de comparação, já que o hardware do CI muda)
+- [x] Rodar o workflow uma vez só com a referência e guardar o resultado em `docs/benchmarks/baseline-winforms.json`, como registro histórico (não como limite de comparação, já que o hardware do CI muda). Resumo e observações em `docs/benchmarks/README.md`
 - [ ] Quando houver acesso a hardware real, registrar também esses números em `docs/benchmarks/`, com a especificação da máquina
 
 #### 0.3 Referências visuais
@@ -217,6 +217,7 @@ public sealed class ScanOptions
 - [ ] Extrair código duplicado entre scanners (`CompiledPathFilter`, `DirectoryIdentity`, montagem da árvore, relatório de progresso) para utilitários comuns no Core
 - [ ] **`ManagedScanner`** (fallback universal): `FileSystemEnumerable<T>` do .NET com paralelismo por diretório. Funciona em qualquer SO e é a rede de segurança final
 - [ ] **Suíte de conformidade:** roda todos os scanners disponíveis no SO sobre a árvore sintética da Fase 0 e exige resultados idênticos (contagem de arquivos/pastas, tamanhos, datas, tratamento de hardlinks/symlinks, pastas sem permissão)
+  - Definir a semântica esperada antes de exigir resultados iguais. Na Fase 0.2, os scanners já divergem no mesmo disco: o `ntquery` soma só o que o usuário consegue ler e conta symlinks de arquivo como arquivos de 0 bytes, enquanto os de MFT ignoram permissões e incluem os arquivos internos do NTFS e a `System Volume Information` (+31,5 MB num disco de 690 MB). Ver `docs/benchmarks/README.md`
 - [ ] **Benchmark:** compara os scanners com BenchmarkDotNet. No Windows, o workflow comparativo da Fase 0.2 confirma que não houve regressão em relação à tag `baseline-winforms`
 
 **Cadeias de fallback:**
