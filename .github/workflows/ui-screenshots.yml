@@ -139,6 +139,7 @@ jobs:
           # Failed captures are reported but do not fail the job: the images
           # that did work are still useful, and failures are listed above.
           if ($code -ne 0) { Write-Warning "Some captures failed (exit code $code)." }
+          exit 0
 
       - name: Upload screenshots
         if: always()

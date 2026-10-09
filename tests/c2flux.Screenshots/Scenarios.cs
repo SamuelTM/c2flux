@@ -74,7 +74,7 @@ namespace c2flux.Screenshots
                 _app.LoadSettings(), "The selected folder could not be read completely. Some sizes may be too small.", "c² flux", "OK"));
             await RunDialogAsync("dialog-warning-yes-no", () => _app.CallStatic(
                 "AppDialogs", "ShowWarningYesNo",
-                _app.LoadSettings(), "Do you really want to delete the scan history of this drive?", "c² flux", "Yes", "No"));
+                null, _app.LoadSettings(), "Do you really want to delete the scan history of this drive?", "c² flux", "Yes", "No"));
             await RunDialogAsync("dialog-elevation-prompt", () => _app.CallStatic(
                 "AppDialogs", "ShowElevationPrompt", _app.LoadSettings()));
 
@@ -180,8 +180,12 @@ namespace c2flux.Screenshots
             bool scanned = await WaitUntilAsync(
                 () =>
                 {
+                    // The root entry is replaced as soon as a scan starts, so
+                    // also wait for every scan session to stop running.
                     object root = AppHost.Get(main, "_currentRootEntry");
-                    return root != null && !ReferenceEquals(root, previousRoot);
+                    IDictionary sessions = (IDictionary)AppHost.Get(main, "_scanSessions");
+                    bool running = sessions.Values.Cast<object>().Any(session => (bool)AppHost.Get(session, "IsRunning"));
+                    return root != null && !ReferenceEquals(root, previousRoot) && !running;
                 },
                 ScanTimeout);
 
@@ -230,7 +234,7 @@ namespace c2flux.Screenshots
                 {
                     item.ShowDropDown();
                     await Task.Delay(500);
-                    SaveScreen(name, Rectangle.Union(main.Bounds, item.DropDown.Bounds), "ToolStripDropDown", item.Text);
+                    SaveScreen(name, Rectangle.Union(WindowCapture.GetVisibleBounds(main), item.DropDown.Bounds), "ToolStripDropDown", item.Text);
                 }
                 catch (Exception exception)
                 {
@@ -259,7 +263,7 @@ namespace c2flux.Screenshots
                 Control target = (Control)AppHost.Get(main, targetField);
                 menu.Show(target, new Point(60, 30));
                 await Task.Delay(500);
-                SaveScreen(name, Rectangle.Union(main.Bounds, menu.Bounds), "ContextMenuStrip", null);
+                SaveScreen(name, Rectangle.Union(WindowCapture.GetVisibleBounds(main), menu.Bounds), "ContextMenuStrip", null);
             }
             catch (Exception exception)
             {
@@ -541,7 +545,9 @@ namespace c2flux.Screenshots
 
         private async Task CaptureTabsAsync(string prefix, Form captureTarget, Control container, Form popupOwner)
         {
-            Control tabs = container == null ? null : FindChildOfType(container, "Tabs");
+            Control tabs = container == null ? null
+                : container.GetType().Name == "Tabs" ? container
+                : FindChildOfType(container, "Tabs");
 
             if (tabs == null)
             {

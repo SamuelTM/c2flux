@@ -29,6 +29,18 @@ namespace c2flux.Screenshots
             return bitmap;
         }
 
+        // Window bounds without the invisible resize borders that Windows 10/11
+        // add around top-level windows (Control.Bounds includes them).
+        public static Rectangle GetVisibleBounds(Control window)
+        {
+            if (DwmGetWindowAttribute(window.Handle, DwmwaExtendedFrameBounds, out Rect rect, Marshal.SizeOf<Rect>()) == 0)
+            {
+                return Rectangle.FromLTRB(rect.Left, rect.Top, rect.Right, rect.Bottom);
+            }
+
+            return window.Bounds;
+        }
+
         public static Bitmap Capture(Control form, out string method)
         {
             form.Refresh();
@@ -106,6 +118,11 @@ namespace c2flux.Screenshots
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool GetWindowRect(IntPtr hWnd, out Rect lpRect);
+
+        private const int DwmwaExtendedFrameBounds = 9;
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out Rect value, int size);
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
