@@ -6,8 +6,8 @@ Capturas da interface WinForms atual, usadas na Fase 5 do [ROADMAP](../../ROADMA
 
 | | |
 |---|---|
-| **Versão** | `cross-platform` (commit a definir após a próxima execução): a v1.4.1 original (`baseline-winforms`) mais as correções do gráfico de pizza, do `DirectoryScanner` e do carregamento do histórico de varreduras. A interface é idêntica à original; a única diferença visível é que o gráfico de pizza deixou de quebrar |
-| **Onde** | Runner `windows-latest` do GitHub, workflow [`ui-screenshots.yml`](../../.github/workflows/ui-screenshots.yml), [execução de 09/10/2026](https://github.com/SamuelTM/c2flux/actions/runs/38000804583) |
+| **Versão** | `cross-platform` no commit `f70c14f`: a v1.4.1 original (`baseline-winforms`) mais as correções do gráfico de pizza, do `DirectoryScanner` e do carregamento do histórico de varreduras. A interface é idêntica à original; a única diferença visível é que o gráfico de pizza deixou de quebrar |
+| **Onde** | Runner `windows-latest` do GitHub, workflow [`ui-screenshots.yml`](../../.github/workflows/ui-screenshots.yml), [execução de 09/10/2026](https://github.com/SamuelTM/c2flux/actions/runs/38004115517) |
 | **Tela** | 1920×1080, DPI 96 (escala 100%), tema escuro, idioma inglês |
 | **Dados** | `T:\` é um disco virtual NTFS de 4 GiB com a árvore de teste (`tests/fixtures/generate_test_tree.py --profile medium`). Ele é varrido duas vezes; entre as varreduras, a ferramenta adiciona um arquivo de 8 MB, apaga um e aumenta outro em 4 MB. "Salvar histórico de varreduras" e "detalhes do histórico de armazenamento" ficam ligados |
 | **Detalhes** | `reference/index.json` lista cada captura, tamanho e método |
