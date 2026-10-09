@@ -214,6 +214,9 @@ namespace c2flux.Screenshots
                 ["ShellSearchContextMenuEnabled"] = false,
                 // On, so the second scan of the run fills the scan history.
                 ["SaveScanHistory"] = true,
+                // Off by default in the app; on, the storage history details
+                // window lists what changed between the two scans.
+                ["StorageHistoryDetailsEnabled"] = true,
                 ["SelectedViewMode"] = 0,
                 ["HasMainWindowBounds"] = true,
                 ["MainWindowLeft"] = 0,
