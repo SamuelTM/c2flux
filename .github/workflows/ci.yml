@@ -56,6 +56,32 @@ jobs:
           path: publish
           retention-days: 7
 
+  core-tests:
+    name: Core tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - macos-latest
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      # Builds only c2flux.Core and its tests: plain net10.0, no Windows
+      # Desktop pieces, so it must work everywhere.
+      - name: Test
+        run: dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --logger "console;verbosity=normal"
+
   test-tree:
     name: Synthetic test tree (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
