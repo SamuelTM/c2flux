@@ -47,22 +47,22 @@ namespace c2flux
         private static readonly object SyncRoot = new object();
 
         private static readonly string DatabaseFilePath = Path.Combine(
-            AppContext.BaseDirectory,
+            AppPaths.DataDirectory,
             "ScanHistory",
             "scan_history_details.db");
 
         private static readonly string PreviousDatabaseFilePath = Path.Combine(
-            AppContext.BaseDirectory,
+            AppPaths.DataDirectory,
             "ScanHistory",
             "storage_history_details.db");
 
         private static readonly string BrotliLegacyDetailsFilePath = Path.Combine(
-            AppContext.BaseDirectory,
+            AppPaths.DataDirectory,
             "ScanHistory",
             "storage_history_details.json.br");
 
         private static readonly string LegacyDetailsFilePath = Path.Combine(
-            AppContext.BaseDirectory,
+            AppPaths.DataDirectory,
             "ScanHistory",
             "storage_history_details.json");
 

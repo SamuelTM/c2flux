@@ -40,7 +40,7 @@ namespace c2flux
         // Central persisted application settings model with validation, migration and safe-save handling.
         private static readonly string SettingsDirectoryPath =
             System.IO.Path.Combine(
-                System.AppContext.BaseDirectory,
+                AppPaths.ConfigDirectory,
                 "Settings");
 
         private static readonly string SettingsFilePath = System.IO.Path.Combine(
@@ -49,7 +49,7 @@ namespace c2flux
 
         private static readonly string LegacySettingsFilePath =
             System.IO.Path.Combine(
-                System.AppContext.BaseDirectory,
+                AppPaths.ConfigDirectory,
                 "settings.json");
 
         public static string StartupWarningMessage { get; private set; }

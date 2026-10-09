@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -275,7 +275,7 @@ namespace c2flux
             {
             }
 
-            return AppContext.BaseDirectory;
+            return AppPaths.DataDirectory;
         }
     }
 }

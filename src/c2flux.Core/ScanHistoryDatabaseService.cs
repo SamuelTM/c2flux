@@ -17,7 +17,7 @@ namespace c2flux
         private static readonly object SyncRoot = new object();
 
         private static readonly string ScanHistoryDirectoryPath = Path.Combine(
-            AppContext.BaseDirectory,
+            AppPaths.DataDirectory,
             "ScanHistory");
 
         private static readonly string DefaultDatabaseFilePath = Path.Combine(

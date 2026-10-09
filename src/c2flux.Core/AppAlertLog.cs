@@ -275,7 +275,7 @@ namespace c2flux
             try
             {
                 string logDirectoryPath = Path.Combine(
-                    AppContext.BaseDirectory,
+                    AppPaths.DataDirectory,
                     LogDirectoryName);
                 string logFilePath = Path.Combine(logDirectoryPath, LogFileName);
                 string previousLogFilePath = Path.Combine(

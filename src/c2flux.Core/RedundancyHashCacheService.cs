@@ -157,7 +157,7 @@ namespace c2flux
 
         private static readonly string CacheDirectoryPath =
             Path.Combine(
-                AppContext.BaseDirectory,
+                AppPaths.CacheDirectory,
                 "RedundancyCache");
 
         private static readonly string CacheFilePath =

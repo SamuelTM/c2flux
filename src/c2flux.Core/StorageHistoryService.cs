@@ -11,17 +11,17 @@ namespace c2flux
         private static readonly object SyncRoot = new object();
 
         private static readonly string HistoryFilePath = System.IO.Path.Combine(
-            AppContext.BaseDirectory,
+            AppPaths.DataDirectory,
             "ScanHistory",
             "scan_history.json");
 
         private static readonly string PreviousHistoryFilePath = System.IO.Path.Combine(
-            AppContext.BaseDirectory,
+            AppPaths.DataDirectory,
             "ScanHistory",
             "storage_history.json");
 
         private static readonly string LegacyHistoryFilePath = System.IO.Path.Combine(
-            AppContext.BaseDirectory,
+            AppPaths.DataDirectory,
             "Languages",
             "storage_history.json");
 

@@ -1543,7 +1543,7 @@ namespace c2flux
             {
             }
 
-            return AppContext.BaseDirectory;
+            return AppPaths.DataDirectory;
         }
 
         private void comboBoxLanguage_SelectedIndexChanged(object sender, EventArgs e)
@@ -1581,9 +1581,7 @@ namespace c2flux
             if (warningResult != DialogResult.Yes)
                 return;
 
-            string languageDirectoryPath = Path.Combine(
-                AppContext.BaseDirectory,
-                "Languages");
+            string languageDirectoryPath = LocalizationService.GetSettingsDirectoryPath();
 
             Directory.CreateDirectory(languageDirectoryPath);
 

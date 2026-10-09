@@ -220,10 +220,7 @@ namespace c2flux
 
         private static string GetCacheFilePath(string rootPath)
         {
-            string cacheDirectoryPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "WTF",
-                "ScanCache");
+            string cacheDirectoryPath = AppPaths.ScanCacheDirectory;
 
             Directory.CreateDirectory(cacheDirectoryPath);
 

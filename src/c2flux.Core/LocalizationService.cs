@@ -164,11 +164,12 @@ namespace c2flux
                         EnglishLanguageCode
                     }
                     .Concat(
-                        Directory
-                            .GetFiles(
-                                GetSettingsDirectoryPath(),
+                        GetLanguageDirectoryPaths()
+                            .Where(Directory.Exists)
+                            .SelectMany(directoryPath => Directory.GetFiles(
+                                directoryPath,
                                 "lang_*.json",
-                                SearchOption.TopDirectoryOnly)
+                                SearchOption.TopDirectoryOnly))
                             .Select(Path.GetFileNameWithoutExtension)
                             .Where(fileName =>
                                 !string.IsNullOrWhiteSpace(fileName) &&
@@ -215,7 +216,7 @@ namespace c2flux
                 return true;
             }
 
-            string languageFilePath = GetLanguageFilePath(normalizedLanguageCode);
+            string languageFilePath = ResolveLanguageFilePath(normalizedLanguageCode);
 
             try
             {
@@ -273,16 +274,65 @@ namespace c2flux
             return normalizedLanguageCode.ToUpperInvariant();
         }
 
+        // Where a language file is installed or removed: the user's language
+        // directory.
         public static string GetLanguageFilePath(string languageCode)
         {
             return Path.Combine(
                 GetSettingsDirectoryPath(),
-                "lang_" + NormalizeLanguageCode(languageCode) + ".json");
+                GetLanguageFileName(languageCode));
         }
 
+        // Where a language is read from: a file the user installed wins over
+        // the one shipped with the app.
+        public static string ResolveLanguageFilePath(string languageCode)
+        {
+            string userFilePath = GetLanguageFilePath(languageCode);
+
+            if (File.Exists(userFilePath))
+            {
+                return userFilePath;
+            }
+
+            string bundledFilePath = Path.Combine(
+                GetBundledLanguageDirectoryPath(),
+                GetLanguageFileName(languageCode));
+
+            return File.Exists(bundledFilePath) ? bundledFilePath : userFilePath;
+        }
+
+        // Languages the user added (writable). On Windows this is the same
+        // directory as the bundled languages, next to c2flux.exe.
         public static string GetSettingsDirectoryPath()
         {
-            return Path.Combine(AppContext.BaseDirectory, "Languages");
+            return Path.Combine(AppPaths.DataDirectory, "Languages");
+        }
+
+        // Languages shipped with the app (read-only on macOS and Linux).
+        public static string GetBundledLanguageDirectoryPath()
+        {
+            return Path.Combine(AppPaths.ResourcesDirectory, "Languages");
+        }
+
+        private static string[] GetLanguageDirectoryPaths()
+        {
+            return new[]
+                {
+                    GetSettingsDirectoryPath(),
+                    GetBundledLanguageDirectoryPath()
+                }
+                .Distinct(PathComparer)
+                .ToArray();
+        }
+
+        private static readonly StringComparer PathComparer =
+            OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
+
+        private static string GetLanguageFileName(string languageCode)
+        {
+            return "lang_" + NormalizeLanguageCode(languageCode) + ".json";
         }
 
         public static void EnsureLanguageFiles()
@@ -392,7 +442,7 @@ namespace c2flux
             }
 
             string languageFilePath =
-                GetLanguageFilePath(normalizedLanguageCode);
+                ResolveLanguageFilePath(normalizedLanguageCode);
 
             try
             {
