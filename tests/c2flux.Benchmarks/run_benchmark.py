@@ -288,6 +288,12 @@ def escape(text):
 # ----- entry point -----------------------------------------------------------
 
 def main():
+    # The Windows console defaults to a legacy code page (cp1252 on the CI
+    # runners) that cannot print the report's symbols.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--bench", required=True, help="c2flux-bench executable (.exe, .dll or a .py stand-in)")
     parser.add_argument("--baseline-app", required=True)
@@ -356,9 +362,8 @@ def main():
         })
         print("[{}] => {} {}".format(target.label, verdict, "; ".join(notes)), flush=True)
 
+    # Files first: a console problem must never cost the measurements.
     markdown = markdown_report(report)
-    print()
-    print(markdown)
 
     if arguments.json_out:
         with open(arguments.json_out, "w", encoding="utf-8") as handle:
@@ -366,6 +371,9 @@ def main():
     if arguments.summary_out:
         with open(arguments.summary_out, "a", encoding="utf-8") as handle:
             handle.write(markdown)
+
+    print()
+    print(markdown)
 
     failed = any(item["verdict"] in ("regression", "error", "mixed") for item in report["targets"])
     return 1 if failed else 0
