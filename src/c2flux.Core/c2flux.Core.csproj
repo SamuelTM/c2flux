@@ -32,9 +32,11 @@
 	</ItemGroup>
 
 	<!-- Some Core types are internal (FileSystemEntry.ParentEntry, the
-	     redundancy hash cache, storage history details) and used by the app. -->
+	     redundancy hash cache, storage history details) and used by the app
+	     and the platform scanners. -->
 	<ItemGroup>
 		<InternalsVisibleTo Include="c2flux" />
+		<InternalsVisibleTo Include="c2flux.Platform.Windows" />
 		<InternalsVisibleTo Include="c2flux.Core.Tests" />
 	</ItemGroup>
 

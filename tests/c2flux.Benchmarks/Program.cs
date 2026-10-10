@@ -12,7 +12,7 @@ namespace c2flux.Benchmarks
     // fresh process per measurement by run_benchmark.py.
     //
     // Exit codes: 0 measured, 1 scanner failed, 2 scanner not supported for the
-    // path, 64 invalid arguments.
+    // path, 3 scanner not present in this app version, 64 invalid arguments.
     internal static class Program
     {
         private const string Usage =
@@ -84,6 +84,15 @@ namespace c2flux.Benchmarks
             result.AppVersion = app.InformationalVersion;
 
             Type scannerType = app.FindScannerType(definition);
+
+            if (scannerType == null)
+            {
+                // The scanner was added after this app version.
+                result.Status = "missing";
+                result.Error = "Scanner not present in this app version (" + string.Join(", ", definition.TypeNames) + ")";
+                return 3;
+            }
+
             result.ScannerType = scannerType.FullName;
 
             string unsupportedReason = app.GetUnsupportedReason(definition, options.Path);

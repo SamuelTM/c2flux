@@ -138,11 +138,14 @@ def compare(target, baseline, candidate, arguments):
     notes = []
 
     if candidate is None:
-        if baseline["status"] in ("ok", "unsupported"):
+        if baseline["status"] in ("ok", "unsupported", "missing"):
             return "baseline-only" if baseline["status"] == "ok" else "unsupported", baseline["errors"]
         # Recording reference numbers: a scanner that is already broken in the
         # baseline is reported, but there is nothing to regress against.
         return "baseline-error", baseline["errors"]
+
+    if baseline["status"] == "missing" and candidate["status"] == "ok":
+        return "new", ["scanner not present in the baseline"]
 
     if baseline["status"] == "unsupported" and candidate["status"] == "unsupported":
         return "unsupported", baseline["errors"]
@@ -204,7 +207,7 @@ def ratio(candidate_value, baseline_value):
 
 VERDICT_ICONS = {
     "ok": "✅", "fixed": "🟢", "baseline-only": "📏", "unsupported": "⏭️",
-    "broken-in-both": "⚠️", "baseline-error": "⚠️", "regression": "❌", "error": "❌", "mixed": "❌",
+    "new": "🆕", "broken-in-both": "⚠️", "baseline-error": "⚠️", "regression": "❌", "error": "❌", "mixed": "❌",
 }
 
 
@@ -246,7 +249,7 @@ def markdown_report(report):
 
     lines.append("")
     lines.append("Legend: ✅ ok · 🟢 fixed (failed only in baseline) · 📏 baseline only · "
-                 "⏭️ unsupported here · ⚠️ fails in both versions (or in the baseline, when measuring it alone) · ❌ regression")
+                 "⏭️ unsupported here · 🆕 new scanner (not in the baseline) · ⚠️ fails in both versions (or in the baseline, when measuring it alone) · ❌ regression")
 
     failing = [item for item in report["targets"] if item["verdict"] in ("regression", "error", "mixed")]
     lines.append("")
@@ -312,10 +315,10 @@ def measure_rounds(arguments, versions, target, measured, warmup, runs, label):
                 else result.get("error", "")), flush=True)
             if round_index >= warmup:
                 measured[name].append(result)
-            if result.get("status") == "unsupported":
+            if result.get("status") in ("unsupported", "missing"):
                 # Support does not change between runs; skip the remaining rounds.
                 measured[name] = [result]
-        if all(len(results) == 1 and results[0].get("status") == "unsupported"
+        if all(len(results) == 1 and results[0].get("status") in ("unsupported", "missing")
                for results in measured.values()):
             break
 

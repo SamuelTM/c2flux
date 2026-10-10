@@ -39,8 +39,8 @@
 
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\libs\NtfsReader\NtfsReader.csproj" />
 		<ProjectReference Include="..\c2flux.Core\c2flux.Core.csproj" />
+		<ProjectReference Include="..\c2flux.Platform.Windows\c2flux.Platform.Windows.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -12,6 +12,8 @@ on:
       - "**/ScanProgress.cs"
       - "**/PauseToken.cs"
       - "**/ScanCacheService.cs"
+      - "src/c2flux.Core/Scanning/**"
+      - "src/c2flux.Platform.Windows/**"
       - "libs/NtfsReader/**"
       - "tests/c2flux.Benchmarks/**"
       - "tests/fixtures/**"
@@ -171,7 +173,7 @@ jobs:
           }
 
           # Static targets: exact tree comparison.
-          foreach ($scanner in 'c2flux', 'ntfsmft', 'ntquery', 'win32find') {
+          foreach ($scanner in 'c2flux', 'ntfsmft', 'ntquery', 'win32find', 'managed') {
             $arguments += @('--target', "$scanner=$($env:STATIC_ROOT):static")
           }
 
@@ -180,7 +182,8 @@ jobs:
             '--target', 'c2flux=C:\',
             '--target', 'ntfsmft=C:\',
             '--target', 'ntquery=C:\Program Files',
-            '--target', 'win32find=C:\Program Files'
+            '--target', 'win32find=C:\Program Files',
+            '--target', 'managed=C:\Program Files'
           )
 
           python @arguments

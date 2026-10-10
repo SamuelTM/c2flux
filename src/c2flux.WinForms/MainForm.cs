@@ -25,7 +25,8 @@ namespace c2flux
         private readonly ExportEntryController _exportEntryController;
         private readonly LayoutMainFormController _layoutMainFormController;
         private readonly StatusMainFormController _statusMainFormController;
-        private readonly ScanExecutionController _scanExecutionController;
+        private readonly ScannerPipeline _scannerPipeline;
+        private readonly IStorageHistorySnapshotSource _storageHistorySnapshotSource;
         private readonly ShellIconService _shellIconService;
         private readonly DriveComboBoxController _driveComboBoxController;
         private PartitionGridController _partitionGridController;
@@ -195,7 +196,8 @@ namespace c2flux
                 toolStripAlertInformationLabel,
                 toolStripAlertWarningLabel,
                 toolStripAlertErrorLabel);
-            _scanExecutionController = new ScanExecutionController(_settings, _statusMainFormController);
+            _scannerPipeline = WindowsScanners.CreatePipeline(_settings);
+            _storageHistorySnapshotSource = new WindowsStorageHistorySnapshotSource(_settings);
             _exportEntryController = new ExportEntryController(
                 _csvExportService,
                 _settings,
@@ -1746,7 +1748,7 @@ namespace c2flux
 
             try
             {
-                FileSystemEntry rootEntry = await _scanExecutionController.ScanAsync(
+                FileSystemEntry rootEntry = await _scannerPipeline.ScanAsync(
                     rootPath,
                     progress,
                     session.CancellationTokenSource.Token,
@@ -1892,9 +1894,6 @@ namespace c2flux
 
                         try
                         {
-                            C2FluxScanner storageHistoryDetailsScanner =
-                                new C2FluxScanner(_settings);
-
                             storageHistoryDetailsSavingTitleActive = true;
                             storageHistoryDetailsProgressActive = true;
 
@@ -1921,8 +1920,8 @@ namespace c2flux
                                 Stopwatch.StartNew();
 
                             FileSystemEntry ntfsStorageHistoryDetailsSnapshot =
-                                await storageHistoryDetailsScanner
-                                    .CaptureStorageHistoryDetailsSnapshotAsync(
+                                await _storageHistorySnapshotSource
+                                    .CaptureAsync(
                                         rootEntry.FullPath,
                                         session.CancellationTokenSource.Token,
                                         storageHistoryDetailsSnapshotProgress);
@@ -1947,9 +1946,6 @@ namespace c2flux
                         {
                             try
                             {
-                                NtQueryDirectoryScanner storageHistoryDetailsFallbackScanner =
-                                    new NtQueryDirectoryScanner(_settings);
-
                                 int storageHistoryDetailsFallbackStartPercent =
                                     Math.Max(
                                         0,
@@ -1989,12 +1985,11 @@ namespace c2flux
                                     Stopwatch.StartNew();
 
                                 FileSystemEntry fallbackStorageHistoryDetailsSnapshot =
-                                    await storageHistoryDetailsFallbackScanner.ScanAsync(
+                                    await _storageHistorySnapshotSource.CaptureFallbackAsync(
                                         rootEntry.FullPath,
                                         storageHistoryDetailsFallbackProgress,
                                         session.CancellationTokenSource.Token,
-                                        session.PauseTokenSource.Token,
-                                        false);
+                                        session.PauseTokenSource.Token);
 
                                 storageHistoryDetailsFallbackStopwatch.Stop();
 

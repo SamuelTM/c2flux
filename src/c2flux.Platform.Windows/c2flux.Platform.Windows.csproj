@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+		Windows-only implementations behind the Core abstractions: the NTFS MFT,
+		NtQueryDirectoryFile and FindFirstFileEx scanners, and the storage
+		history details snapshot. Plain net10.0 (no Windows Desktop), marked as
+		Windows-only. See ROADMAP.md, phase 2.
+	-->
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>disable</Nullable>
+		<ImplicitUsings>disable</ImplicitUsings>
+		<AssemblyName>c2flux.Platform.Windows</AssemblyName>
+		<RootNamespace>c2flux</RootNamespace>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+		<Authors>Daniel Capilla</Authors>
+		<Company>Daniel Capilla</Company>
+		<Product>c² flux - Tree Scanner</Product>
+		<Copyright>Copyright © Daniel Capilla</Copyright>
+
+		<Version>1.4.1</Version>
+		<AssemblyVersion>1.4.1</AssemblyVersion>
+		<FileVersion>1.4.1</FileVersion>
+		<InformationalVersion>1.4.1</InformationalVersion>
+		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+			<_Parameter1>windows</_Parameter1>
+		</AssemblyAttribute>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\c2flux.Core\c2flux.Core.csproj" />
+		<ProjectReference Include="..\..\libs\NtfsReader\NtfsReader.csproj" />
+	</ItemGroup>
+
+</Project>

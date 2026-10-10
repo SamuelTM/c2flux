@@ -20,6 +20,8 @@ namespace c2flux.Benchmarks
             new ScannerDefinition("ntfsmft", true, "c2flux.NtfsMftScanner"),
             new ScannerDefinition("ntquery", false, "c2flux.NtQueryDirectoryScanner"),
             new ScannerDefinition("win32find", false, "c2flux.DirectoryScanner"),
+            // Portable scanner in c2flux.Core since phase 2; absent in older versions.
+            new ScannerDefinition("managed", false, "c2flux.ManagedScanner"),
         };
 
         private ScannerDefinition(string key, bool requiresMft, params string[] typeNames)
@@ -157,13 +159,10 @@ namespace c2flux.Benchmarks
                 }
             }
 
-            throw new InvalidOperationException(
-                string.Format(
-                    "None of the types {0} exist in this app version.",
-                    string.Join(", ", definition.TypeNames)));
+            return null;
         }
 
-        // Mirrors the check ScanExecutionController makes before choosing an MFT
+        // Mirrors the check the app makes before choosing an MFT
         // scanner. Returns null when the scanner can run on the path.
         public string GetUnsupportedReason(ScannerDefinition definition, string path)
         {
