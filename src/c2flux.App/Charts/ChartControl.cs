@@ -106,23 +106,8 @@ namespace c2flux
                 return;
             }
 
-            MenuItem reveal = new MenuItem { Header = LocalizationService.GetText("Context.OpenInExplorer") };
-            reveal.Click += (_, _) => Reveal(entry.FullPath);
-            new ContextMenu { ItemsSource = new[] { reveal } }.Open(this);
+            ShowRevealMenu(entry);
             e.Handled = true;
-        }
-
-        // Folders open in the file manager, files are selected in it.
-        private static void Reveal(string path)
-        {
-            if (Directory.Exists(path))
-            {
-                FileManager.Open(path);
-            }
-            else if (File.Exists(path))
-            {
-                FileManager.Reveal(path);
-            }
         }
 
         // The entry's dates read from disk, as the WinForms charts show them;

@@ -366,11 +366,11 @@ public sealed class ScanOptions
 Portar de GDI+ para `DrawingContext` do Avalonia (ou SkiaSharp direto, se for preciso mais desempenho). A lógica de layout (algoritmo de treemap, ângulos do sunburst, escalas) é reaproveitada quase sem mudanças.
 
 - [x] `TreeEntrySizeBarView` → `EntryTree`: árvore inteira (seleção, teclado, expandir, rolagem), desenhando só as linhas visíveis. Ícones de arquivo, pasta e unidade ficam para o serviço de ícones da Fase 5
-- [ ] `Chart_Treemap` (3,3 mil linhas, o maior): layout, cores, rótulos, hover, clique, zoom
+- [x] `Chart_Treemap` → `Treemap`: o canvas (layout squarified, famílias, rótulos, "Other (n)", hover, clique, duplo clique para zoom, menu de contexto), com cache em bitmap como no original. Diferença média de 11 níveis por pixel contra a referência, quase toda na fonte. A tabela de cima vai para a 5.3, com as outras tabelas
 - [x] `Chart_Sunburst` → `Sunburst`. O `PathGradientBrush` do GDI+ virou gradiente radial (quase idêntico na comparação)
 - [x] `Chart_PieChart` → `PieChart`
 - [x] `Chart_BarChart` → `BarChart` (espaço do ícone vazio até o serviço de ícones)
-- [ ] `Chart_TableGridChart` / `Chart_ResponsiveTableGrid`
+- [ ] `Chart_TableGridChart` / `Chart_ResponsiveTableGrid` e a tabela do `Chart_Treemap`: são tabelas (DataGrid), portadas na 5.3
 - [ ] `StorageHistoryChart`
 - [ ] `ScanHistoryGrowthOverviewControl`
 - [x] `StatusSymbolRenderer`
