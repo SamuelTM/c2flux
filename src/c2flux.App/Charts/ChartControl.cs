@@ -1,20 +1,18 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Documents;
 using Avalonia.Input;
 using Avalonia.Media;
 
 namespace c2flux
 {
     // What the WinForms charts share: an entry to show, areas that map points
-    // to entries (filled while rendering), a date tooltip, the "Open in
-    // Explorer" context menu and text in the window's font.
-    public abstract class ChartControl : Control
+    // to entries (filled while rendering), a tooltip and the "Open in
+    // Explorer" context menu.
+    public abstract class ChartControl : DrawnControl
     {
         private readonly List<(Func<Point, bool> Contains, FileSystemEntry Entry)> _hitAreas =
             new List<(Func<Point, bool>, FileSystemEntry)>();
@@ -62,49 +60,6 @@ namespace c2flux
         internal FileSystemEntry HitTest(Point point)
         {
             return _hitAreas.FirstOrDefault(area => area.Contains(point)).Entry;
-        }
-
-        protected IBrush Foreground => Resource("TextPrimaryBrush");
-
-        protected FormattedText CreateText(string text, IBrush brush)
-        {
-            return new FormattedText(
-                text,
-                CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight,
-                new Typeface(FontFamily.Default),
-                GetValue(TextElement.FontSizeProperty),
-                brush);
-        }
-
-        // WinForms Font.Height of Segoe UI (line spacing 1.33 em: 16 px at
-        // 12 px), so rows keep the original height with any font.
-        protected double FontHeight => Math.Ceiling(GetValue(TextElement.FontSizeProperty) * 1.33);
-
-        // TextRenderer pads text by about a sixth of the line height.
-        protected double TextPadding => Math.Ceiling(FontHeight / 6);
-
-        // TextRenderer.MeasureText: text width plus padding on both sides.
-        protected double MeasureWidth(string text)
-        {
-            return Math.Ceiling(CreateText(text, null).WidthIncludingTrailingWhitespace + TextPadding * 2);
-        }
-
-        // TextRenderer.DrawText with Left | VerticalCenter | EndEllipsis.
-        protected void DrawTextLine(DrawingContext context, string text, Rect bounds, IBrush brush)
-        {
-            double width = bounds.Width - TextPadding * 2;
-
-            if (width <= 0)
-            {
-                return;
-            }
-
-            FormattedText formatted = CreateText(text, brush);
-            formatted.MaxTextWidth = width;
-            formatted.MaxLineCount = 1;
-            formatted.Trimming = TextTrimming.CharacterEllipsis;
-            context.DrawText(formatted, new Point(bounds.X + TextPadding, bounds.Y + (bounds.Height - formatted.Height) / 2));
         }
 
         protected void DrawNoData(DrawingContext context)
@@ -197,9 +152,6 @@ namespace c2flux
                 return null;
             }
         }
-
-        protected IBrush Resource(string key) =>
-            this.FindResource(ActualThemeVariant, key) as IBrush ?? Brushes.Transparent;
 
         // Vertical gradient over the given bounds, as GDI+'s
         // LinearGradientBrush(bounds, top, bottom, Vertical).

@@ -67,6 +67,33 @@ namespace c2flux
                 (byte)Math.Max(0, (int)Math.Round(color.B * factor)));
         }
 
+        // The opaque color of a translucent one drawn over background. GDI+
+        // blends in linear light (gamma corrected), unlike Avalonia, so
+        // translucent WinForms fills look brighter than a plain alpha blend.
+        public static Color BlendLinear(Color color, Color background)
+        {
+            double alpha = color.A / 255D;
+
+            byte Channel(byte front, byte back)
+            {
+                double linear = ToLinear(front) * alpha + ToLinear(back) * (1 - alpha);
+                return (byte)Math.Round(FromLinear(linear) * 255);
+            }
+
+            return Color.FromRgb(Channel(color.R, background.R), Channel(color.G, background.G), Channel(color.B, background.B));
+        }
+
+        private static double ToLinear(byte value)
+        {
+            double c = value / 255D;
+            return c <= 0.04045 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+        }
+
+        private static double FromLinear(double c)
+        {
+            return c <= 0.0031308 ? c * 12.92 : 1.055 * Math.Pow(c, 1 / 2.4) - 0.055;
+        }
+
         // FNV-1a over the upper-cased name: the same colors in every run.
         private static int GetStableNameHash(string name)
         {

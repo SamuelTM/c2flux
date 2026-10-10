@@ -40,6 +40,25 @@ Capturas da interface WinForms atual, usadas na Fase 5 do [ROADMAP](../../ROADMA
 
 **Cores do Treemap e do Sunburst:** até a Fase 1, elas mudavam a cada vez que o app abria (hash do nome aleatório por processo). Agora são estáveis; duas execuções do mesmo commit produziram imagens idênticas. As cores destas referências não correspondem a nenhuma execução específica da v1.4.1, que não tinha cores fixas.
 
+## `charts/`
+
+Cada gráfico do WinForms sozinho, desenhado com uma árvore fixa em vez de uma varredura real, para comparar com o gráfico portado com os mesmos dados (Fase 5.2).
+
+| | |
+|---|---|
+| **Versão** | `cross-platform` no commit `980f112`, [execução de 10/10/2026](https://github.com/SamuelTM/c2flux/actions/runs/38059539655) do `ui-screenshots.yml` |
+| **Dados** | `tests/fixtures/generate_chart_fixture.py` com raiz `T:\` (262 arquivos, 377 MB) |
+| **Tamanho** | 890×630 (área do gráfico na janela de 1280×800); árvore 360×450 |
+| **Como** | `c2flux-shots --charts`: cada controle numa janela sem borda, com as cores e a fonte que ele herda na janela principal |
+
+| Arquivo | Controle |
+|---|---|
+| `chart-pie.png`, `chart-bar.png`, `chart-sunburst.png`, `chart-treemap.png`, `chart-table.png` | `Chart_PieChart`, `Chart_BarChart`, `Chart_Sunburst`, `Chart_Treemap`, `Chart_TableGridChart` |
+| `chart-tree.png` | `TreeEntrySizeBarView`, sem os ícones do shell. A raiz mostra 4 GB porque `T:\` é um volume de verdade no runner |
+| `chart-symbols.png` | `StatusSymbolRenderer`: os quatro símbolos e o glifo +/− em 14 px e 48 px |
+
+O lado Avalonia sai dos testes do app (`ChartCaptures`), com os mesmos nomes de arquivo, em `$C2FLUX_CHART_OUT`.
+
 ## Limitações conhecidas
 
 - **Só tema escuro:** na v1.4.1 o tema claro não é alcançável (o `AppSettings.Load()` força `WindowsDarkMode`). Não existe referência para o claro.

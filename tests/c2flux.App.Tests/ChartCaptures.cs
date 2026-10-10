@@ -78,6 +78,15 @@ namespace c2flux.AppTests
             Capture("chart-sunburst", chart, ChartWidth, ChartHeight);
         }
 
+        [AvaloniaFact]
+        public void Tree()
+        {
+            EntryTree tree = new EntryTree();
+            tree.SetRootEntry(LoadFixture());
+            // Size of the tree in the 1280x800 main window.
+            Capture("chart-tree", tree, 360, 450);
+        }
+
         internal static FileSystemEntry LoadFixture()
         {
             return ScanResultFileService.Load(Path.Combine(AppContext.BaseDirectory, "chart-tree.json"));

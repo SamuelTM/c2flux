@@ -365,15 +365,16 @@ public sealed class ScanOptions
 
 Portar de GDI+ para `DrawingContext` do Avalonia (ou SkiaSharp direto, se for preciso mais desempenho). A lógica de layout (algoritmo de treemap, ângulos do sunburst, escalas) é reaproveitada quase sem mudanças.
 
-- [ ] `TreeEntrySizeBarView`: barras de tamanho na árvore
+- [x] `TreeEntrySizeBarView` → `EntryTree`: árvore inteira (seleção, teclado, expandir, rolagem), desenhando só as linhas visíveis. Ícones de arquivo, pasta e unidade ficam para o serviço de ícones da Fase 5
 - [ ] `Chart_Treemap` (3,3 mil linhas, o maior): layout, cores, rótulos, hover, clique, zoom
-- [ ] `Chart_Sunburst`
-- [ ] `Chart_PieChart`
-- [ ] `Chart_BarChart`
+- [x] `Chart_Sunburst` → `Sunburst`. O `PathGradientBrush` do GDI+ virou gradiente radial (quase idêntico na comparação)
+- [x] `Chart_PieChart` → `PieChart`
+- [x] `Chart_BarChart` → `BarChart` (espaço do ícone vazio até o serviço de ícones)
 - [ ] `Chart_TableGridChart` / `Chart_ResponsiveTableGrid`
 - [ ] `StorageHistoryChart`
 - [ ] `ScanHistoryGrowthOverviewControl`
-- [ ] `StatusSymbolRenderer`
+- [x] `StatusSymbolRenderer`
+- [x] **Comparação:** `tests/fixtures/generate_chart_fixture.py` gera uma árvore fixa; `c2flux-shots --charts` desenha cada gráfico do WinForms com ela (`docs/fidelity/charts/`) e os testes do app desenham o port com os mesmos dados (`ChartCaptures`). Achados: o WinForms mistura transparência em luz linear (`ChartColors.BlendLinear`) e o texto segue as métricas da Segoe UI e do `TextRenderer` (`DrawnControl`)
 - [ ] Virtualização e cache de renderização para árvores com milhões de entradas
 
 #### 5.3 Janelas e controles
