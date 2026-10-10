@@ -533,11 +533,15 @@ public sealed partial class NtfsReader : IDisposable
                         if (attributeFileName->ParentDirectory.InodeNumberHighPart > 0)
                             throw new NotSupportedException("48 bits inode are not supported to reduce memory footprint.");
 
-                        //node.ParentNodeIndex = ((ulong)attributeFileName->ParentDirectory.InodeNumberHighPart << 32) + attributeFileName->ParentDirectory.InodeNumberLowPart;
-                        node.ParentNodeIndex = attributeFileName->ParentDirectory.InodeNumberLowPart;
-
+                        // A file with hard links has one $FILE_NAME per link. Name and
+                        // parent must come from the same one: taking the parent from
+                        // every attribute paired one link's name with another's folder.
                         if (attributeFileName->NameType == 1 || node.NameIndex == 0)
+                        {
+                            //node.ParentNodeIndex = ((ulong)attributeFileName->ParentDirectory.InodeNumberHighPart << 32) + attributeFileName->ParentDirectory.InodeNumberLowPart;
+                            node.ParentNodeIndex = attributeFileName->ParentDirectory.InodeNumberLowPart;
                             node.NameIndex = GetNameIndex(new string(&attributeFileName->Name, 0, attributeFileName->NameLength));
+                        }
 
                         break;
 

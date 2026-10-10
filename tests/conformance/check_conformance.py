@@ -4,12 +4,23 @@ Compares what a scanner saw (a c2flux-bench --dump file) with what the test
 tree generator created (its manifest), entry by entry, and reports every
 difference by category. See ROADMAP.md, phase 2, conformance suite.
 
+Rules every scanner must meet (exit code 1 otherwise):
+  * no extra entries, no size, mtime or kind differences, and every directory
+    the sum of its children;
+  * every manifest file and directory present, except as allowed below;
+  * symbolic links never followed: if listed, 0 bytes and no children;
+  * --hardlinks each: every link listed; once: exactly one path per file
+    (counted once, as on disk);
+  * --permissions enforced: an unreadable folder's contents are absent;
+    ignored (reads the volume directly): they are present.
+
 The dump lists entries relative to the scanned root. When the scan root is not
 the tree itself (MFT scanners always scan a whole volume), --subtree selects
 the tree's folder inside the dump (e.g. "tree" for T:\\tree).
 
 Usage:
     python check_conformance.py --manifest M.json --dump D.txt [--subtree tree]
+                                [--hardlinks each|once] [--permissions enforced|ignored]
                                 [--scanner NAME] [--json-out F] [--summary-out F]
 """
 
@@ -75,6 +86,7 @@ def check(manifest, dump):
                 "target_kind": entry.get("target_kind"),
                 "seen_as": None if seen is None else seen["kind"],
                 "seen_size": None if seen is None else seen["size"],
+                "followed": any(other.startswith(path + "/") for other in dump),
             })
             continue
 
@@ -115,7 +127,47 @@ def check(manifest, dump):
     return findings
 
 
-def markdown(scanner, findings, outside, dump_count):
+def violations(manifest, findings, hardlinks, permissions):
+    """The findings that break the rules for this scanner, as readable lines."""
+    problems = []
+    for key in ("extra", "size", "mtime", "kind", "directory_size"):
+        for item in findings[key]:
+            problems.append("{}: {}".format(key, item))
+
+    link_groups = {}
+    for entry in manifest["entries"]:
+        if entry.get("link_group"):
+            link_groups.setdefault(entry["link_group"], []).append(entry["path"])
+    missing = {item["path"] for item in findings["missing"]}
+
+    for group, paths in link_groups.items():
+        present = [path for path in paths if path not in missing]
+        if hardlinks == "once":
+            if len(present) != 1:
+                problems.append("hardlinks: group {} should appear once, found {}".format(group, present))
+            missing -= set(paths)
+        elif len(present) != len(paths):
+            problems.append("hardlinks: group {} missing {}".format(group, sorted(set(paths) - set(present))))
+            missing -= set(paths)
+
+    for path in sorted(missing):
+        problems.append("missing: {}".format(path))
+
+    if permissions == "enforced":
+        for item in findings["unreadable_visible"]:
+            problems.append("unreadable folder content visible: {}".format(item["path"]))
+    else:
+        for item in findings["missing_unreadable"]:
+            problems.append("unreadable folder content missing (scanner ignores permissions): {}".format(item["path"]))
+
+    for link in findings["symlinks"]:
+        if link["followed"] or (link["seen_size"] or 0) != 0:
+            problems.append("symbolic link followed: {}".format(link))
+
+    return problems
+
+
+def markdown(scanner, findings, outside, dump_count, problems):
     lines = ["### Conformance: {}".format(scanner), ""]
     lines.append("Entries in scan: {:,} (outside the tree: {:,})".format(dump_count, outside))
     lines.append("")
@@ -127,6 +179,12 @@ def markdown(scanner, findings, outside, dump_count):
         examples = ", ".join("`{}`".format(item["path"]) for item in items[:3])
         lines.append("| {} | {} | {} |".format(key, len(items), examples))
     lines.append("")
+    lines.append("**Result: {}**".format("FAILED ({} problems)".format(len(problems)) if problems else "passed"))
+    lines.append("")
+    for problem in problems[:20]:
+        lines.append("- " + problem)
+    if problems:
+        lines.append("")
     lines.append("Symbolic links:")
     lines.append("")
     for link in findings["symlinks"]:
@@ -142,6 +200,8 @@ def main():
     parser.add_argument("--dump", required=True)
     parser.add_argument("--subtree", default="")
     parser.add_argument("--scanner", default="scanner")
+    parser.add_argument("--hardlinks", choices=["each", "once"], default="each")
+    parser.add_argument("--permissions", choices=["enforced", "ignored"], default="enforced")
     parser.add_argument("--json-out")
     parser.add_argument("--summary-out")
     arguments = parser.parse_args()
@@ -154,6 +214,7 @@ def main():
         manifest = json.load(handle)
     dump, outside = load_dump(arguments.dump, arguments.subtree)
     findings = check(manifest, dump)
+    problems = violations(manifest, findings, arguments.hardlinks, arguments.permissions)
 
     report = {
         "scanner": arguments.scanner,
@@ -161,10 +222,13 @@ def main():
         "skipped_features": manifest.get("skipped_features"),
         "entries_in_scan": len(dump),
         "entries_outside_tree": outside,
+        "hardlinks": arguments.hardlinks,
+        "permissions": arguments.permissions,
+        "problems": problems,
         "counts": {key: len(items) for key, items in findings.items()},
         "findings": findings,
     }
-    text = markdown(arguments.scanner, findings, outside, len(dump))
+    text = markdown(arguments.scanner, findings, outside, len(dump), problems)
 
     if arguments.json_out:
         with open(arguments.json_out, "w", encoding="utf-8") as handle:
@@ -173,7 +237,8 @@ def main():
         with open(arguments.summary_out, "a", encoding="utf-8") as handle:
             handle.write(text)
     print(text)
+    return 1 if problems else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

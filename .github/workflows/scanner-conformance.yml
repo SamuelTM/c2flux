@@ -2,8 +2,7 @@ name: Scanner conformance
 
 # Runs every scanner available on each OS over the synthetic test tree and
 # compares what it saw with the generator's manifest, entry by entry.
-# See ROADMAP.md, phase 2. Report only for now: the findings decide the
-# expected semantics before this becomes a gate.
+# See ROADMAP.md, phase 2; the rules are in tests/conformance/check_conformance.py.
 
 on:
   pull_request:
@@ -73,26 +72,31 @@ jobs:
           New-Item -ItemType Directory -Force -Path $out | Out-Null
           "## Scanner conformance (Windows)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
 
-          # MFT scanners read the whole volume; the others scan the tree folder.
+          # MFT scanners read the whole volume directly: they see the tree as a
+          # subfolder, count a hard-linked file once and ignore permissions.
+          $mft = @('--subtree', 'tree', '--hardlinks', 'once', '--permissions', 'ignored')
           $targets = @(
-            @{ Scanner = 'c2flux';    Path = 'T:\';     Subtree = 'tree' },
-            @{ Scanner = 'ntfsmft';   Path = 'T:\';     Subtree = 'tree' },
-            @{ Scanner = 'ntquery';   Path = 'T:\tree'; Subtree = '' },
-            @{ Scanner = 'win32find'; Path = 'T:\tree'; Subtree = '' },
-            @{ Scanner = 'managed';   Path = 'T:\tree'; Subtree = '' }
+            @{ Scanner = 'c2flux';    Path = 'T:\';     Rules = $mft },
+            @{ Scanner = 'ntfsmft';   Path = 'T:\';     Rules = $mft },
+            @{ Scanner = 'ntquery';   Path = 'T:\tree'; Rules = @() },
+            @{ Scanner = 'win32find'; Path = 'T:\tree'; Rules = @() },
+            @{ Scanner = 'managed';   Path = 'T:\tree'; Rules = @() }
           )
+          $failed = @()
 
           foreach ($target in $targets) {
             $dump = Join-Path $out "$($target.Scanner).dump"
             & "$env:RUNNER_TEMP\bench\c2flux-bench.exe" --app "$env:RUNNER_TEMP\app" --scanner $target.Scanner --path $target.Path --dump $dump | Out-File -FilePath (Join-Path $out "$($target.Scanner).json") -Encoding utf8
             if (-not (Test-Path $dump)) {
-              Write-Warning "$($target.Scanner) produced no result"
               "$($target.Scanner): no result (see artifact)`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+              $failed += $target.Scanner
               continue
             }
-            python tests/conformance/check_conformance.py --manifest "$env:RUNNER_TEMP\manifest.json" --dump $dump --subtree $target.Subtree --scanner "$($target.Scanner) (Windows)" --json-out (Join-Path $out "$($target.Scanner).conformance.json") --summary-out $env:GITHUB_STEP_SUMMARY
+            $rules = $target.Rules
+            python tests/conformance/check_conformance.py --manifest "$env:RUNNER_TEMP\manifest.json" --dump $dump @rules --scanner "$($target.Scanner) (Windows)" --json-out (Join-Path $out "$($target.Scanner).conformance.json") --summary-out $env:GITHUB_STEP_SUMMARY
+            if ($LASTEXITCODE -ne 0) { $failed += $target.Scanner }
           }
-          exit 0
+          if ($failed.Count -gt 0) { throw "Conformance failed: $($failed -join ', ')" }
 
       - name: Upload results
         if: always()
@@ -143,7 +147,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/conformance"
           echo "## Scanner conformance (${{ matrix.os }})" >> "$GITHUB_STEP_SUMMARY"
-          dotnet "$RUNNER_TEMP/bench/c2flux-bench.dll" --app "$RUNNER_TEMP/core" --main-assembly c2flux.Core.dll --scanner managed --path "$RUNNER_TEMP/tree" --dump "$RUNNER_TEMP/conformance/managed.dump" > "$RUNNER_TEMP/conformance/managed.json" || true
+          dotnet "$RUNNER_TEMP/bench/c2flux-bench.dll" --app "$RUNNER_TEMP/core" --main-assembly c2flux.Core.dll --scanner managed --path "$RUNNER_TEMP/tree" --dump "$RUNNER_TEMP/conformance/managed.dump" > "$RUNNER_TEMP/conformance/managed.json"
           python tests/conformance/check_conformance.py --manifest "$RUNNER_TEMP/manifest.json" --dump "$RUNNER_TEMP/conformance/managed.dump" --scanner "managed (${{ matrix.os }})" --json-out "$RUNNER_TEMP/conformance/managed.conformance.json" --summary-out "$GITHUB_STEP_SUMMARY"
 
       - name: Upload results

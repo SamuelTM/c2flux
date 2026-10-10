@@ -275,8 +275,10 @@ namespace c2flux
                         FullPath = fileSystemEntry.FullPath,
                         SizeBytes = fileLength,
                         IsDirectory = false,
+                        // Already DateTime ticks (FileTimeToUtcTicks); FromFileTimeUtc
+                        // added the 1601 offset a second time (dates around year 3620).
                         LastWriteTimeUtc = fileSystemEntry.LastWriteTimeUtcTicks > 0
-                            ? DateTime.FromFileTimeUtc(fileSystemEntry.LastWriteTimeUtcTicks)
+                            ? new DateTime(fileSystemEntry.LastWriteTimeUtcTicks, DateTimeKind.Utc)
                             : DateTime.MinValue
                     };
 

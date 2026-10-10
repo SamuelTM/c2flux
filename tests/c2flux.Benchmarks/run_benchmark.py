@@ -12,7 +12,10 @@ For every target (scanner + path):
     against thresholds. Interference on a shared runner (antivirus, other
     disk activity) only ever adds time, so the fastest run is the most
     stable estimate of the code's own cost; medians are still reported,
-  * on static targets, also requires identical tree fingerprints.
+  * on static targets, notes whether the trees are identical. Correctness is
+    checked against the test tree manifest by the conformance workflow; a
+    tree that differs from the baseline is expected after a bug fix (the
+    baseline keeps its bugs), so it is reported, not failed.
 
 Without --candidate-app it only measures the baseline (to record reference
 numbers).
@@ -176,11 +179,11 @@ def compare(target, baseline, candidate, arguments):
         if len(baseline["digests"]) > 1:
             notes.append("baseline produced different trees across runs")
         if len(candidate["digests"]) > 1:
+            # Same files, different results between runs: nondeterminism.
             verdict = "regression"
             notes.append("candidate produced different trees across runs")
         elif baseline["digests"] != candidate["digests"]:
-            verdict = "regression"
-            notes.append("tree differs from baseline: " + tree_difference(baseline["tree"], candidate["tree"]))
+            notes.append("tree differs from baseline (see conformance): " + tree_difference(baseline["tree"], candidate["tree"]))
     else:
         difference = tree_difference(baseline["tree"], candidate["tree"])
         if difference != "same counts":
