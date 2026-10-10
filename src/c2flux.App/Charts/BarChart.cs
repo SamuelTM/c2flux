@@ -92,9 +92,10 @@ namespace c2flux
             }
         }
 
-        protected override string FormatToolTip(FileSystemEntry entry, DateTime created, DateTime modified, DateTime accessed)
+        protected override string GetToolTip(FileSystemEntry entry)
         {
-            return string.Format(LocalizationService.GetText("Chart.TooltipDates"), created, Environment.NewLine, modified, accessed);
+            return FormatDates(entry, (created, modified, accessed) => string.Format(
+                LocalizationService.GetText("Chart.TooltipDates"), created, Environment.NewLine, modified, accessed));
         }
     }
 }

@@ -6,7 +6,8 @@ Avalonia charts (rendered headless on any OS) load the same tree, so their
 images can be compared directly. See ROADMAP.md, phase 5.2.
 
 Paths use the separator of the OS that renders them, because the charts split
-paths with System.IO.Path. Everything else (names, sizes, dates) is identical.
+paths with System.IO.Path. Everything else (names, sizes, dates) is identical,
+including the root's name.
 
 Usage: generate_chart_fixture.py <output.json> [--root T:\\]
 """
@@ -94,8 +95,8 @@ def build(root, sep):
         file("empty.txt", 0),
     ]
 
-    root_node = entry("", root, directory=True)
-    root_node["Name"] = root
+    # Same name on every OS: the sunburst and treemap derive colors from it.
+    root_node = entry("fixture", root, directory=True)
     for make in top:
         root_node["Children"].append(make(root))
     root_node["Children"].sort(key=lambda child: -child["SizeBytes"])

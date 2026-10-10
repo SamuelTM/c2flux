@@ -57,11 +57,11 @@ namespace c2flux
             DrawLegend(context, items, totalSize, chartBounds.Right + chartLegendGap, chartTop);
         }
 
-        protected override string FormatToolTip(FileSystemEntry entry, DateTime created, DateTime modified, DateTime accessed)
+        protected override string GetToolTip(FileSystemEntry entry)
         {
-            return string.Format(
+            return FormatDates(entry, (created, modified, accessed) => string.Format(
                 LocalizationService.GetText("Chart.PieTooltip"),
-                entry.FullPath, Environment.NewLine, created, modified, accessed);
+                entry.FullPath, Environment.NewLine, created, modified, accessed));
         }
 
         // Top ten children by size (zero-byte ones left out), then "Other"

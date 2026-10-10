@@ -70,6 +70,14 @@ namespace c2flux.AppTests
             Capture("chart-bar", chart, ChartWidth, ChartHeight);
         }
 
+        [AvaloniaFact]
+        public void Sunburst()
+        {
+            Sunburst chart = new Sunburst();
+            chart.SetEntry(LoadFixture());
+            Capture("chart-sunburst", chart, ChartWidth, ChartHeight);
+        }
+
         internal static FileSystemEntry LoadFixture()
         {
             return ScanResultFileService.Load(Path.Combine(AppContext.BaseDirectory, "chart-tree.json"));

@@ -43,9 +43,8 @@ namespace c2flux
 
         protected abstract void RenderChart(DrawingContext context);
 
-        // Format key of the tooltip ({0} created, {1} new line, ... as in
-        // the WinForms chart); null for no tooltip.
-        protected abstract string FormatToolTip(FileSystemEntry entry, DateTime created, DateTime modified, DateTime accessed);
+        // Text shown while the pointer is over entry; null for none.
+        protected abstract string GetToolTip(FileSystemEntry entry);
 
         protected void AddHitArea(Rect bounds, FileSystemEntry entry)
         {
@@ -65,8 +64,7 @@ namespace c2flux
             return _hitAreas.FirstOrDefault(area => area.Contains(point)).Entry;
         }
 
-        protected IBrush Foreground =>
-            this.FindResource(ActualThemeVariant, "TextPrimaryBrush") as IBrush ?? Brushes.White;
+        protected IBrush Foreground => Resource("TextPrimaryBrush");
 
         protected FormattedText CreateText(string text, IBrush brush)
         {
@@ -127,7 +125,7 @@ namespace c2flux
             }
 
             _hoveredEntry = entry;
-            ToolTip.SetTip(this, CreateToolTip(entry));
+            ToolTip.SetTip(this, entry == null ? null : GetToolTip(entry));
         }
 
         protected override void OnPointerExited(PointerEventArgs e)
@@ -172,14 +170,16 @@ namespace c2flux
             }
         }
 
-        private string CreateToolTip(FileSystemEntry entry)
+        // The entry's dates read from disk, as the WinForms charts show them;
+        // null when the entry no longer exists.
+        protected static string FormatDates(FileSystemEntry entry, Func<DateTime, DateTime, DateTime, string> format)
         {
-            if (entry == null || string.IsNullOrWhiteSpace(entry.FullPath))
+            string path = entry.FullPath;
+
+            if (string.IsNullOrWhiteSpace(path))
             {
                 return null;
             }
-
-            string path = entry.FullPath;
 
             try
             {
@@ -189,14 +189,17 @@ namespace c2flux
                 }
 
                 return entry.IsDirectory
-                    ? FormatToolTip(entry, Directory.GetCreationTime(path), Directory.GetLastWriteTime(path), Directory.GetLastAccessTime(path))
-                    : FormatToolTip(entry, File.GetCreationTime(path), File.GetLastWriteTime(path), File.GetLastAccessTime(path));
+                    ? format(Directory.GetCreationTime(path), Directory.GetLastWriteTime(path), Directory.GetLastAccessTime(path))
+                    : format(File.GetCreationTime(path), File.GetLastWriteTime(path), File.GetLastAccessTime(path));
             }
             catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
             {
                 return null;
             }
         }
+
+        protected IBrush Resource(string key) =>
+            this.FindResource(ActualThemeVariant, key) as IBrush ?? Brushes.Transparent;
 
         // Vertical gradient over the given bounds, as GDI+'s
         // LinearGradientBrush(bounds, top, bottom, Vertical).
