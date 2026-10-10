@@ -159,9 +159,12 @@ namespace c2flux
                 DriveInfo driveInfo = new DriveInfo(driveRoot);
 
                 phaseStopwatch.Restart();
+                // Same 4 MB MFT reads as C2FluxScanner; the library default
+                // buffer made many more, smaller reads.
                 NtfsReader reader = new NtfsReader(
                     driveInfo,
-                    RetrieveMode.Minimal | RetrieveMode.StandardInformations);
+                    RetrieveMode.Minimal | RetrieveMode.StandardInformations,
+                    4u * 1024u * 1024u);
                 List<INode> nodes = NtfsReaderFastNodeProvider.GetNodes(
                     reader,
                     driveRoot,

@@ -304,9 +304,10 @@ public sealed class ScanOptions
 
 #### 3.4 Windows: ajustes
 
-- [ ] Manter a MFT como caminho principal. Avaliar se o `C2FluxScanner` e o `NtfsMftScanner` podem virar um só
-- [ ] Suporte a `win-arm64` (verificar o NtfsReader em ARM64)
-- [ ] Avaliar ReFS / exFAT: hoje caem no NtQuery, o que está correto
+- [x] Manter a MFT como caminho principal. **Avaliação `C2FluxScanner` × `NtfsMftScanner`:** o c2flux faz a mesma varredura cerca de 2× mais rápido e com metade da memória, com a mesma contagem, mas o padrão continua sendo o ntfsmft (o c2flux depende da opção "c²flux Scan"). Decisão: manter os dois e a opção; o ntfsmft passa a ler a MFT em blocos de 4 MB, como o c2flux, em vez do buffer padrão (bem menor) do NtfsReader. O buffer pequeno era o motivo de o ntfsmft no `C:\` do CI oscilar tanto
+- [ ] Confirmar no benchmark que o ntfsmft não ficou mais lento
+- [ ] ~~Suporte a `win-arm64`~~: **movido para a Fase 6** (publicar e testar o RID é empacotamento). O NtfsReader é .NET puro, e as chamadas nativas são as mesmas
+- [x] Avaliar ReFS / exFAT: caem no NtQuery, o que está correto (a MFT só existe no NTFS)
 
 **Entregável:** varredura nativa e paralela nos três SOs, validada pela suíte de conformidade e com benchmarks publicados.
 
