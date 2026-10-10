@@ -743,8 +743,9 @@ namespace c2flux
 
         private static string NormalizePath(string path)
         {
-            string trimmed = path.Trim().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            return trimmed.Length == 0 ? path.Trim() : trimmed;
+            string native = EntryPaths.ToNativeSeparators(path.Trim());
+            string trimmed = native.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return trimmed.Length == 0 ? native : trimmed;
         }
 
         // ----- families ---------------------------------------------------

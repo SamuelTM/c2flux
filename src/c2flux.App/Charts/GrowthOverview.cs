@@ -165,7 +165,7 @@ namespace c2flux
             string.Equals(NormalizePath(left), NormalizePath(right), StringComparison.OrdinalIgnoreCase);
 
         private static string NormalizePath(string path) =>
-            string.IsNullOrWhiteSpace(path) ? string.Empty : path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string.IsNullOrWhiteSpace(path) ? string.Empty : EntryPaths.ToNativeSeparators(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
         internal static string FormatSignedSize(long bytes)
         {

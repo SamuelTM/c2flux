@@ -713,7 +713,7 @@ namespace c2flux
         // other paths lose a trailing separator.
         private static string NormalizeEntryPath(string path)
         {
-            string normalized = path.Trim();
+            string normalized = EntryPaths.ToNativeSeparators(path.Trim());
 
             if (normalized.Length == 3 && normalized[1] == ':' && (normalized[2] == '\\' || normalized[2] == '/'))
             {
