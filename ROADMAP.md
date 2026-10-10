@@ -361,7 +361,7 @@ public sealed class ScanOptions
 - [x] Ícone do app (o mesmo `c2flux.png`/`.ico` do WinForms) e decorações nativas da janela. Barra customizada: não por enquanto; reavaliar depois das capturas da Fase 5.3
 - [x] Menu de aplicativo nativo no macOS: Sobre e Ajustes (⌘,) no menu do app, desabilitados até as janelas existirem (Fase 5.4); Ocultar, Serviços e Sair (⌘Q) o Avalonia já adiciona. Atalhos da Fase 5.3: usar `PlatformHotkeyConfiguration.CommandModifiers` (⌘ no macOS, Ctrl nos outros), nunca `Ctrl` fixo
 
-#### 5.2 Gráficos (desenho customizado)
+#### 5.2 Gráficos (desenho customizado) ✅
 
 Portar de GDI+ para `DrawingContext` do Avalonia (ou SkiaSharp direto, se for preciso mais desempenho). A lógica de layout (algoritmo de treemap, ângulos do sunburst, escalas) é reaproveitada quase sem mudanças.
 
@@ -370,7 +370,6 @@ Portar de GDI+ para `DrawingContext` do Avalonia (ou SkiaSharp direto, se for pr
 - [x] `Chart_Sunburst` → `Sunburst`. O `PathGradientBrush` do GDI+ virou gradiente radial (quase idêntico na comparação)
 - [x] `Chart_PieChart` → `PieChart`
 - [x] `Chart_BarChart` → `BarChart` (espaço do ícone vazio até o serviço de ícones)
-- [ ] `Chart_TableGridChart` / `Chart_ResponsiveTableGrid` e a tabela do `Chart_Treemap`: são tabelas (DataGrid), portadas na 5.3
 - [x] `StorageHistoryChart`
 - [x] `ScanHistoryGrowthOverviewControl` → `GrowthOverview` (o seletor de visão usa o `ComboBox` do Fluent até o tema dos controles da 5.3)
 - [x] `StatusSymbolRenderer`
@@ -381,6 +380,7 @@ Portar de GDI+ para `DrawingContext` do Avalonia (ou SkiaSharp direto, se for pr
 
 Ordem sugerida: o que é visto primeiro vem antes.
 
+- [ ] Tabelas: `Chart_TableGridChart`, `Chart_ResponsiveTableGrid` e a tabela de cima do `Chart_Treemap` (vieram da 5.2; são DataGrid, não desenho). Referências: `docs/fidelity/charts/chart-table.png` e `chart-treemap.png`
 - [ ] `MainForm`: layout principal, barra de ferramentas, seletor de unidade, árvore, painel de gráficos, barra de status (`LayoutMainFormController`, `StatusMainFormController`, `TreeEntryController`, `ExportEntryController`, `PartitionGridController`, `DriveComboBoxController`)
 - [ ] `SearchForm`: busca rápida
 - [ ] `SettingsForm`
