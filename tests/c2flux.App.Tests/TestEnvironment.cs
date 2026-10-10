@@ -1,0 +1,32 @@
+using System;
+using System.IO;
+using System.Runtime.CompilerServices;
+using Avalonia;
+using Avalonia.Headless;
+using c2flux.AppTests;
+
+[assembly: AvaloniaTestApplication(typeof(TestEnvironment))]
+// Language and theme are global state.
+[assembly: Xunit.CollectionBehavior(DisableTestParallelization = true)]
+
+namespace c2flux.AppTests
+{
+    public static class TestEnvironment
+    {
+        // Settings and languages go to a throwaway directory, not the
+        // developer's real c2flux data.
+        [ModuleInitializer]
+        internal static void Initialize()
+        {
+            string home = Path.Combine(Path.GetTempPath(), "c2flux-app-tests-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(home);
+            Environment.SetEnvironmentVariable(AppPaths.HomeVariable, home);
+        }
+
+        public static AppBuilder BuildAvaloniaApp()
+        {
+            return AppBuilder.Configure<App>()
+                .UseHeadless(new AvaloniaHeadlessPlatformOptions());
+        }
+    }
+}

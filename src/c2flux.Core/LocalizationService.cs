@@ -19,6 +19,15 @@ namespace c2flux
 
         public static string StartupWarningMessage { get; private set; }
 
+        // Raised after Load swaps the texts, so UIs can refresh at runtime.
+        public static event Action LanguageChanged;
+
+        // Arabic, Hebrew, Persian and Urdu are written right to left.
+        public static bool IsRightToLeft(string languageCode)
+        {
+            return NormalizeLanguageCode(languageCode) is "ar" or "he" or "fa" or "ur";
+        }
+
         public static void Initialize(string languageCode)
         {
             StartupWarningMessage = null;
@@ -60,6 +69,8 @@ namespace c2flux
                     : normalizedLanguageCode;
                 _texts = loadedTexts;
             }
+
+            LanguageChanged?.Invoke();
         }
 
         public static string GetText(string key)

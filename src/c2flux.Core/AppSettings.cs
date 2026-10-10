@@ -216,7 +216,6 @@ namespace c2flux
 
                 settings = settings ?? new AppSettings();
                 settings.EnsureToolbarButtonVisibilitySettings();
-                settings.Layout = AppLayout.WindowsDarkMode;
                 settings.LanguageCode = LocalizationService.NormalizeLanguageCode(settings.LanguageCode);
                 settings.StorageHistoryGradientIntensityPercent = Math.Max(
                     0,
@@ -460,8 +459,6 @@ namespace c2flux
             {
                 return;
             }
-
-            Layout = AppLayout.WindowsDarkMode;
 
             string temporaryFilePath = null;
 

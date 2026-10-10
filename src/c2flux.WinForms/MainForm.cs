@@ -180,6 +180,7 @@ namespace c2flux
             _suspendPersistentSettingsSave = true;
 
             _settings = AppSettings.Load();
+            _settings.Layout = AppLayout.WindowsDarkMode;
             LocalizationService.Load(_settings.LanguageCode);
             _csvExportService = new CsvExportService();
             _shellIconService = new ShellIconService();

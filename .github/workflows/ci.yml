@@ -57,7 +57,7 @@ jobs:
           retention-days: 7
 
   core-tests:
-    name: Core tests (${{ matrix.os }})
+    name: Core and app tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -81,6 +81,10 @@ jobs:
       # Desktop pieces, so it must work everywhere.
       - name: Test
         run: dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --logger "console;verbosity=normal"
+
+      # The Avalonia app on the headless platform: no display needed.
+      - name: Test app
+        run: dotnet test tests/c2flux.App.Tests/c2flux.App.Tests.csproj --configuration Release
 
   test-tree:
     name: Synthetic test tree (${{ matrix.os }})

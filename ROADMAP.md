@@ -352,14 +352,14 @@ public sealed class ScanOptions
 
 #### 5.1 Fundação
 
-- [ ] Projeto Avalonia 11 (versão estável mais recente) com MVVM leve (CommunityToolkit.Mvvm)
-- [ ] **Tema Ant Design:** portar a paleta, raios, espaçamentos, tipografia e estados (hover, foco, pressionado, desabilitado) de `AntdThemeService.cs` para estilos Avalonia (`ControlTheme`). Avaliar o Semi.Avalonia como base ou fazer o tema do zero, só com os controles usados
-- [ ] Temas claro, escuro e "seguir o sistema" (reaproveitar as opções de `AppLayout`)
-- [ ] Integração do `LocalizationService` com binding (troca de idioma em tempo de execução)
-- [ ] **RTL:** árabe, hebraico, persa e urdu com `FlowDirection.RightToLeft`
-- [ ] Fontes embutidas para resultado idêntico entre SOs, com fallback para CJK, tailandês e devanágari
-- [ ] Ícone do app, barra de título (decorações nativas por padrão; avaliar barra customizada para imitar o Windows)
-- [ ] Menu de aplicativo nativo no macOS (Sobre, Ajustes ⌘, , Sair ⌘Q) e atalhos com ⌘ em vez de Ctrl
+- [x] Projeto Avalonia com MVVM leve (CommunityToolkit.Mvvm): `src/c2flux.App`, ao lado do WinForms até a Fase 7. **Desvio:** Avalonia **12.1.3** em vez de 11 — a 12 já era a estável mais recente (a 12.1.4 tinha 1 dia e ficou para depois). Testes em `tests/c2flux.App.Tests` (plataforma *headless* do Avalonia, xunit v3), no CI nos três SOs
+- [x] **Tema Ant Design:** paleta (claro e escuro) e raios (6 px nos controles, 8 px em popups) de `AntdThemeService.cs` em `Themes/AntTokens.axaml`, fonte de 12 px (Segoe UI 9 pt). **Decisão:** sem Semi.Avalonia (outra linguagem visual, que teria de ser desfeita); a base é o `FluentTheme` que já vem no Avalonia, recolorido pela paleta. Os `ControlTheme` com os estados (hover, foco, pressionado, desabilitado) de cada controle são escritos nas Fases 5.3 e 5.4, à medida que os controles são portados e comparados com as referências
+- [x] Temas claro, escuro e "seguir o sistema" (`AppLayout`: `WindowsDefault` segue o SO). O `AppSettings` do Core deixou de forçar o escuro; quem força agora é o WinForms, que só tem o escuro pronto
+- [x] Integração do `LocalizationService` com binding: `{l:T Chave}` no XAML, atualizado pelo evento `LocalizationService.LanguageChanged`
+- [x] **RTL:** árabe, hebraico, persa e urdu (`LocalizationService.IsRightToLeft`) viram `FlowDirection.RightToLeft` em todas as janelas. Espelhamento de cada tela: conferir nas capturas da Fase 5.3 em diante
+- [x] Fontes: Inter embutida (`Avalonia.Fonts.Inter`) em todos os SOs. **Desvio:** CJK, tailandês e devanágari usam o *fallback* automático para as fontes do sistema (conferido no macOS com japonês, hindi e árabe), em vez de fontes embutidas (Noto CJK sozinha tem mais de 15 MB). No Linux, o pacote da Fase 6 deve depender de `fonts-noto-cjk`
+- [x] Ícone do app (o mesmo `c2flux.png`/`.ico` do WinForms) e decorações nativas da janela. Barra customizada: não por enquanto; reavaliar depois das capturas da Fase 5.3
+- [x] Menu de aplicativo nativo no macOS: Sobre e Ajustes (⌘,) no menu do app, desabilitados até as janelas existirem (Fase 5.4); Ocultar, Serviços e Sair (⌘Q) o Avalonia já adiciona. Atalhos da Fase 5.3: usar `PlatformHotkeyConfiguration.CommandModifiers` (⌘ no macOS, Ctrl nos outros), nunca `Ctrl` fixo
 
 #### 5.2 Gráficos (desenho customizado)
 
@@ -509,11 +509,11 @@ As Fases 3 e 4/5 podem andar em paralelo depois da Fase 2: os scanners nativos n
 - [x] **Fork ou upstream:** **fork independente.** Consequências: novo nome e ícone próprios (ver abaixo), créditos ao c² flux original e ao autor no README e na janela Sobre, licença GPL-3.0 mantida. A sincronização com o upstream deixa de ser obrigatória; correções relevantes do original podem ser trazidas pontualmente (*cherry-pick*)
 - [x] **Diálogo de arquivos:** **nativo de cada SO** (`StorageProvider` do Avalonia). O `AppFileDialog` customizado não será portado
 - [x] **Distribuição no macOS:** **sem conta Apple Developer.** O app é distribuído só com assinatura *ad-hoc* (exigida para rodar em Apple Silicon e aplicada automaticamente pelo `dotnet publish`), sem notarização. Na primeira abertura, o usuário precisa liberar em *Ajustes do Sistema → Privacidade e Segurança → Abrir mesmo assim*
+- [x] **Tema base:** **`FluentTheme` do Avalonia recolorido com a paleta Ant**, sem Semi.Avalonia (ver Fase 5.1)
 
 ### Em aberto
 
 - [ ] **Nome e ícone do fork:** necessário antes da primeira release pública (Fase 6)
-- [ ] **Tema base:** partir do Semi.Avalonia ou escrever o tema Ant Design do zero? Decidir no início da Fase 5
 - [ ] **Native AOT:** inicialização mais rápida e binário menor, mas exige revisar reflexão e serialização JSON (usar *source generators*)
 - [ ] **Linux:** quais formatos além do AppImage (deb, rpm, Flatpak)?
 - [ ] **io_uring:** vale a complexidade extra? Decidir com base nos benchmarks da Fase 3.2

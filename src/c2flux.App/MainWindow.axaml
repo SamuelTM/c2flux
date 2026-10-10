@@ -1,0 +1,18 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:l="using:c2flux"
+        x:Class="c2flux.MainWindow"
+        Title="c² flux"
+        Icon="avares://c2flux.App/Assets/c2flux.png"
+        Width="1280" Height="800" MinWidth="800" MinHeight="500"
+        WindowStartupLocation="CenterScreen">
+
+  <!-- The main window is built in phase 5.3; for now only the status bar. -->
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource HeaderBackgroundBrush}"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="8,4">
+      <TextBlock x:Name="StatusText" Text="{l:T Common.Ready}" />
+    </Border>
+    <Panel />
+  </DockPanel>
+</Window>

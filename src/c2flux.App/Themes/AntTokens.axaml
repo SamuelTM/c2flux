@@ -1,0 +1,51 @@
+<!--
+  Colors of the WinForms theme (AntdThemeService.cs). Light values replace
+  the Windows SystemColors the WinForms light mode used (Window, Control,
+  ControlLight, ControlText, ControlDark) with their default values.
+  Shapes follow Ant Design: 6 px controls, 8 px popups.
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="BackgroundPrimaryBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="BackgroundSecondaryBrush" Color="#F0F0F0" />
+      <SolidColorBrush x:Key="BackgroundTertiaryBrush" Color="#E3E3E3" />
+      <SolidColorBrush x:Key="HeaderBackgroundBrush" Color="#F0F0F0" />
+      <SolidColorBrush x:Key="SurfaceHighlightBrush" Color="#A0A0A0" />
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#000000" />
+      <SolidColorBrush x:Key="DisabledTextBrush" Color="#000000" />
+      <SolidColorBrush x:Key="InputBackgroundBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="BorderBrush" Color="#D9D9D9" />
+      <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#F5F5F5" />
+      <SolidColorBrush x:Key="PressedBackgroundBrush" Color="#E6F4FF" />
+      <SolidColorBrush x:Key="AccentBrush" Color="#0078D7" />
+      <SolidColorBrush x:Key="IconInactiveBrush" Color="#005499" />
+      <SolidColorBrush x:Key="UsageBarTrackBrush" Color="#E1E1E1" />
+      <SolidColorBrush x:Key="UsageBarFillBrush" Color="#1677FF" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="BackgroundPrimaryBrush" Color="#202020" />
+      <SolidColorBrush x:Key="BackgroundSecondaryBrush" Color="#2D2D2D" />
+      <SolidColorBrush x:Key="BackgroundTertiaryBrush" Color="#373737" />
+      <SolidColorBrush x:Key="HeaderBackgroundBrush" Color="#181818" />
+      <SolidColorBrush x:Key="SurfaceHighlightBrush" Color="#505050" />
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="DisabledTextBrush" Color="#808080" />
+      <SolidColorBrush x:Key="InputBackgroundBrush" Color="#262626" />
+      <SolidColorBrush x:Key="BorderBrush" Color="#444444" />
+      <SolidColorBrush x:Key="HoverBackgroundBrush" Color="#3A3A3A" />
+      <SolidColorBrush x:Key="PressedBackgroundBrush" Color="#484848" />
+      <SolidColorBrush x:Key="AccentBrush" Color="#0078D7" />
+      <SolidColorBrush x:Key="IconInactiveBrush" Color="#5CA9FF" />
+      <SolidColorBrush x:Key="UsageBarTrackBrush" Color="#404040" />
+      <SolidColorBrush x:Key="UsageBarFillBrush" Color="#4B91E6" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+
+  <CornerRadius x:Key="ControlCornerRadius">6</CornerRadius>
+  <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
+  <!-- Segoe UI 9 pt (SystemFonts.MessageBoxFont) is 12 px at 100 %. -->
+  <x:Double x:Key="ControlContentThemeFontSize">12</x:Double>
+</ResourceDictionary>

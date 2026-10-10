@@ -1,0 +1,39 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:c2flux"
+             x:Class="c2flux.App"
+             Name="c² flux"
+             RequestedThemeVariant="Dark">
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://c2flux.App/Themes/AntTokens.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Light" Accent="#0078D7" RegionColor="#FFFFFF" BaseHigh="#000000" />
+        <ColorPaletteResources x:Key="Dark" Accent="#0078D7" RegionColor="#202020" BaseHigh="#FFFFFF" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
+    <Style Selector="Window">
+      <Setter Property="FlowDirection" Value="{Binding FlowDirection, Source={x:Static l:Loc.Instance}}" />
+      <Setter Property="Background" Value="{DynamicResource BackgroundPrimaryBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+  </Application.Styles>
+
+  <!-- macOS application menu; Avalonia adds Hide, Services and Quit (⌘Q).
+       About and Settings open their windows once they exist (phase 5.4). -->
+  <NativeMenu.Menu>
+    <NativeMenu>
+      <NativeMenuItem Header="{l:T Menu.About}" IsEnabled="False" />
+      <NativeMenuItemSeparator />
+      <NativeMenuItem Header="{l:T Menu.Settings}" Gesture="Cmd+OemComma" IsEnabled="False" />
+    </NativeMenu>
+  </NativeMenu.Menu>
+</Application>

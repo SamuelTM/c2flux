@@ -21,6 +21,9 @@ namespace c2flux
             Application.SetCompatibleTextRenderingDefault(false);
 
             AppSettings settings = AppSettings.Load();
+            // The WinForms UI only has a finished dark theme; the setting is
+            // kept as saved for the Avalonia app.
+            settings.Layout = AppLayout.WindowsDarkMode;
             AntdThemeService.Apply(settings.Layout);
 
             AppAlertLog.Configure(
