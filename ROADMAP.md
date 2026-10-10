@@ -304,8 +304,8 @@ public sealed class ScanOptions
 
 #### 3.4 Windows: ajustes
 
-- [x] Manter a MFT como caminho principal. **Avaliação `C2FluxScanner` × `NtfsMftScanner`:** o c2flux faz a mesma varredura cerca de 2× mais rápido e com metade da memória, com a mesma contagem, mas o padrão continua sendo o ntfsmft (o c2flux depende da opção "c²flux Scan"). Decisão: manter os dois e a opção; o ntfsmft passa a ler a MFT em blocos de 4 MB, como o c2flux, em vez do buffer padrão (bem menor) do NtfsReader. O buffer pequeno era o motivo de o ntfsmft no `C:\` do CI oscilar tanto
-- [ ] Confirmar no benchmark que o ntfsmft não ficou mais lento
+- [x] Manter a MFT como caminho principal, **com um scanner só**. O `NtfsMftScanner` (o original) e o `C2FluxScanner` (opcional desde a v1.2.38, pela opção "c²flux Scan") chegavam ao mesmo resultado; o c2flux fazia isso cerca de 2× mais rápido e com metade da memória, mas não mostrava a árvore crescendo durante a varredura. Decisão: removidos o `NtfsMftScanner` e a opção "c²flux Scan"; o `C2FluxScanner` passou a mandar a árvore ao vivo (raiz e os primeiros 100 filhos), a cada 100 mil arquivos montados e no final. Como ele primeiro lê toda a MFT e só depois monta a árvore, a árvore aparece a partir da montagem, não durante a leitura da MFT. O teste de suporte (NTFS fixo + administrador) foi para o `C2FluxScanner`. Nas Configurações, as linhas abaixo da opção subiram 36 px. Um `settings.json` com `C2FluxScan` continua carregando (a propriedade é ignorada)
+- [ ] Confirmar no CI: benchmark do c2flux sem regressão (os retratos ao vivo custam algo) e captura das Configurações sem a opção
 - [ ] ~~Suporte a `win-arm64`~~: **movido para a Fase 6** (publicar e testar o RID é empacotamento). O NtfsReader é .NET puro, e as chamadas nativas são as mesmas
 - [x] Avaliar ReFS / exFAT: caem no NtQuery, o que está correto (a MFT só existe no NTFS)
 

@@ -9,7 +9,7 @@ namespace c2flux
     // them in turn. See ROADMAP.md, phase 2.
     public interface IFileSystemScanner
     {
-        // Short technical name for logs, e.g. "NtfsMftScanner".
+        // Short technical name for logs, e.g. "C2FluxScanner".
         string Name { get; }
 
         // LocalizationService key of the status bar text shown while this

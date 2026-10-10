@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 namespace c2flux
 {
     // The Windows scan chain, fastest first:
-    //   MFT (C2FluxScanner or NtfsMftScanner, by the "c²flux Scan" setting)
-    //   -> NtQueryDirectoryScanner -> DirectoryScanner -> ManagedScanner
+    //   MFT (C2FluxScanner) -> NtQueryDirectoryScanner -> DirectoryScanner
+    //   -> ManagedScanner
     //
     // The adapters only connect the existing scanners to IFileSystemScanner;
     // their scanning code is unchanged. Names, status texts and warnings are
@@ -57,8 +57,7 @@ namespace c2flux
             _settings = settings;
         }
 
-        // The setting can change between scans, so it is read every time.
-        public string Name => _settings.C2FluxScan ? "C2FluxScanner" : "NtfsMftScanner";
+        public string Name => "C2FluxScanner";
 
         public string StatusTextKey => "Status.MftFastScanRunning";
 
@@ -68,7 +67,7 @@ namespace c2flux
         {
             bool isRootDrivePath = WindowsScanners.IsRootDrivePath(rootPath);
             bool isMftSupported = isRootDrivePath &&
-                NtfsMftScanner.IsSupported(rootPath);
+                C2FluxScanner.IsSupported(rootPath);
 
             AppAlertLog.AddVerboseInformation(
                 "Scan",
@@ -77,8 +76,7 @@ namespace c2flux
                     Environment.NewLine,
                     string.Format("Path: {0}", rootPath),
                     string.Format("IsRootDrivePath: {0}", isRootDrivePath),
-                    string.Format("NtfsMftScanner.IsSupported: {0}", isMftSupported),
-                    string.Format("C2FluxScan: {0}", _settings.C2FluxScan)));
+                    string.Format("C2FluxScanner.IsSupported: {0}", isMftSupported)));
 
             if (!isRootDrivePath)
             {
@@ -96,9 +94,7 @@ namespace c2flux
             CancellationToken cancellationToken,
             PauseToken pauseToken)
         {
-            return _settings.C2FluxScan
-                ? new C2FluxScanner(_settings).ScanAsync(rootPath, progress, cancellationToken, pauseToken)
-                : new NtfsMftScanner(_settings).ScanAsync(rootPath, progress, cancellationToken, pauseToken);
+            return new C2FluxScanner(_settings).ScanAsync(rootPath, progress, cancellationToken, pauseToken);
         }
     }
 

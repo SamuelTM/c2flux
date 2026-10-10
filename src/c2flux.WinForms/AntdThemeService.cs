@@ -869,34 +869,21 @@ namespace c2flux
         public const int SettingsGeneralShowFilesCheckboxWidth = 420;
         public const int SettingsGeneralShowFilesCheckboxHeight = 24;
 
-        // Checkbox c²flux Scan
-        public const int SettingsGeneralC2FluxScanCheckboxLeft = 24;
-        public const int SettingsGeneralC2FluxScanCheckboxTop = 100;
-        public const int SettingsGeneralC2FluxScanCheckboxWidth = 360;
-        public const int SettingsGeneralC2FluxScanCheckboxHeight = 24;
-
-        // Button c²flux Scan help
-        public const int SettingsGeneralC2FluxScanHelpButtonLeft = 145;
-        public const int SettingsGeneralC2FluxScanHelpButtonTop = 100;
-        public const int SettingsGeneralC2FluxScanHelpButtonWidth = 24;
-        public const int SettingsGeneralC2FluxScanHelpButtonHeight = 24;
-        public const int SettingsGeneralC2FluxScanHelpButtonRadius = 12;
-
         // Text NT query directory buffer size
         public const int SettingsGeneralNtQueryDirectoryBufferSizeLabelLeft = 34;
-        public const int SettingsGeneralNtQueryDirectoryBufferSizeLabelTop = 138;
+        public const int SettingsGeneralNtQueryDirectoryBufferSizeLabelTop = 102;
         public const int SettingsGeneralNtQueryDirectoryBufferSizeLabelWidth = 125;
         public const int SettingsGeneralNtQueryDirectoryBufferSizeLabelHeight = 28;
 
         // Auswahlfeld NT query directory buffer size
         public const int SettingsGeneralNtQueryDirectoryBufferSizeSelectLeft = 160;
-        public const int SettingsGeneralNtQueryDirectoryBufferSizeSelectTop = 136;
+        public const int SettingsGeneralNtQueryDirectoryBufferSizeSelectTop = 100;
         public const int SettingsGeneralNtQueryDirectoryBufferSizeSelectWidth = 108;
         public const int SettingsGeneralNtQueryDirectoryBufferSizeSelectHeight = 32;
 
         // Checkbox Skip reparse points
         public const int SettingsGeneralSkipReparsePointsCheckboxLeft = 24;
-        public const int SettingsGeneralSkipReparsePointsCheckboxTop = 180;
+        public const int SettingsGeneralSkipReparsePointsCheckboxTop = 144;
         public const int SettingsGeneralSkipReparsePointsCheckboxWidth = 420;
         public const int SettingsGeneralSkipReparsePointsCheckboxHeight = 24;
 
@@ -908,41 +895,41 @@ namespace c2flux
 
         // Checkbox Start elevated
         public const int SettingsGeneralStartElevatedCheckboxLeft = 24;
-        public const int SettingsGeneralStartElevatedCheckboxTop = 216;
+        public const int SettingsGeneralStartElevatedCheckboxTop = 180;
         public const int SettingsGeneralStartElevatedCheckboxWidth = 420;
         public const int SettingsGeneralStartElevatedCheckboxHeight = 24;
 
         // Checkbox Show elevation prompt
         public const int SettingsGeneralShowElevationPromptCheckboxLeft = 24;
-        public const int SettingsGeneralShowElevationPromptCheckboxTop = 252;
+        public const int SettingsGeneralShowElevationPromptCheckboxTop = 216;
         public const int SettingsGeneralShowElevationPromptCheckboxWidth = 420;
         public const int SettingsGeneralShowElevationPromptCheckboxHeight = 24;
 
         // Checkbox Explorer context menu: Scan drive
         public const int SettingsGeneralShellContextMenuCheckboxLeft = 24;
-        public const int SettingsGeneralShellContextMenuCheckboxTop = 288;
+        public const int SettingsGeneralShellContextMenuCheckboxTop = 252;
         public const int SettingsGeneralShellContextMenuCheckboxWidth = 420;
         public const int SettingsGeneralShellContextMenuCheckboxHeight = 24;
 
         // Checkbox Explorer context menu: Search
         public const int SettingsGeneralShellSearchContextMenuCheckboxLeft = 24;
-        public const int SettingsGeneralShellSearchContextMenuCheckboxTop = 324;
+        public const int SettingsGeneralShellSearchContextMenuCheckboxTop = 288;
         public const int SettingsGeneralShellSearchContextMenuCheckboxWidth = 420;
         public const int SettingsGeneralShellSearchContextMenuCheckboxHeight = 24;
 
         // Checkbox Auto check for updates
         public const int SettingsGeneralAutoCheckForUpdatesCheckboxLeft = 24;
-        public const int SettingsGeneralAutoCheckForUpdatesCheckboxTop = 360;
+        public const int SettingsGeneralAutoCheckForUpdatesCheckboxTop = 324;
         public const int SettingsGeneralAutoCheckForUpdatesCheckboxWidth = 420;
         public const int SettingsGeneralAutoCheckForUpdatesCheckboxHeight = 24;
 
         public const int SettingsGeneralRedundancyCacheSizeLabelLeft = 34;
-        public const int SettingsGeneralRedundancyCacheSizeLabelTop = 396;
+        public const int SettingsGeneralRedundancyCacheSizeLabelTop = 360;
         public const int SettingsGeneralRedundancyCacheSizeLabelWidth = 390;
         public const int SettingsGeneralRedundancyCacheSizeLabelHeight = 28;
 
         public const int SettingsGeneralClearRedundancyCacheButtonLeft = 34;
-        public const int SettingsGeneralClearRedundancyCacheButtonTop = 428;
+        public const int SettingsGeneralClearRedundancyCacheButtonTop = 392;
         public const int SettingsGeneralClearRedundancyCacheButtonWidth = 220;
         public const int SettingsGeneralClearRedundancyCacheButtonHeight = 32;
 

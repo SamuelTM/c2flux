@@ -17,6 +17,7 @@ namespace c2flux.Benchmarks
         public static readonly ScannerDefinition[] All =
         {
             new ScannerDefinition("c2flux", true, "c2flux.C2FluxScanner"),
+            // Removed in phase 3.4; still measurable in older versions.
             new ScannerDefinition("ntfsmft", true, "c2flux.NtfsMftScanner"),
             new ScannerDefinition("ntquery", false, "c2flux.NtQueryDirectoryScanner"),
             new ScannerDefinition("win32find", false, "c2flux.DirectoryScanner"),
@@ -84,7 +85,8 @@ namespace c2flux.Benchmarks
 
     internal sealed class AppLoader
     {
-        private const string MftSupportTypeName = "c2flux.NtfsMftScanner";
+        // The MFT support check lived on NtfsMftScanner until phase 3.4.
+        private static readonly string[] MftSupportTypeNames = { "c2flux.C2FluxScanner", "c2flux.NtfsMftScanner" };
 
         private readonly Assembly _assembly;
 
@@ -186,13 +188,15 @@ namespace c2flux.Benchmarks
                 return "MFT scanners only accept a drive root such as C:\\";
             }
 
-            Type supportType = FindAppType(MftSupportTypeName);
-            MethodInfo isSupported = supportType?.GetMethod(
-                "IsSupported",
-                BindingFlags.Public | BindingFlags.Static,
-                null,
-                new[] { typeof(string) },
-                null);
+            MethodInfo isSupported = MftSupportTypeNames
+                .Select(FindAppType)
+                .Select(type => type?.GetMethod(
+                    "IsSupported",
+                    BindingFlags.Public | BindingFlags.Static,
+                    null,
+                    new[] { typeof(string) },
+                    null))
+                .FirstOrDefault(method => method != null);
 
             if (isSupported == null)
             {

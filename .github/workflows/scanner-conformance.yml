@@ -79,7 +79,6 @@ jobs:
           $mft = @('--subtree', 'tree', '--hardlinks', 'once', '--permissions', 'ignored')
           $targets = @(
             @{ Scanner = 'c2flux';    Path = 'T:\';     Rules = $mft },
-            @{ Scanner = 'ntfsmft';   Path = 'T:\';     Rules = $mft },
             @{ Scanner = 'ntquery';   Path = 'T:\tree'; Rules = @() },
             @{ Scanner = 'win32find'; Path = 'T:\tree'; Rules = @() },
             @{ Scanner = 'managed';   Path = 'T:\tree'; Rules = @() }

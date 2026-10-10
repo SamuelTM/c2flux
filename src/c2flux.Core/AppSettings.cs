@@ -58,7 +58,6 @@ namespace c2flux
 
         //changed with v1.3.0
         public bool ShowFilesInTree { get; set; } = true;
-        public bool C2FluxScan { get; set; }
         public int NtQueryDirectoryBufferSize { get; set; } = 64 * 1024;
         public bool SkipReparsePoints { get; set; } = true;
         public bool ShowPartitionPanel { get; set; } = true;

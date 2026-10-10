@@ -152,14 +152,13 @@ jobs:
           }
 
           # Static targets: exact tree comparison.
-          foreach ($scanner in 'c2flux', 'ntfsmft', 'ntquery', 'win32find', 'managed') {
+          foreach ($scanner in 'c2flux', 'ntquery', 'win32find', 'managed') {
             $arguments += @('--target', "$scanner=$($env:STATIC_ROOT):static")
           }
 
           # Live targets: realistic size, timing only (files change while the runner works).
           $arguments += @(
             '--target', 'c2flux=C:\',
-            '--target', 'ntfsmft=C:\',
             '--target', 'ntquery=C:\Program Files',
             '--target', 'win32find=C:\Program Files',
             '--target', 'managed=C:\Program Files'

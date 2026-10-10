@@ -7,7 +7,7 @@ namespace c2flux
     public static class ScanTree
     {
         // Largest first, then by name (case-insensitive), at every level.
-        // Same order as DirectoryScanner and NtfsMftScanner.
+        // Same order as DirectoryScanner (and the former NtfsMftScanner).
         public static void SortChildrenBySizeDescending(FileSystemEntry root)
         {
             Stack<(FileSystemEntry Entry, bool Visited)> stack = new Stack<(FileSystemEntry Entry, bool Visited)>();

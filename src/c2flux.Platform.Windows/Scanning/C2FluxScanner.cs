@@ -22,6 +22,104 @@ namespace c2flux
             _settings = settings;
         }
 
+        // Moved from NtfsMftScanner (removed in phase 3.4): a fixed NTFS drive,
+        // and administrator rights to open the volume.
+        public static bool IsSupported(string rootPath)
+        {
+            bool isProcessElevated = IsProcessElevated();
+
+            if (!isProcessElevated)
+            {
+                AppAlertLog.AddVerboseInformation(
+                    "Scan",
+                    "MFT support check",
+                    string.Join(
+                        Environment.NewLine,
+                        string.Format("Path: {0}", rootPath),
+                        string.Format("IsProcessElevated: {0}", isProcessElevated),
+                        "Result: False"));
+
+                return false;
+            }
+
+            try
+            {
+                string driveRoot = Path.GetPathRoot(rootPath);
+
+                if (string.IsNullOrWhiteSpace(driveRoot))
+                {
+                    AppAlertLog.AddVerboseInformation(
+                        "Scan",
+                        "MFT support check",
+                        string.Join(
+                            Environment.NewLine,
+                            string.Format("Path: {0}", rootPath),
+                            string.Format("IsProcessElevated: {0}", isProcessElevated),
+                            "DriveRoot: <empty>",
+                            "Result: False"));
+
+                    return false;
+                }
+
+                DriveInfo driveInfo = new DriveInfo(driveRoot);
+                bool isReady = driveInfo.IsReady;
+                DriveType driveType = driveInfo.DriveType;
+                string driveFormat = isReady
+                    ? driveInfo.DriveFormat
+                    : string.Empty;
+                bool result =
+                    isReady &&
+                    driveType == DriveType.Fixed &&
+                    string.Equals(
+                        driveFormat,
+                        "NTFS",
+                        StringComparison.OrdinalIgnoreCase);
+
+                AppAlertLog.AddVerboseInformation(
+                    "Scan",
+                    "MFT support check",
+                    string.Join(
+                        Environment.NewLine,
+                        string.Format("Path: {0}", rootPath),
+                        string.Format("IsProcessElevated: {0}", isProcessElevated),
+                        string.Format("DriveRoot: {0}", driveRoot),
+                        string.Format("IsReady: {0}", isReady),
+                        string.Format("DriveType: {0}", driveType),
+                        string.Format("DriveFormat: {0}", driveFormat),
+                        string.Format("Result: {0}", result)));
+
+                return result;
+            }
+            catch (Exception exception)
+            {
+                AppAlertLog.AddVerboseInformation(
+                    "Scan",
+                    "MFT support check failed",
+                    string.Join(
+                        Environment.NewLine,
+                        string.Format("Path: {0}", rootPath),
+                        string.Format("IsProcessElevated: {0}", isProcessElevated),
+                        string.Format("Exception: {0}", exception)));
+
+                return false;
+            }
+        }
+
+        private static bool IsProcessElevated()
+        {
+            try
+            {
+                using System.Security.Principal.WindowsIdentity identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+                System.Security.Principal.WindowsPrincipal principal = new System.Security.Principal.WindowsPrincipal(identity);
+
+                return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public Task<FileSystemEntry> ScanAsync(
             string rootPath,
             IProgress<ScanProgress> progress,
@@ -350,6 +448,23 @@ namespace c2flux
                     {
                         parentEntry.Children.Add(fileEntry);
                     }
+
+                    // The tree only exists from here on (the MFT pass above
+                    // collects nodes), so this is where it can grow on screen.
+                    if (lazyFilePathCount % ProgressReportIntervalNodes == 0)
+                    {
+                        progressReportCount++;
+
+                        progress?.Report(
+                            new ScanProgress
+                            {
+                                CurrentPath = rootEntry.FullPath,
+                                ScannedBytes = scannedBytes,
+                                ScannedDirectories = scannedDirectories,
+                                ScannedFiles = scannedFiles,
+                                LiveRootEntry = CreateLiveSnapshot(rootEntry)
+                            });
+                    }
                 }
 
                 phaseStopwatch.Stop();
@@ -385,7 +500,7 @@ namespace c2flux
                         ScannedBytes = rootEntry.SizeBytes,
                         ScannedDirectories = scannedDirectories,
                         ScannedFiles = scannedFiles,
-                        LiveRootEntry = null
+                        LiveRootEntry = CreateLiveSnapshot(rootEntry)
                     });
 
                 totalStopwatch.Stop();
@@ -1130,6 +1245,36 @@ namespace c2flux
             }
 
             return Path.GetFullPath(path);
+        }
+
+        // The root and its first 100 children (directories, plus files when
+        // shown in the tree), as NtfsMftScanner reported them.
+        private FileSystemEntry CreateLiveSnapshot(FileSystemEntry rootEntry)
+        {
+            FileSystemEntry snapshot = new FileSystemEntry
+            {
+                Name = rootEntry.Name,
+                FullPath = rootEntry.FullPath,
+                SizeBytes = rootEntry.SizeBytes,
+                IsDirectory = true
+            };
+
+            foreach (FileSystemEntry child in rootEntry.Children
+                         .Where(child => child.IsDirectory || _settings.ShowFilesInTree)
+                         .OrderByDescending(child => child.SizeBytes)
+                         .ThenBy(child => child.Name)
+                         .Take(100))
+            {
+                snapshot.Children.Add(new FileSystemEntry
+                {
+                    Name = child.Name,
+                    FullPath = child.FullPath,
+                    SizeBytes = child.SizeBytes,
+                    IsDirectory = child.IsDirectory
+                });
+            }
+
+            return snapshot;
         }
 
         private string NormalizeDirectoryPath(

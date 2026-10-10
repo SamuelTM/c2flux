@@ -9,6 +9,9 @@
 		<ImplicitUsings>disable</ImplicitUsings>
 		<IsPackable>false</IsPackable>
 		<RootNamespace>c2flux.Core.Tests</RootNamespace>
+		<!-- Tests call pure parsing code of platform projects (e.g. the Linux
+		     mountinfo parser) on every OS on purpose. -->
+		<NoWarn>$(NoWarn);CA1416</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
