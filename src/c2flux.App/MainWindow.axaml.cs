@@ -111,6 +111,7 @@ namespace c2flux
             // Set from code only: a binding here would overwrite the summary
             // whenever the language changes.
             SetStatusText(LocalizationService.GetText("Common.Ready"));
+            ConfigureToolbar();
             BuildAlertCounters();
             AppAlertLog.Changed += OnAlertLogChanged;
 
@@ -338,8 +339,60 @@ namespace c2flux
 
         internal string StatusLine => StatusText.Text;
 
+        private bool _fullDiskAccessChecked;
+
+        // macOS hides folders like ~/Library/Mail from apps without Full Disk
+        // Access; a scan that covers the home folder would silently miss them.
+        // Asked once per run, for scans that include the home folder.
+        private async Task CheckFullDiskAccessAsync(string rootPath)
+        {
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+            if (!OperatingSystem.IsMacOS() || _fullDiskAccessChecked || !EntryTreeCanvas.IsSameOrDescendantPath(home, rootPath) || HasFullDiskAccess(home))
+            {
+                return;
+            }
+
+            _fullDiskAccessChecked = true;
+            AppAlertLog.AddWarning(LocalizationService.GetText("Alert.Scan"), LocalizationService.Format("MacOS.FullDiskAccessMessage", AppConstants.ApplicationName));
+
+            bool openSettings = await AppDialogs.ShowWarningYesNoAsync(
+                this,
+                LocalizationService.Format("MacOS.FullDiskAccessMessage", AppConstants.ApplicationName),
+                yesText: LocalizationService.GetText("MacOS.FullDiskAccessOpen"),
+                noText: LocalizationService.GetText("MacOS.FullDiskAccessContinue"));
+
+            if (openSettings)
+            {
+                FileManager.Open("x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles");
+            }
+        }
+
+        // ~/Library/Safari is protected by TCC: listing it fails without Full
+        // Disk Access. Without that folder there is nothing to tell.
+        internal static bool HasFullDiskAccess(string home)
+        {
+            string probe = Path.Combine(home, "Library", "Safari");
+
+            try
+            {
+                if (Directory.Exists(probe))
+                {
+                    using IEnumerator<string> entries = Directory.EnumerateFileSystemEntries(probe).GetEnumerator();
+                    entries.MoveNext();
+                }
+
+                return true;
+            }
+            catch (Exception exception) when (exception is UnauthorizedAccessException || exception is IOException)
+            {
+                return false;
+            }
+        }
+
         private async Task StartScanAsync(string rootPath)
         {
+            await CheckFullDiskAccessAsync(rootPath);
             string normalizedRootPath = NormalizeScanPath(rootPath);
             ViewMode viewMode = _settings.SelectedViewMode;
 
@@ -831,6 +884,149 @@ namespace c2flux
                     file != null && !file.IsDirectory && file.FullPath != null &&
                     file.FullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
             }
+        }
+
+        // ----- toolbar groups and button visibility ------------------------
+
+        private (Control Button, string TextKey, Func<bool> Get, Action<bool> Set)[] ToolbarButtons => new (Control, string, Func<bool>, Action<bool>)[]
+        {
+            (ScanButton, "Toolbar.ScanButton", () => _settings.ToolbarScanButtonVisible, value => _settings.ToolbarScanButtonVisible = value),
+            (PauseButton, "Toolbar.PauseButton", () => _settings.ToolbarPauseButtonVisible, value => _settings.ToolbarPauseButtonVisible = value),
+            (OpenFolderButton, "Toolbar.OpenFolderButton", () => _settings.ToolbarOpenFolderButtonVisible, value => _settings.ToolbarOpenFolderButtonVisible = value),
+            (TableButton, "Toolbar.TableButton", () => _settings.ToolbarTableButtonVisible, value => _settings.ToolbarTableButtonVisible = value),
+            (PieButton, "Toolbar.PieChartButton", () => _settings.ToolbarPieChartButtonVisible, value => _settings.ToolbarPieChartButtonVisible = value),
+            (BarButton, "Toolbar.BarChartButton", () => _settings.ToolbarBarChartButtonVisible, value => _settings.ToolbarBarChartButtonVisible = value),
+            (SunburstButton, "Toolbar.SunburstButton", () => _settings.ToolbarSunburstButtonVisible, value => _settings.ToolbarSunburstButtonVisible = value),
+            (TreemapButton, "Toolbar.TreemapButton", () => _settings.ToolbarTreemapButtonVisible, value => _settings.ToolbarTreemapButtonVisible = value),
+            (ExportButton, "Toolbar.ExportButton", () => _settings.ToolbarExportCsvButtonVisible, value => _settings.ToolbarExportCsvButtonVisible = value),
+            (AnalysisButton, "Toolbar.AnalysisButton", () => _settings.ToolbarAnalysisButtonVisible, value => _settings.ToolbarAnalysisButtonVisible = value),
+            (StorageHistoryButton, "Toolbar.StorageHistoryButton", () => _settings.ToolbarStorageHistoryButtonVisible, value => _settings.ToolbarStorageHistoryButtonVisible = value),
+            (SearchButton, "Toolbar.SearchButton", () => _settings.ToolbarSearchButtonVisible, value => _settings.ToolbarSearchButtonVisible = value),
+        };
+
+        private StackPanel[] ToolbarGroups => new[] { GroupMain, GroupViews, GroupExport, GroupFeatures };
+
+        private void ConfigureToolbar()
+        {
+            _settings.EnsureToolbarButtonVisibilitySettings();
+            ApplyToolbarOrder();
+            ApplyToolbarButtonVisibility();
+            Toolbar.ContextRequested += (_, e) =>
+            {
+                BuildToolbarMenu().Open(Toolbar);
+                e.Handled = true;
+            };
+
+            foreach (StackPanel group in ToolbarGroups)
+            {
+                Control grip = group.Children[0];
+                grip.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.SizeAll);
+                grip.PointerPressed += (_, e) => e.Pointer.Capture(grip);
+                grip.PointerReleased += (_, e) =>
+                {
+                    e.Pointer.Capture(null);
+                    MoveToolbarGroup(group, e.GetPosition(Toolbar));
+                };
+            }
+        }
+
+        // Port of RebuildToolbarContextMenu: a check per button, "show all".
+        private ContextMenu BuildToolbarMenu()
+        {
+            List<object> items = new List<object>
+            {
+                new MenuItem { Header = LocalizationService.GetText("Toolbar.CustomizeButtons"), IsEnabled = false },
+                new Separator(),
+            };
+            int[] separatorsAfter = { 2, 7, 8 };
+
+            for (int index = 0; index < ToolbarButtons.Length; index++)
+            {
+                var (_, textKey, get, set) = ToolbarButtons[index];
+                MenuItem item = new MenuItem { Header = LocalizationService.GetText(textKey), ToggleType = MenuItemToggleType.CheckBox, IsChecked = get() };
+                item.Click += (_, _) =>
+                {
+                    set(!get());
+                    SaveToolbarButtonVisibility();
+                };
+                items.Add(item);
+
+                if (Array.IndexOf(separatorsAfter, index) >= 0)
+                {
+                    items.Add(new Separator());
+                }
+            }
+
+            items.Add(new Separator());
+            MenuItem showAll = new MenuItem { Header = LocalizationService.GetText("Toolbar.ShowAllButtons") };
+            showAll.Click += (_, _) =>
+            {
+                foreach (var (_, _, _, set) in ToolbarButtons)
+                {
+                    set(true);
+                }
+
+                _settings.ToolbarScanHistoryButtonVisible = true;
+                SaveToolbarButtonVisibility();
+            };
+            items.Add(showAll);
+            return new ContextMenu { ItemsSource = items };
+        }
+
+        private void SaveToolbarButtonVisibility()
+        {
+            _settings.ToolbarButtonVisibilitySettingsVersion = 1;
+            ApplyToolbarButtonVisibility();
+            _settings.Save();
+        }
+
+        // A group without visible buttons disappears, except the first one,
+        // which keeps the drive list.
+        private void ApplyToolbarButtonVisibility()
+        {
+            foreach (var (button, _, get, _) in ToolbarButtons)
+            {
+                button.IsVisible = get();
+            }
+
+            foreach (StackPanel group in ToolbarGroups)
+            {
+                group.IsVisible = group == GroupMain || group.Children.Skip(1).Any(child => child.IsVisible);
+            }
+        }
+
+        // Group order is saved as each group's position (ToolStrip*Left), as
+        // WinForms did with layout version 14.
+        private void ApplyToolbarOrder()
+        {
+            if (!_settings.HasToolStripLayout || _settings.ToolStripLayoutVersion != 14)
+            {
+                return;
+            }
+
+            int[] order = { _settings.ToolStripMainLeft, _settings.ToolStripViewModeLeft, _settings.ToolStripExportLeft, _settings.ToolStripFeaturesLeft };
+            StackPanel[] groups = ToolbarGroups.Select((group, index) => (group, order[index])).OrderBy(item => item.Item2).Select(item => item.group).ToArray();
+            Toolbar.Children.Clear();
+            Toolbar.Children.AddRange(groups);
+        }
+
+        // Drop a group (dragged by its grip) before the group under the
+        // pointer, or at the end.
+        private void MoveToolbarGroup(StackPanel group, Point point)
+        {
+            List<Control> others = Toolbar.Children.Where(child => child != group).ToList();
+            int target = others.FindIndex(child => point.Y < child.Bounds.Bottom && (point.Y < child.Bounds.Top || point.X < child.Bounds.Center.X));
+            target = target < 0 ? others.Count : target;
+
+            Toolbar.Children.Remove(group);
+            Toolbar.Children.Insert(Math.Min(target, Toolbar.Children.Count), group);
+            _settings.HasToolStripLayout = true;
+            _settings.ToolStripLayoutVersion = 14;
+            _settings.ToolStripMainLeft = Toolbar.Children.IndexOf(GroupMain);
+            _settings.ToolStripViewModeLeft = Toolbar.Children.IndexOf(GroupViews);
+            _settings.ToolStripExportLeft = Toolbar.Children.IndexOf(GroupExport);
+            _settings.ToolStripFeaturesLeft = Toolbar.Children.IndexOf(GroupFeatures);
+            _settings.Save();
         }
 
         // ----- tree context menu, save and load ----------------------------

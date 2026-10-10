@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Xunit;
@@ -37,6 +38,32 @@ namespace c2flux.AppTests
                 window.Close();
                 Directory.Delete(folder, recursive: true);
             }
+        }
+
+        [AvaloniaFact]
+        public void Toolbar_hides_empty_groups_and_restores_the_saved_order()
+        {
+            AppSettings settings = new AppSettings
+            {
+                ToolbarButtonVisibilitySettingsVersion = 1,
+                ToolbarExportCsvButtonVisible = false,
+                HasToolStripLayout = true,
+                ToolStripLayoutVersion = 14,
+                ToolStripMainLeft = 3,
+                ToolStripViewModeLeft = 2,
+                ToolStripExportLeft = 1,
+                ToolStripFeaturesLeft = 0,
+            };
+            settings.ToolbarScanButtonVisible = settings.ToolbarPauseButtonVisible = settings.ToolbarOpenFolderButtonVisible = true;
+            settings.ToolbarTableButtonVisible = settings.ToolbarPieChartButtonVisible = settings.ToolbarBarChartButtonVisible = true;
+            settings.ToolbarSunburstButtonVisible = settings.ToolbarTreemapButtonVisible = settings.ToolbarAnalysisButtonVisible = true;
+            settings.ToolbarStorageHistoryButtonVisible = settings.ToolbarSearchButtonVisible = true;
+            MainWindow window = new MainWindow(settings);
+
+            Avalonia.Controls.WrapPanel toolbar = window.FindControl<Avalonia.Controls.WrapPanel>("Toolbar");
+            Assert.Equal(new[] { "GroupFeatures", "GroupExport", "GroupViews", "GroupMain" }, toolbar.Children.Select(child => child.Name));
+            Assert.False(window.FindControl<Avalonia.Controls.StackPanel>("GroupExport").IsVisible);
+            Assert.True(window.FindControl<Avalonia.Controls.StackPanel>("GroupViews").IsVisible);
         }
     }
 }

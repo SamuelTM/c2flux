@@ -22,8 +22,8 @@
     <!-- 56 px band with the 28 px buttons centered, as in WinForms. -->
     <Border DockPanel.Dock="Top" Background="{DynamicResource BackgroundSecondaryBrush}" Padding="8,14,8,14">
       <WrapPanel x:Name="Toolbar" Orientation="Horizontal">
-        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
-          <Rectangle Classes="grip" />
+        <StackPanel x:Name="GroupMain" Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
+          <Border Background="Transparent" Width="7" Margin="0,0,0,0"><Rectangle Classes="grip" /></Border>
           <TextBlock x:Name="DriveLabel" Text="{l:T Toolbar.Drive}" VerticalAlignment="Center" />
           <ComboBox x:Name="DriveSelect" Classes="ant" Width="270" />
           <Button x:Name="ScanButton" Classes="ant" Padding="5,0">
@@ -36,8 +36,8 @@
             <l:ToolbarIcon Kind="OpenFolder" />
           </Button>
         </StackPanel>
-        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
-          <Rectangle Classes="grip" />
+        <StackPanel x:Name="GroupViews" Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
+          <Border Background="Transparent" Width="7" Margin="0,0,0,0"><Rectangle Classes="grip" /></Border>
           <ToggleButton x:Name="TableButton" Classes="ant view" Tag="Table">
             <StackPanel Orientation="Horizontal" Spacing="4">
               <l:ToolbarIcon Kind="Table" IsActive="{Binding #TableButton.IsChecked}" />
@@ -69,8 +69,8 @@
             </StackPanel>
           </ToggleButton>
         </StackPanel>
-        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
-          <Rectangle Classes="grip" />
+        <StackPanel x:Name="GroupExport" Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
+          <Border Background="Transparent" Width="7" Margin="0,0,0,0"><Rectangle Classes="grip" /></Border>
           <Button x:Name="ExportButton" Classes="ant" IsEnabled="False">
             <StackPanel Orientation="Horizontal" Spacing="4">
               <l:ToolbarIcon Kind="Export" />
@@ -78,8 +78,8 @@
             </StackPanel>
           </Button>
         </StackPanel>
-        <StackPanel Orientation="Horizontal" Spacing="6">
-          <Rectangle Classes="grip" />
+        <StackPanel x:Name="GroupFeatures" Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
+          <Border Background="Transparent" Width="7" Margin="0,0,0,0"><Rectangle Classes="grip" /></Border>
           <ToggleButton x:Name="AnalysisButton" Classes="ant" IsEnabled="False">
             <StackPanel Orientation="Horizontal" Spacing="4">
               <l:ToolbarIcon Kind="Analysis" IsActive="{Binding #AnalysisButton.IsChecked}" />

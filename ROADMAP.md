@@ -385,8 +385,10 @@ Ordem sugerida: o que é visto primeiro vem antes.
   - [x] Janela, menu (nativo no macOS, dentro da janela no Windows/Linux), barra de ferramentas com os ícones desenhados, árvore, painel de partições, visualizações e barra de status (contadores de alerta, resumo com tamanho de cluster, progresso)
   - [x] Varredura: sessões por unidade, progresso, árvore ao vivo, pausar e cancelar, histórico de armazenamento (com detalhes) e de varreduras, aviso de pastas puladas. Teste headless varre uma pasta de ponta a ponta
   - [x] Achado: `DriveInfo.GetDrives` em paralelo derruba o processo no macOS (`getmntinfo` não é seguro entre threads); `Volumes.List` serializa as chamadas
-  - [ ] Menus de contexto (árvore, barra de ferramentas), exportação, salvar e carregar varredura, Sobre, verificação de atualização, argumentos de inicialização, reordenar e ocultar grupos da barra
-  - [ ] Ícones de arquivo, pasta e unidade (serviço por SO); elevação no Windows; aviso de Acesso Total ao Disco no macOS
+  - [x] Menu de contexto da árvore (o próprio do app; o do Explorer ficou fora, Fase 4), exportação CSV e cópias, salvar e carregar varredura (diálogos nativos), argumento de inicialização, botões da barra ocultáveis (menu de contexto) e grupos reordenáveis pela alça
+  - [ ] Sobre e verificação de atualização (são janelas: itens `AboutForm` e `UpdateAvailableForm` abaixo)
+  - [x] Ícones de arquivo, pasta e unidade: shell do Windows (`SHGetFileInfo`), `NSWorkspace` no macOS, desenhados no Linux (sem tema de ícones freedesktop por enquanto)
+  - [x] Elevação no Windows (iniciar elevado, prompt de elevação) e aviso de Acesso Total ao Disco no macOS (uma vez por execução, ao varrer algo que inclui a pasta pessoal, com botão para os Ajustes)
   - [ ] Visões embutidas: Análise (`AdvancedFeaturesForm`) e Histórico de armazenamento (`StorageHistoryForm`); hoje os botões ficam desabilitados
 - [ ] `SearchForm`: busca rápida
 - [ ] `SettingsForm`
@@ -395,7 +397,7 @@ Ordem sugerida: o que é visto primeiro vem antes.
 - [ ] `AdvancedFeaturesForm`: análise, redundância
 - [ ] `AlertHistoryForm`
 - [ ] `AboutForm`, `UpdateAvailableForm`, `DatabaseMoveForm`, `DebugClassForm`
-- [ ] `AppDialogs`: caixas de mensagem no estilo Ant
+- [x] `AppDialogs`: aviso com OK, aviso com Sim/Não e prompt de elevação, com os ícones do Windows desenhados
 - [ ] `AppFileDialog`: **substituir** pelo `StorageProvider` nativo do Avalonia (diálogos nativos de cada SO), conforme decidido na seção 9
 
 #### 5.4 Validação de fidelidade
