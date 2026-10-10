@@ -305,11 +305,13 @@ public sealed class ScanOptions
 #### 3.4 Windows: ajustes
 
 - [x] Manter a MFT como caminho principal, **com um scanner só**. O `NtfsMftScanner` (o original) e o `C2FluxScanner` (opcional desde a v1.2.38, pela opção "c²flux Scan") chegavam ao mesmo resultado; o c2flux fazia isso cerca de 2× mais rápido e com metade da memória, mas não mostrava a árvore crescendo durante a varredura. Decisão: removidos o `NtfsMftScanner` e a opção "c²flux Scan"; o `C2FluxScanner` passou a mandar a árvore ao vivo (raiz e os primeiros 100 filhos), a cada 100 mil arquivos montados e no final. Como ele primeiro lê toda a MFT e só depois monta a árvore, a árvore aparece a partir da montagem, não durante a leitura da MFT. O teste de suporte (NTFS fixo + administrador) foi para o `C2FluxScanner`. Nas Configurações, as linhas abaixo da opção subiram 36 px. Um `settings.json` com `C2FluxScan` continua carregando (a propriedade é ignorada)
-- [ ] Confirmar no CI: benchmark do c2flux sem regressão (os retratos ao vivo custam algo) e captura das Configurações sem a opção
+- [x] Confirmado no CI (`c3fbce9`): benchmark do c2flux sem regressão (−1,1% no `C:`, −10,3% no `T:`: os retratos ao vivo não custam nada mensurável); conformidade ✅; Configurações sem a opção e sem buraco no layout. Referências visuais atualizadas para esse commit
 - [ ] ~~Suporte a `win-arm64`~~: **movido para a Fase 6** (publicar e testar o RID é empacotamento). O NtfsReader é .NET puro, e as chamadas nativas são as mesmas
 - [x] Avaliar ReFS / exFAT: caem no NtQuery, o que está correto (a MFT só existe no NTFS)
 
 **Entregável:** varredura nativa e paralela nos três SOs, validada pela suíte de conformidade e com benchmarks publicados.
+
+**Situação:** ✅ concluída em 10/10/2026. macOS com scanner nativo (`getattrlistbulk`, de 2× a 6× mais rápido que o `managed`); Linux sem scanner nativo, porque o `managed` já é mais rápido que o `du`, mas sem atravessar montagens; Windows com um scanner de MFT só. Adiados: hardlinks contados uma vez e tamanho alocado no macOS e no Linux, aviso de Acesso Total ao Disco (Fase 5) e `win-arm64` (Fase 6).
 
 ---
 
