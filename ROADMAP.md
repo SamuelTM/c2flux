@@ -330,9 +330,16 @@ public sealed class ScanOptions
 | `IThemeDetector`: claro/escuro do SO | Registro (código atual) | Fornecido pelo Avalonia (`PlatformSettings`) | Fornecido pelo Avalonia (portal freedesktop) |
 | `IAppPaths`: pastas de dados | Fase 1 | Fase 1 | Fase 1 |
 
-- [ ] Implementar cada interface nos três projetos `Platform.*`
-- [ ] Substituir **todas** as chamadas diretas a `explorer.exe`, Registro, `DriveInfo` e `WindowsPrincipal` pelas interfaces
-- [ ] `PartitionGridController` / `DriveComboBoxController`: trabalhar com "volumes" em vez de letras de unidade (no macOS/Linux o caminho raiz é o ponto de montagem)
+**Versão enxuta (decisão de 10/10/2026):** só o que a Fase 5 com certeza vai usar e que dá para testar sem interface. O resto fica para quando uma tela precisar, ou sai do plano.
+
+- [x] **Análise de duplicados portátil:** o `RedundancyAnalysisService` foi para o Core. Ele pulava todo arquivo cujo ID do Windows não pudesse ler, então fora do Windows não acharia nenhum duplicado. A identidade de arquivo virou um ponto de extensão (`FileIdentities.Reader`): Windows com o código de antes (ID de 128 bits + USN, `WindowsFileIdentity`), macOS com `getattrlist` (`MacFileIdentity`) e Linux com `statx` (`LinuxFileIdentity`), todos seguindo links. O padrão, sem leitor registrado, usa o caminho: funciona, mas hardlinks aparecem como duplicados. Testado de ponta a ponta no macOS: acha o par duplicado e conta o hardlink como a mesma cópia
+- [x] **Volumes** (`Volumes.List()` no Core, no lugar de `IVolumeProvider`): o `DriveInfo` do .NET já funciona nos três SOs, e o que muda é quais montagens mostrar. macOS: `/` e `/Volumes/*`, com o nome do volume de inicialização ("Macintosh HD") tirado do link em `/Volumes`; Linux: sem sistemas virtuais, imagens (`squashfs`, `overlay`) nem `/proc`, `/sys`, `/dev`, `/run`, `/snap`; Windows: como hoje. As regras são funções puras testadas em todos os SOs. Neste Mac a lista dá exatamente "Macintosh HD" e "SSD"
+- [x] **Gerenciador de arquivos** (`FileManager.Reveal`/`Open` no Core, no lugar de `IFileManager`): `explorer.exe /select,` no Windows, `open -R` no macOS e, no Linux, D-Bus `FileManager1.ShowItems` com `xdg-open` na pasta-mãe como alternativa. Comandos testados nos três SOs; não executados aqui, para não abrir janelas na máquina do usuário
+- [ ] **Para a Fase 5**, quando a tela precisar: ícones de arquivo, menu de contexto, tema claro/escuro (o Avalonia já detecta nos três SOs), tamanho de cluster na barra de status
+- [ ] ~~Lixeira~~: o app não exclui arquivos hoje; seria um recurso novo
+- [ ] ~~Elevação~~: não se aplica ao macOS e é opcional no Linux. No Windows fica o código atual do WinForms
+- [ ] ~~Substituir as chamadas do WinForms pelas interfaces~~: o WinForms só roda no Windows e será removido na Fase 7
+- [ ] Confirmar no CI (testes dos três SOs, incluindo identidade com hardlink no Linux)
 
 **Entregável:** nenhuma chamada específica de SO fora dos projetos `Platform.*`.
 
