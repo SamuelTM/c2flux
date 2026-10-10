@@ -168,19 +168,19 @@ jobs:
       # native scanner is worth it on this OS (phase 3). Informational.
       - name: Speed probe (scanners vs du on /usr)
         run: |
-          echo "### Speed probe: /usr (${{ matrix.os }})" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Speed probe: /usr (${{ matrix.os }})" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "" | tee -a "$GITHUB_STEP_SUMMARY"
           for scanner in $SCANNERS; do
             for run in 1 2 3; do
               dotnet "$RUNNER_TEMP/bench/c2flux-bench.dll" --app "$RUNNER_TEMP/scanners" --main-assembly "$MAIN_ASSEMBLY" --scanner "$scanner" --path /usr \
-                | python -c "import json,sys; d=json.load(sys.stdin); t=d.get('tree') or {}; print('- %s run %s: %.0f ms, %s files, %s directories' % ('$scanner', '$run', d.get('elapsed_ms', 0), t.get('files'), t.get('directories')))" >> "$GITHUB_STEP_SUMMARY"
+                | python -c "import json,sys; d=json.load(sys.stdin); t=d.get('tree') or {}; print('- %s run %s: %.0f ms, %s files, %s directories' % ('$scanner', '$run', d.get('elapsed_ms', 0), t.get('files'), t.get('directories')))" | tee -a "$GITHUB_STEP_SUMMARY"
             done
           done
           for run in 1 2 3; do
             start=$(date +%s%N 2>/dev/null || python -c 'import time; print(time.time_ns())')
             du -sk /usr > /dev/null 2>&1 || true
             end=$(date +%s%N 2>/dev/null || python -c 'import time; print(time.time_ns())')
-            echo "- du run $run: $(( (end - start) / 1000000 )) ms" >> "$GITHUB_STEP_SUMMARY"
+            echo "- du run $run: $(( (end - start) / 1000000 )) ms" | tee -a "$GITHUB_STEP_SUMMARY"
           done
 
       - name: Upload results
