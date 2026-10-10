@@ -35,6 +35,9 @@ namespace c2flux
         private readonly TreemapView _treemap = new TreemapView();
         private readonly PartitionList _partitions;
         private readonly Dictionary<ViewMode, (ToggleButton Button, Control View)> _views;
+        private readonly ExportActions _export;
+        private NativeMenuItem _menuSaveScan;
+        private NativeMenuItem _menuExport;
         private FileSystemEntry _currentRootEntry;
         private FileSystemEntry _selectedEntry;
         private ViewMode _viewMode;
@@ -89,6 +92,9 @@ namespace c2flux
             OpenFolderButton.Click += OnOpenFolderClick;
             _liveTreeTimer.Tick += (_, _) => FlushLiveTree();
 
+            _export = new ExportActions(settings, this, SetStatusText);
+            ExportButton.Click += async (_, _) => await _export.ExportAsync(_currentRootEntry);
+            Tree.EntryPressed += OnTreeEntryPressed;
             BuildMenu();
 
             // Set from code only: a binding here would overwrite the summary
@@ -135,6 +141,13 @@ namespace c2flux
                 Submenu(
                     "Menu.File",
                     Item("Menu.NewScan", () => OnScanClick(this, EventArgs.Empty)),
+                    _menuSaveScan = Item("Menu.SaveScanResult", async () => await SaveScanResultAsync()),
+                    Item("Menu.LoadScanResult", async () => await LoadScanResultAsync()),
+                    new NativeMenuItemSeparator(),
+                    _menuExport = Item("Menu.ExportCsv", async () => await _export.ExportAsync(_currentRootEntry)),
+                    new NativeMenuItemSeparator(),
+                    // shortcut: disabled until SettingsForm is ported (5.3).
+                    Item("Menu.Settings", () => { }, enabled: false),
                     new NativeMenuItemSeparator(),
                     Item("Menu.Exit", Close)),
                 Submenu(
@@ -809,6 +822,114 @@ namespace c2flux
             }
         }
 
+        // ----- tree context menu, save and load ----------------------------
+
+        // Right click on a folder: the app's own menu (WinForms showed the
+        // Explorer menu with these commands added; that menu is Windows-only
+        // and was not ported). Files get no menu, as in WinForms.
+        private void OnTreeEntryPressed(FileSystemEntry entry, Avalonia.Input.PointerPressedEventArgs e)
+        {
+            if (!e.GetCurrentPoint(this).Properties.IsRightButtonPressed || entry == null || !entry.IsDirectory || string.IsNullOrWhiteSpace(entry.FullPath))
+            {
+                return;
+            }
+
+            List<object> items = new List<object>();
+            FileSystemEntry root = Tree.GetRootEntry(entry);
+
+            MenuItem Command(string header, Action action)
+            {
+                MenuItem item = new MenuItem { Header = header };
+                item.Click += (_, _) => action();
+                return item;
+            }
+
+            if (root != null)
+            {
+                string rootName = NormalizeScanPath(root.FullPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                items.Add(Command(LocalizationService.Format("Context.RemoveFromTreePane", rootName.Length == 0 ? root.FullPath : rootName), () => RemoveFromTreePane(entry)));
+            }
+
+            items.Add(Command(LocalizationService.GetText("Context.Export"), async () => await _export.ExportAsync(entry)));
+            items.Add(Command("Copy: Selected item", async () => await _export.CopyNameAsync(entry)));
+            items.Add(Command(_export.TreeCopyMenuText("Text"), async () => await _export.CopyTreeTextAsync(entry)));
+            items.Add(Command(_export.TreeCopyMenuText(".CSV"), async () => await _export.CopyCsvAsync(entry)));
+            items.Add(new Separator());
+            items.Add(Command(LocalizationService.GetText("Context.OpenInExplorer"), () => FileManager.Open(entry.FullPath)));
+
+            new ContextMenu { ItemsSource = items }.Open(Tree);
+        }
+
+        // Hides a scanned root from the tree; scanning it again shows it.
+        private void RemoveFromTreePane(FileSystemEntry entry)
+        {
+            FileSystemEntry root = Tree.GetRootEntry(entry);
+
+            if (root != null && Tree.RemoveRootEntry(root))
+            {
+                _pendingLiveTree.Remove(root.FullPath);
+            }
+        }
+
+        private async Task SaveScanResultAsync()
+        {
+            if (_currentRootEntry == null)
+            {
+                return;
+            }
+
+            string fileName = await FileDialogs.SaveAsync(
+                this,
+                LocalizationService.GetText("Menu.SaveScanResult"),
+                "WTF Scan (*.wtfscan)|*.wtfscan|JSON (*.json)|*.json",
+                "scan-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".wtfscan");
+
+            if (fileName == null)
+            {
+                return;
+            }
+
+            try
+            {
+                ScanResultFileService.Save(fileName, _currentRootEntry);
+            }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException || exception is NotSupportedException)
+            {
+                AppAlertLog.AddError(LocalizationService.GetText("Menu.SaveScanResult"), exception.Message, "Path: " + fileName + Environment.NewLine + exception);
+                SetStatusText(LocalizationService.GetText("Common.Error") + ": " + exception.Message);
+            }
+        }
+
+        private async Task LoadScanResultAsync()
+        {
+            string fileName = await FileDialogs.OpenAsync(
+                this,
+                LocalizationService.GetText("Menu.LoadScanResult"),
+                "WTF Scan (*.wtfscan;*.json)|*.wtfscan;*.json");
+
+            if (fileName == null)
+            {
+                return;
+            }
+
+            try
+            {
+                FileSystemEntry loaded = ScanResultFileService.Load(fileName);
+
+                if (loaded != null)
+                {
+                    _currentRootEntry = loaded;
+                    RenderScanResult(loaded);
+                    SetScanningState(false);
+                }
+            }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException || exception is System.Text.Json.JsonException || exception is NotSupportedException)
+            {
+                AppAlertLog.AddError(LocalizationService.GetText("Menu.LoadScanResult"), exception.Message, "Path: " + fileName + Environment.NewLine + exception);
+                SetStatusText(LocalizationService.GetText("Common.Error") + ": " + exception.Message);
+            }
+        }
+
         // ----- view mode and toolbar state --------------------------------
 
         private void SetViewMode(ViewMode mode, bool save)
@@ -859,6 +980,12 @@ namespace c2flux
             bool hasResult = !scanning && _currentRootEntry != null;
             ExportButton.IsEnabled = hasResult;
             AnalysisButton.IsEnabled = hasResult;
+
+            if (_menuExport != null)
+            {
+                _menuExport.IsEnabled = hasResult;
+                _menuSaveScan.IsEnabled = hasResult;
+            }
         }
 
         private void SetScanHistorySavingState()
