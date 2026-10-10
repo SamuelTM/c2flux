@@ -19,6 +19,8 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\c2flux.Core\c2flux.Core.csproj" />
+		<!-- Plain net10.0; only its pure parsing code is tested on every OS. -->
+		<ProjectReference Include="..\..\src\c2flux.Platform.Linux\c2flux.Platform.Linux.csproj" />
 	</ItemGroup>
 
 	<!-- Stand-ins for the languages shipped next to the executable. -->

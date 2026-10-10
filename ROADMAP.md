@@ -290,24 +290,17 @@ public sealed class ScanOptions
 - [ ] **Adiado para a Fase 5:** aviso de **Acesso Total ao Disco** com botão para os Ajustes. O scanner já reporta as pastas protegidas como puladas (`EPERM`); falta a interface
 - [ ] ~~Ignorar volumes de sistema somente leitura e snapshots~~: coberto pela regra de volume (VM, Preboot, Update etc. têm devid próprio)
 
-#### 3.2 Linux: `GetDentsStatxScanner`
+#### 3.2 Linux: `LinuxScanner` (no lugar do `GetDentsStatxScanner`)
 
-- [ ] P/Invoke para `openat`, `getdents64`, `statx`, `close` (libc)
-- [ ] Ler cada diretório com `getdents64` usando um buffer grande. O `d_type` identifica pastas sem precisar de `stat`
-- [ ] `statx(dirfd, nome, AT_SYMLINK_NOFOLLOW | AT_STATX_DONT_SYNC, STATX_SIZE | STATX_BLOCKS | STATX_MTIME | STATX_INO | STATX_NLINK, ...)`: chamada relativa ao diretório e apenas os campos necessários
-- [ ] Tratar `d_type == DT_UNKNOWN` (alguns sistemas de arquivos, como XFS antigo e alguns FUSE) com `statx` adicional
-- [ ] Paralelismo com fila de diretórios e N workers
-- [ ] **Sistemas de arquivos virtuais:** ler `/proc/self/mountinfo` e ignorar `proc`, `sysfs`, `devtmpfs`, `devpts`, `cgroup*`, `tracefs`, `debugfs`, `securityfs`, `pstore`, `bpf`, `autofs` etc.
-- [ ] Não atravessar pontos de montagem por padrão (comparar `stx_dev_major/minor`)
-- [ ] Hardlinks contados uma vez `(dev, ino)`, symlinks nunca seguidos
-- [ ] Tamanho lógico (`stx_size`) e alocado (`stx_blocks * 512`)
-- [ ] Tratar `EACCES` / `EPERM` como "pasta pulada" (igual ao comportamento atual no Windows)
-- [ ] Benchmark contra o `ManagedScanner`, `du -s`, `gdu` e `dua`
+- [x] **Medir antes:** no Ubuntu do CI, o `ManagedScanner` **já é mais rápido que o `du`** em `/usr` (2,1 × 2,6 s, 629 mil arquivos, cache aquecido). O `FileSystemEnumerable` do .NET no Linux já usa `getdents64` e `fstatat`, e o motor do `managed` lê várias pastas em paralelo. Um scanner com `getdents64` + `statx` próprios não se paga: descartado
+- [x] O que faltava no Linux era **correção**: varrendo `/`, o `managed` entraria em `/proc`, `/sys`, `/dev`, `/run` e em outros discos. `src/c2flux.Platform.Linux/Scanning/LinuxScanner.cs` lê `/proc/self/mountinfo` uma vez por varredura e não entra em nenhum ponto de montagem abaixo da raiz (como o `du -x`). Os sistemas de arquivos virtuais também são montagens, então a mesma regra os cobre, sem lista de tipos. A leitura das pastas continua sendo a do `managed`. Cadeia do Linux: `LinuxScanner` → `ManagedScanner` (`LinuxScanners`)
+- [x] Testes do parser do `mountinfo` (incluindo os caminhos com espaço, que vêm em octal) e da regra de montagem, nos três SOs. No CI do Ubuntu: conformidade com o `LinuxScanner` e varredura de `/`, que reprova se houver qualquer entrada dentro de `/proc`, `/sys`, `/dev` ou `/run`
+- [ ] Confirmar no CI
+- [ ] **Adiado:** hardlinks contados uma vez e tamanho alocado (`stx_blocks`), pelos mesmos motivos do macOS
 
-#### 3.3 Linux: `IoUringStatxScanner` (opcional, depois da 3.2)
+#### 3.3 Linux: `IoUringStatxScanner`
 
-- [ ] Enviar os `statx` em lote via `io_uring` (`IORING_OP_STATX`), reduzindo trocas de contexto
-- [ ] Ativar só se o kernel suportar e se o benchmark mostrar ganho real (principalmente em HDD e armazenamento de rede)
+- [ ] ~~`statx` em lote via `io_uring`~~: **descartado** junto com o `GetDentsStatxScanner`, já que o `managed` está à frente do `du`. Reavaliar só se aparecer um caso real lento (disco de rede, HDD)
 
 #### 3.4 Windows: ajustes
 

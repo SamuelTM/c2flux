@@ -10,6 +10,7 @@ on:
       - "src/c2flux.Core/**"
       - "src/c2flux.Platform.Windows/**"
       - "src/c2flux.Platform.MacOS/**"
+      - "src/c2flux.Platform.Linux/**"
       - "libs/NtfsReader/**"
       - "tests/c2flux.Benchmarks/**"
       - "tests/conformance/**"
@@ -136,7 +137,7 @@ jobs:
           python-version: "3.12"
 
       # The platform project of this OS (it brings c2flux.Core with the
-      # managed scanner); Linux has no native scanner yet, so only Core.
+      # managed scanner).
       - name: Build scanners and benchmark tool
         run: |
           if [ "$RUNNER_OS" = "macOS" ]; then
@@ -144,9 +145,9 @@ jobs:
             echo "MAIN_ASSEMBLY=c2flux.Platform.MacOS.dll" >> "$GITHUB_ENV"
             echo "SCANNERS=attrlistbulk managed" >> "$GITHUB_ENV"
           else
-            dotnet build src/c2flux.Core/c2flux.Core.csproj --configuration Release --output "$RUNNER_TEMP/scanners"
-            echo "MAIN_ASSEMBLY=c2flux.Core.dll" >> "$GITHUB_ENV"
-            echo "SCANNERS=managed" >> "$GITHUB_ENV"
+            dotnet build src/c2flux.Platform.Linux/c2flux.Platform.Linux.csproj --configuration Release --output "$RUNNER_TEMP/scanners"
+            echo "MAIN_ASSEMBLY=c2flux.Platform.Linux.dll" >> "$GITHUB_ENV"
+            echo "SCANNERS=linux managed" >> "$GITHUB_ENV"
           fi
           dotnet build tests/c2flux.Benchmarks/c2flux.Benchmarks.csproj --configuration Release --output "$RUNNER_TEMP/bench"
 
@@ -163,6 +164,17 @@ jobs:
             python tests/conformance/check_conformance.py --manifest "$RUNNER_TEMP/manifest.json" --dump "$RUNNER_TEMP/conformance/$scanner.dump" --scanner "$scanner (${{ matrix.os }})" --json-out "$RUNNER_TEMP/conformance/$scanner.conformance.json" --summary-out "$GITHUB_STEP_SUMMARY" || failed="$failed $scanner"
           done
           if [ -n "$failed" ]; then echo "Conformance failed:$failed"; exit 1; fi
+
+      # Scanning / must not enter other mounts, above all the virtual /proc,
+      # /sys, /dev and /run, which would hang or inflate the scan.
+      - name: Scan / without crossing mounts (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          dotnet "$RUNNER_TEMP/bench/c2flux-bench.dll" --app "$RUNNER_TEMP/scanners" --main-assembly "$MAIN_ASSEMBLY" --scanner linux --path / --dump "$RUNNER_TEMP/root.dump" \
+            | python -c "import json,sys; d=json.load(sys.stdin); t=d.get('tree') or {}; print('linux /: %s, %.0f ms, %s files, %s directories' % (d['status'], d.get('elapsed_ms', 0), t.get('files'), t.get('directories')))" | tee -a "$GITHUB_STEP_SUMMARY"
+          crossed=$(grep -E '^[DF]\|/(proc|sys|dev|run)/' "$RUNNER_TEMP/root.dump" | head -5 || true)
+          if [ -n "$crossed" ]; then echo "Entered a mount below /:"; echo "$crossed"; exit 1; fi
+          echo "No entries inside /proc, /sys, /dev or /run." | tee -a "$GITHUB_STEP_SUMMARY"
 
       # Rough speed against du on a large system folder, to judge whether a
       # native scanner is worth it on this OS (phase 3). Informational.

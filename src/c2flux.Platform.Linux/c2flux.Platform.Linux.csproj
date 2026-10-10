@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+		Linux-only implementations behind the Core abstractions: the
+		mount-aware scanner. Plain net10.0, marked as Linux-only.
+		See ROADMAP.md, phase 3.2.
+	-->
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>disable</Nullable>
+		<ImplicitUsings>disable</ImplicitUsings>
+		<AssemblyName>c2flux.Platform.Linux</AssemblyName>
+		<RootNamespace>c2flux</RootNamespace>
+
+		<Authors>Daniel Capilla</Authors>
+		<Company>Daniel Capilla</Company>
+		<Product>c² flux - Tree Scanner</Product>
+		<Copyright>Copyright © Daniel Capilla</Copyright>
+
+		<Version>1.4.1</Version>
+		<AssemblyVersion>1.4.1</AssemblyVersion>
+		<FileVersion>1.4.1</FileVersion>
+		<InformationalVersion>1.4.1</InformationalVersion>
+		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+			<_Parameter1>linux</_Parameter1>
+		</AssemblyAttribute>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\c2flux.Core\c2flux.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="c2flux.Core.Tests" />
+	</ItemGroup>
+
+</Project>

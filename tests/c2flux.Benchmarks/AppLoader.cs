@@ -24,6 +24,8 @@ namespace c2flux.Benchmarks
             new ScannerDefinition("managed", false, "c2flux.ManagedScanner"),
             // macOS getattrlistbulk scanner (c2flux.Platform.MacOS, phase 3).
             new ScannerDefinition("attrlistbulk", false, "c2flux.GetAttrListBulkScanner"),
+            // Linux mount-aware scanner (c2flux.Platform.Linux, phase 3).
+            new ScannerDefinition("linux", false, "c2flux.LinuxScanner"),
         };
 
         private ScannerDefinition(string key, bool requiresMft, params string[] typeNames)

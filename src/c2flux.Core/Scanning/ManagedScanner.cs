@@ -107,7 +107,9 @@ namespace c2flux
                 TaskScheduler.Default);
         }
 
-        private static void ReadWithFileSystemEnumerable(string directoryPath, List<DirectoryEntryData> entries)
+        // The default DirectoryReader: .NET's FileSystemEnumerable. Platform
+        // readers that only decide which directories to enter call it.
+        public static void ReadWithFileSystemEnumerable(string directoryPath, List<DirectoryEntryData> entries)
         {
             FileSystemEnumerable<DirectoryEntryData> enumerable = new FileSystemEnumerable<DirectoryEntryData>(
                 directoryPath,
