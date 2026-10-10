@@ -6,8 +6,8 @@ Capturas da interface WinForms atual, usadas na Fase 5 do [ROADMAP](../../ROADMA
 
 | | |
 |---|---|
-| **Versão** | `cross-platform` no commit `f70c14f`: a v1.4.1 original (`baseline-winforms`) mais as correções do gráfico de pizza, do `DirectoryScanner` e do carregamento do histórico de varreduras. A interface é idêntica à original; a única diferença visível é que o gráfico de pizza deixou de quebrar |
-| **Onde** | Runner `windows-latest` do GitHub, workflow [`ui-screenshots.yml`](../../.github/workflows/ui-screenshots.yml), [execução de 09/10/2026](https://github.com/SamuelTM/c2flux/actions/runs/38004115517) |
+| **Versão** | `cross-platform` no commit `18a6d38` (Fase 1): a v1.4.1 original (`baseline-winforms`) mais as correções do gráfico de pizza, do `DirectoryScanner`, do carregamento do histórico de varreduras e das cores do Treemap/Sunburst. A interface é idêntica à original; a única diferença visível é que o gráfico de pizza deixou de quebrar |
+| **Onde** | Runner `windows-latest` do GitHub, workflow [`ui-screenshots.yml`](../../.github/workflows/ui-screenshots.yml), [execução de 09/10/2026](https://github.com/SamuelTM/c2flux/actions/runs/38008459723) |
 | **Tela** | 1920×1080, DPI 96 (escala 100%), tema escuro, idioma inglês |
 | **Dados** | `T:\` é um disco virtual NTFS de 4 GiB com a árvore de teste (`tests/fixtures/generate_test_tree.py --profile medium`). Ele é varrido duas vezes; entre as varreduras, a ferramenta adiciona um arquivo de 8 MB, apaga um e aumenta outro em 4 MB. "Salvar histórico de varreduras" e "detalhes do histórico de armazenamento" ficam ligados |
 | **Detalhes** | `reference/index.json` lista cada captura, tamanho e método |
@@ -37,6 +37,8 @@ Capturas da interface WinForms atual, usadas na Fase 5 do [ROADMAP](../../ROADMA
 | `update-available.png` | Aviso de nova versão (dados de exemplo) |
 | `dialog-warning-ok.png`, `dialog-warning-yes-no.png`, `dialog-elevation-prompt.png` | Caixas de diálogo de `AppDialogs` |
 | `database-move.png`, `debug-class.png` | Diálogos auxiliares |
+
+**Cores do Treemap e do Sunburst:** até a Fase 1, elas mudavam a cada vez que o app abria (hash do nome aleatório por processo). Agora são estáveis; duas execuções do mesmo commit produziram imagens idênticas. As cores destas referências não correspondem a nenhuma execução específica da v1.4.1, que não tinha cores fixas.
 
 ## Limitações conhecidas
 
