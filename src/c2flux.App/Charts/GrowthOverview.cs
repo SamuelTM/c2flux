@@ -58,6 +58,9 @@ namespace c2flux
             DockPanel.SetDock(viewHeader, Dock.Top);
             detail.Children.Add(viewHeader);
             detail.Children.Add(new ScrollViewer { Content = _detailChart });
+            // WinForms: the detail panel keeps the default 3 px margin of a
+            // TableLayoutPanel cell, and a 34 px top padding above its header.
+            detail.Margin = new Thickness(3, 37, 3, 3);
 
             Grid root = new Grid { RowDefinitions = new RowDefinitions("68,24,96,*"), Margin = new Thickness(8) };
             Grid.SetRow(_driveTitle, 1);

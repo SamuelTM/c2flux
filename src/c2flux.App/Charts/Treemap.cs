@@ -567,10 +567,10 @@ namespace c2flux
                     : Resource("BorderBrush");
             Rect pixel = Snap(bounds);
 
-            // GDI+ DrawRectangle(x, y, w - 1, h - 1): a 1 px outline on the
-            // tile's outermost pixels. The 1.4 px family pen rasterizes the
-            // same without anti-aliasing.
-            context.DrawRectangle(null, new Pen(borderBrush, 1), new Rect(pixel.X + 0.5, pixel.Y + 0.5, Math.Max(0, pixel.Width - 1), Math.Max(0, pixel.Height - 1)));
+            // GDI+ DrawRectangle(x, y, w - 1, h - 1). With PixelOffsetMode.Half
+            // a 1 px line at c lights pixel c - 1, so the outline sits one
+            // pixel up and left of the fill (see DrawHorizontalLine).
+            context.DrawRectangle(null, new Pen(borderBrush, 1), new Rect(pixel.X - 0.5, pixel.Y - 0.5, Math.Max(0, pixel.Width - 1), Math.Max(0, pixel.Height - 1)));
 
             if (isLeafNode && bounds.Width >= 8 && bounds.Height >= 8)
             {
@@ -588,15 +588,17 @@ namespace c2flux
             }
         }
 
-        // One pixel row from left to right (inclusive), as GDI+ DrawLine.
+        // GDI+ DrawLine with a 1 px pen from left to right at y. Under
+        // PixelOffsetMode.Half it lights the pixels one up and one left of
+        // the coordinates, ends included.
         private static void DrawHorizontalLine(DrawingContext context, IBrush brush, double left, double right, double y)
         {
-            context.FillRectangle(brush, new Rect(left, y, Math.Max(1, right - left + 1), 1));
+            context.FillRectangle(brush, new Rect(left - 1, y - 1, Math.Max(1, right - left + 1), 1));
         }
 
         private static void DrawVerticalLine(DrawingContext context, IBrush brush, double x, double top, double bottom)
         {
-            context.FillRectangle(brush, new Rect(x, top, 1, Math.Max(1, bottom - top + 1)));
+            context.FillRectangle(brush, new Rect(x - 1, top - 1, 1, Math.Max(1, bottom - top + 1)));
         }
 
         private static IBrush VerticalGradient(Color top, Color bottom, Rect bounds)

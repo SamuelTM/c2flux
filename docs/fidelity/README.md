@@ -46,8 +46,8 @@ Cada gráfico do WinForms sozinho, desenhado com uma árvore fixa em vez de uma 
 
 | | |
 |---|---|
-| **Versão** | `cross-platform` no commit `980f112`, [execução de 10/10/2026](https://github.com/SamuelTM/c2flux/actions/runs/38059539655) do `ui-screenshots.yml` |
-| **Dados** | `tests/fixtures/generate_chart_fixture.py` com raiz `T:\` (262 arquivos, 377 MB) |
+| **Versão** | `cross-platform` no commit `153c06b`, [execução de 10/10/2026](https://github.com/SamuelTM/c2flux/actions/runs/38060639616) do `ui-screenshots.yml` |
+| **Dados** | `tests/fixtures/generate_chart_fixture.py` com raiz `T:\`: árvore (262 arquivos, 377 MB), histórico de armazenamento e comparação de varreduras. A versão com raiz `/fixture` fica em `tests/fixtures/charts/`, para os testes do app |
 | **Tamanho** | 890×630 (área do gráfico na janela de 1280×800); árvore 360×450 |
 | **Como** | `c2flux-shots --charts`: cada controle numa janela sem borda, com as cores e a fonte que ele herda na janela principal |
 
@@ -56,8 +56,12 @@ Cada gráfico do WinForms sozinho, desenhado com uma árvore fixa em vez de uma 
 | `chart-pie.png`, `chart-bar.png`, `chart-sunburst.png`, `chart-treemap.png`, `chart-table.png` | `Chart_PieChart`, `Chart_BarChart`, `Chart_Sunburst`, `Chart_Treemap`, `Chart_TableGridChart` |
 | `chart-tree.png` | `TreeEntrySizeBarView`, sem os ícones do shell. A raiz mostra 4 GB porque `T:\` é um volume de verdade no runner |
 | `chart-symbols.png` | `StatusSymbolRenderer`: os quatro símbolos e o glifo +/− em 14 px e 48 px |
+| `chart-storage-history.png` | `StorageHistoryChart` (660×520), 8 medições de espaço livre num volume de 500 GB |
+| `chart-growth-overview.png` | `ScanHistoryGrowthOverviewControl` (1080×520), comparação de duas varreduras |
 
-O lado Avalonia sai dos testes do app (`ChartCaptures`), com os mesmos nomes de arquivo, em `$C2FLUX_CHART_OUT`.
+O lado Avalonia sai dos testes do app (`ChartCaptures`), com os mesmos nomes de arquivo, em `$C2FLUX_CHART_OUT` (o canvas do treemap como `chart-treemap-canvas.png`: a faixa de baixo de `chart-treemap.png`, a partir de y = 454).
+
+Diferença média por pixel (0–255, maior canal) entre o port e a referência, na Fase 5.2: símbolos 1,0; barras 1,5; pizza 2,5; crescimento 3,1; armazenamento 3,5; sunburst 3,9; árvore 4,0; treemap 7,0. Quase toda a diferença é a fonte (Inter em tons de cinza contra Segoe UI com ClearType).
 
 ## Limitações conhecidas
 

@@ -173,7 +173,10 @@ namespace c2flux
             DateTime minimumTime = _records.Min(record => record.RecordedAtUtc);
             DateTime maximumTime = _records.Max(record => record.RecordedAtUtc);
             double timeRangeTicks = Math.Max(1D, (maximumTime - minimumTime).Ticks);
-            Pen gridPen = new Pen(GetLineBrush(110), 1, new DashStyle(new double[] { 1, 1 }, 0));
+            // GDI+ draws the dotted alpha-110 grid anti-aliased at fractional
+            // positions, which blurs it into an even line of half the alpha.
+            // Coordinates get +0.5 throughout: GDI+ puts them on pixel centers.
+            Pen gridPen = new Pen(GetLineBrush(55), 1);
             Pen axisPen = new Pen(GetLineBrush(180), 1);
             double labelHeight = FontHeight;
 
@@ -216,15 +219,16 @@ namespace c2flux
             }
 
             Pen graphPen = new Pen(GraphBrush, 2);
+            Vector pixelCenter = new Vector(0.5, 0.5);
 
             for (int index = 1; index < _points.Length; index++)
             {
-                context.DrawLine(graphPen, _points[index - 1], _points[index]);
+                context.DrawLine(graphPen, _points[index - 1] + pixelCenter, _points[index] + pixelCenter);
             }
 
             foreach (Point point in _points)
             {
-                context.DrawEllipse(GraphBrush, null, point, 3, 3);
+                context.DrawEllipse(GraphBrush, null, point + pixelCenter, 3, 3);
             }
         }
 

@@ -366,15 +366,15 @@ public sealed class ScanOptions
 Portar de GDI+ para `DrawingContext` do Avalonia (ou SkiaSharp direto, se for preciso mais desempenho). A lógica de layout (algoritmo de treemap, ângulos do sunburst, escalas) é reaproveitada quase sem mudanças.
 
 - [x] `TreeEntrySizeBarView` → `EntryTree`: árvore inteira (seleção, teclado, expandir, rolagem), desenhando só as linhas visíveis. Ícones de arquivo, pasta e unidade ficam para o serviço de ícones da Fase 5
-- [x] `Chart_Treemap` → `Treemap`: o canvas (layout squarified, famílias, rótulos, "Other (n)", hover, clique, duplo clique para zoom, menu de contexto), com cache em bitmap como no original. Diferença média de 11 níveis por pixel contra a referência, quase toda na fonte. A tabela de cima vai para a 5.3, com as outras tabelas
+- [x] `Chart_Treemap` → `Treemap`: o canvas (layout squarified, famílias, rótulos, "Other (n)", hover, clique, duplo clique para zoom, menu de contexto), com cache em bitmap como no original. Diferença média de 7 níveis por pixel contra a referência, quase toda na fonte. A tabela de cima vai para a 5.3, com as outras tabelas
 - [x] `Chart_Sunburst` → `Sunburst`. O `PathGradientBrush` do GDI+ virou gradiente radial (quase idêntico na comparação)
 - [x] `Chart_PieChart` → `PieChart`
 - [x] `Chart_BarChart` → `BarChart` (espaço do ícone vazio até o serviço de ícones)
 - [ ] `Chart_TableGridChart` / `Chart_ResponsiveTableGrid` e a tabela do `Chart_Treemap`: são tabelas (DataGrid), portadas na 5.3
-- [ ] `StorageHistoryChart`
-- [ ] `ScanHistoryGrowthOverviewControl`
+- [x] `StorageHistoryChart`
+- [x] `ScanHistoryGrowthOverviewControl` → `GrowthOverview` (o seletor de visão usa o `ComboBox` do Fluent até o tema dos controles da 5.3)
 - [x] `StatusSymbolRenderer`
-- [x] **Comparação:** `tests/fixtures/generate_chart_fixture.py` gera uma árvore fixa; `c2flux-shots --charts` desenha cada gráfico do WinForms com ela (`docs/fidelity/charts/`) e os testes do app desenham o port com os mesmos dados (`ChartCaptures`). Achados: o WinForms mistura transparência em luz linear (`ChartColors.BlendLinear`) e o texto segue as métricas da Segoe UI e do `TextRenderer` (`DrawnControl`)
+- [x] **Comparação:** `tests/fixtures/generate_chart_fixture.py` gera uma árvore fixa; `c2flux-shots --charts` desenha cada gráfico do WinForms com ela (`docs/fidelity/charts/`) e os testes do app desenham o port com os mesmos dados (`ChartCaptures`). Achados: o WinForms mistura transparência em luz linear (`ChartColors.BlendLinear`); o texto segue as métricas da Segoe UI e do `TextRenderer` (`DrawnControl`); com `PixelOffsetMode.Half`, um traço de 1 px em *c* acende o pixel *c* − 1; o destaque do sistema é `#0078D4`. Diferença média de 1 a 7 níveis por pixel em todos os gráficos (`docs/fidelity/README.md`)
 - [ ] Virtualização e cache de renderização para árvores com milhões de entradas
 
 #### 5.3 Janelas e controles
