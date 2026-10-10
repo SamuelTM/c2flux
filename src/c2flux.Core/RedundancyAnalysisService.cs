@@ -1,9 +1,7 @@
-﻿using Microsoft.Win32.SafeHandles;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading;
 
@@ -40,8 +38,6 @@ namespace c2flux
     {
         private const int SampleBlockSize = 4 * 1024;
         private const int CompareBufferSize = 1024 * 1024;
-        private const int FileIdInfoClass = 18;
-        private const uint FsctlReadFileUsnData = 0x000900EB;
 
         public static IReadOnlyList<RedundancyAnalysisGroup> Analyze(
             IReadOnlyList<FileSystemEntry> files,
@@ -124,7 +120,7 @@ namespace c2flux
                         continue;
                     }
 
-                    if (!TryGetFileIdentityAndUsn(
+                    if (!FileIdentities.Reader(
                             file.FullPath,
                             out FileIdentity identity,
                             out long usn,
@@ -501,9 +497,11 @@ namespace c2flux
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (!TryGetFileIdentity(
+                    if (!FileIdentities.Reader(
                             reparseFile.FullPath,
-                            out FileIdentity identity) ||
+                            out FileIdentity identity,
+                            out _,
+                            out _) ||
                         !groupByIdentity.TryGetValue(
                             identity,
                             out WorkingGroup workingGroup))
@@ -785,246 +783,6 @@ namespace c2flux
             {
                 isSymbolicLink = false;
                 return false;
-            }
-        }
-
-        private static bool TryGetFileIdentityAndUsn(
-            string path,
-            out FileIdentity identity,
-            out long usn,
-            out bool hasUsn)
-        {
-            try
-            {
-                using SafeFileHandle handle =
-                    File.OpenHandle(
-                        path,
-                        FileMode.Open,
-                        FileAccess.Read,
-                        FileShare.ReadWrite |
-                            FileShare.Delete,
-                        FileOptions.None);
-
-                if (!GetFileInformationByHandleEx(
-                        handle,
-                        FileIdInfoClass,
-                        out FileIdInfo fileIdInfo,
-                        (uint)Marshal.SizeOf<FileIdInfo>()))
-                {
-                    identity = default;
-                    usn = 0L;
-                    hasUsn = false;
-                    return false;
-                }
-
-                identity =
-                    new FileIdentity(
-                        fileIdInfo.VolumeSerialNumber,
-                        fileIdInfo.FileId.Low,
-                        fileIdInfo.FileId.High);
-
-                usn = 0L;
-                hasUsn =
-                    TryGetFileUsn(
-                        handle,
-                        out usn);
-
-                return true;
-            }
-            catch
-            {
-                identity = default;
-                usn = 0L;
-                hasUsn = false;
-                return false;
-            }
-        }
-
-        private static bool TryGetFileUsn(
-            SafeFileHandle handle,
-            out long usn)
-        {
-            ReadFileUsnData input =
-                new ReadFileUsnData
-                {
-                    MinMajorVersion = 2,
-                    MaxMajorVersion = 3
-                };
-
-            byte[] output =
-                new byte[512];
-
-            if (!DeviceIoControl(
-                    handle,
-                    FsctlReadFileUsnData,
-                    ref input,
-                    (uint)Marshal.SizeOf<ReadFileUsnData>(),
-                    output,
-                    (uint)output.Length,
-                    out uint bytesReturned,
-                    IntPtr.Zero) ||
-                bytesReturned < 32)
-            {
-                usn = 0L;
-                return false;
-            }
-
-            ushort majorVersion =
-                BitConverter.ToUInt16(
-                    output,
-                    4);
-
-            int usnOffset =
-                majorVersion == 3
-                    ? 40
-                    : 24;
-
-            if (bytesReturned <
-                usnOffset + sizeof(long))
-            {
-                usn = 0L;
-                return false;
-            }
-
-            usn =
-                BitConverter.ToInt64(
-                    output,
-                    usnOffset);
-
-            return true;
-        }
-
-        private static bool TryGetFileIdentity(
-            string path,
-            out FileIdentity identity)
-        {
-            try
-            {
-                using SafeFileHandle handle =
-                    File.OpenHandle(
-                        path,
-                        FileMode.Open,
-                        FileAccess.Read,
-                        FileShare.ReadWrite |
-                            FileShare.Delete,
-                        FileOptions.None);
-
-                if (!GetFileInformationByHandleEx(
-                        handle,
-                        FileIdInfoClass,
-                        out FileIdInfo fileIdInfo,
-                        (uint)Marshal.SizeOf<FileIdInfo>()))
-                {
-                    identity = default;
-                    return false;
-                }
-
-                identity =
-                    new FileIdentity(
-                        fileIdInfo.VolumeSerialNumber,
-                        fileIdInfo.FileId.Low,
-                        fileIdInfo.FileId.High);
-
-                return true;
-            }
-            catch
-            {
-                identity = default;
-                return false;
-            }
-        }
-
-        [DllImport(
-            "kernel32.dll",
-            SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool DeviceIoControl(
-            SafeFileHandle deviceHandle,
-            uint ioControlCode,
-            ref ReadFileUsnData inputBuffer,
-            uint inputBufferSize,
-            [Out] byte[] outputBuffer,
-            uint outputBufferSize,
-            out uint bytesReturned,
-            IntPtr overlapped);
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct ReadFileUsnData
-        {
-            public ushort MinMajorVersion;
-            public ushort MaxMajorVersion;
-        }
-
-        [DllImport(
-            "kernel32.dll",
-            SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool GetFileInformationByHandleEx(
-            SafeFileHandle fileHandle,
-            int fileInformationClass,
-            out FileIdInfo fileInformation,
-            uint bufferSize);
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct FileIdInfo
-        {
-            public ulong VolumeSerialNumber;
-            public FileId128 FileId;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct FileId128
-        {
-            public ulong Low;
-            public ulong High;
-        }
-
-        private readonly struct FileIdentity :
-            IEquatable<FileIdentity>
-        {
-            public FileIdentity(
-                ulong volumeSerialNumber,
-                ulong fileIdLow,
-                ulong fileIdHigh)
-            {
-                VolumeSerialNumber =
-                    volumeSerialNumber;
-                FileIdLow =
-                    fileIdLow;
-                FileIdHigh =
-                    fileIdHigh;
-            }
-
-            public ulong VolumeSerialNumber { get; }
-            public ulong FileIdLow { get; }
-            public ulong FileIdHigh { get; }
-
-            public bool Equals(
-                FileIdentity other)
-            {
-                return
-                    VolumeSerialNumber ==
-                        other.VolumeSerialNumber &&
-                    FileIdLow ==
-                        other.FileIdLow &&
-                    FileIdHigh ==
-                        other.FileIdHigh;
-            }
-
-            public override bool Equals(
-                object obj)
-            {
-                return
-                    obj is FileIdentity other &&
-                    Equals(other);
-            }
-
-            public override int GetHashCode()
-            {
-                return HashCode.Combine(
-                    VolumeSerialNumber,
-                    FileIdLow,
-                    FileIdHigh);
             }
         }
 

@@ -12,6 +12,7 @@
 		<ImplicitUsings>disable</ImplicitUsings>
 		<AssemblyName>c2flux.Platform.Linux</AssemblyName>
 		<RootNamespace>c2flux</RootNamespace>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
 		<Authors>Daniel Capilla</Authors>
 		<Company>Daniel Capilla</Company>

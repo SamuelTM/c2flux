@@ -14,6 +14,7 @@ namespace c2flux
         {
             // Before anything else, so Core services can warn through the UI.
             AppNotifications.WarningHandler = ShowCoreWarning;
+            FileIdentities.Reader = WindowsFileIdentity.TryRead;
 
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
