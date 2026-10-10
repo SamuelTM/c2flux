@@ -25,8 +25,12 @@ namespace c2flux.AppTests
 
         public static AppBuilder BuildAvaloniaApp()
         {
+            // Real Skia drawing and the app's font, so chart captures look
+            // like the app.
             return AppBuilder.Configure<App>()
-                .UseHeadless(new AvaloniaHeadlessPlatformOptions());
+                .UseSkia()
+                .UseAppFonts()
+                .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
         }
     }
 }

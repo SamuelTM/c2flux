@@ -21,7 +21,7 @@ namespace c2flux
         {
             return AppBuilder.Configure<App>()
                 .UsePlatformDetect()
-                .WithInterFont()
+                .UseAppFonts()
                 .LogToTrace();
         }
     }
