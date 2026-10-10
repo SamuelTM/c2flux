@@ -22,7 +22,6 @@ namespace c2flux
         private const uint FILE_SHARE_DELETE = 0x00000004;
         private const uint OPEN_EXISTING = 3;
         private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
-        private const int FileIdInfoClass = 18;
         private static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
 
         private readonly AppSettings _settings;
@@ -64,18 +63,6 @@ namespace c2flux
             uint dwFlagsAndAttributes,
             IntPtr hTemplateFile);
 
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool GetFileInformationByHandleEx(
-            SafeFileHandle hFile,
-            int fileInformationClass,
-            out FILE_ID_INFO lpFileInformation,
-            uint dwBufferSize);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool GetFileInformationByHandle(
-            SafeFileHandle hFile,
-            out BY_HANDLE_FILE_INFORMATION lpFileInformation);
-
         private enum FINDEX_INFO_LEVELS
         {
             FindExInfoStandard = 0,
@@ -113,82 +100,6 @@ namespace c2flux
             public uint dwHighDateTime;
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        private struct FILE_ID_128
-        {
-            public ulong LowPart;
-            public ulong HighPart;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct FILE_ID_INFO
-        {
-            public ulong VolumeSerialNumber;
-            public FILE_ID_128 FileId;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct BY_HANDLE_FILE_INFORMATION
-        {
-            public FileAttributes dwFileAttributes;
-            public FILETIME ftCreationTime;
-            public FILETIME ftLastAccessTime;
-            public FILETIME ftLastWriteTime;
-            public uint dwVolumeSerialNumber;
-            public uint nFileSizeHigh;
-            public uint nFileSizeLow;
-            public uint nNumberOfLinks;
-            public uint nFileIndexHigh;
-            public uint nFileIndexLow;
-        }
-
-        private readonly struct DirectoryIdentity
-        {
-            public DirectoryIdentity(
-                bool hasExtendedId,
-                ulong extendedVolumeSerialNumber,
-                ulong extendedFileIdLow,
-                ulong extendedFileIdHigh,
-                bool hasLegacyId,
-                uint legacyVolumeSerialNumber,
-                ulong legacyFileId)
-            {
-                HasExtendedId = hasExtendedId;
-                ExtendedVolumeSerialNumber = extendedVolumeSerialNumber;
-                ExtendedFileIdLow = extendedFileIdLow;
-                ExtendedFileIdHigh = extendedFileIdHigh;
-                HasLegacyId = hasLegacyId;
-                LegacyVolumeSerialNumber = legacyVolumeSerialNumber;
-                LegacyFileId = legacyFileId;
-            }
-
-            public bool HasExtendedId { get; }
-            public ulong ExtendedVolumeSerialNumber { get; }
-            public ulong ExtendedFileIdLow { get; }
-            public ulong ExtendedFileIdHigh { get; }
-            public bool HasLegacyId { get; }
-            public uint LegacyVolumeSerialNumber { get; }
-            public ulong LegacyFileId { get; }
-
-            public bool Matches(DirectoryIdentity other)
-            {
-                if (HasExtendedId && other.HasExtendedId)
-                {
-                    return ExtendedVolumeSerialNumber == other.ExtendedVolumeSerialNumber &&
-                        ExtendedFileIdLow == other.ExtendedFileIdLow &&
-                        ExtendedFileIdHigh == other.ExtendedFileIdHigh;
-                }
-
-                if (HasLegacyId && other.HasLegacyId)
-                {
-                    return LegacyVolumeSerialNumber == other.LegacyVolumeSerialNumber &&
-                        LegacyFileId == other.LegacyFileId;
-                }
-
-                return false;
-            }
-        }
-
         private sealed class Win32FileSystemEntry
         {
             public string Name { get; set; }
@@ -221,7 +132,7 @@ namespace c2flux
 
                 ReportProgress(rootPath, progress, true);
                 ScanDirectoryContents(rootEntry, progress, cancellationToken, pauseToken, null);
-                SortChildrenRecursive(rootEntry);
+                ScanTree.SortChildrenBySizeDescending(rootEntry);
                 ReportProgress(rootPath, progress, true);
 
                 progress?.Report(new ScanProgress
@@ -496,39 +407,7 @@ namespace c2flux
             if (directoryHandle == null || directoryHandle.IsInvalid)
                 return false;
 
-            FILE_ID_INFO fileIdInfo;
-            bool hasExtendedId =
-                GetFileInformationByHandleEx(
-                    directoryHandle,
-                    FileIdInfoClass,
-                    out fileIdInfo,
-                    (uint)Marshal.SizeOf(typeof(FILE_ID_INFO))) &&
-                (fileIdInfo.FileId.LowPart != 0 ||
-                 fileIdInfo.FileId.HighPart != 0);
-
-            bool hasLegacyId =
-                GetFileInformationByHandle(
-                    directoryHandle,
-                    out BY_HANDLE_FILE_INFORMATION fileInformation);
-
-            if (!hasExtendedId && !hasLegacyId)
-                return false;
-
-            ulong legacyFileId = hasLegacyId
-                ? ((ulong)fileInformation.nFileIndexHigh << 32) |
-                    fileInformation.nFileIndexLow
-                : 0;
-
-            directoryIdentity = new DirectoryIdentity(
-                hasExtendedId,
-                hasExtendedId ? fileIdInfo.VolumeSerialNumber : 0,
-                hasExtendedId ? fileIdInfo.FileId.LowPart : 0,
-                hasExtendedId ? fileIdInfo.FileId.HighPart : 0,
-                hasLegacyId,
-                hasLegacyId ? fileInformation.dwVolumeSerialNumber : 0,
-                legacyFileId);
-
-            return true;
+            return DirectoryIdentity.TryRead(directoryHandle, out directoryIdentity);
         }
 
         private static string NormalizePathForDirectoryHandle(string path)
@@ -656,44 +535,5 @@ namespace c2flux
             return snapshot;
         }
 
-        private void SortChildrenRecursive(FileSystemEntry entry)
-        {
-            Stack<(FileSystemEntry Entry, bool Visited)> stack =
-                new Stack<(FileSystemEntry Entry, bool Visited)>();
-
-            stack.Push((entry, false));
-
-            while (stack.Count > 0)
-            {
-                (FileSystemEntry Entry, bool Visited) current = stack.Pop();
-
-                if (!current.Visited)
-                {
-                    stack.Push((current.Entry, true));
-
-                    foreach (FileSystemEntry child in current.Entry.Children)
-                    {
-                        if (child.IsDirectory)
-                        {
-                            stack.Push((child, false));
-                        }
-                    }
-
-                    continue;
-                }
-
-                current.Entry.Children.Sort((left, right) =>
-                {
-                    int sizeCompare = right.SizeBytes.CompareTo(left.SizeBytes);
-
-                    if (sizeCompare != 0)
-                    {
-                        return sizeCompare;
-                    }
-
-                    return string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase);
-                });
-            }
-        }
     }
 }

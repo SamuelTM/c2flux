@@ -5,8 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 
-// not used anymore. Initially for filtering while scanning *1
-// using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
@@ -23,8 +21,6 @@ namespace c2flux
         private const int FileFullDirectoryInformationFileNameOffset = 68;
         private const int FileIdFullDirectoryInformationClass = 38;
         private const int FileIdFullDirectoryInformationFileNameOffset = 80;
-        private const int FileIdInfoClass = 18;
-
         private const uint FILE_LIST_DIRECTORY = 0x0001;
         private const uint SYNCHRONIZE = 0x00100000;
         private const uint FILE_SHARE_READ = 0x00000001;
@@ -58,8 +54,6 @@ namespace c2flux
         private FileInformationConfiguration _fileInformationConfiguration;
         private PauseToken _pauseToken;
 
-        // not used anymore. Initially for filtering while scanning *1
-        // private CompiledPathFilter _pathFilter;
         private ConcurrentBag<List<FileSystemEntry>> _workerFileBatches;
         private bool _prepareDirectoryTree;
 
@@ -103,8 +97,6 @@ namespace c2flux
                         FileIdFullDirectoryInformationFileNameOffset));
                 _workQueue = new BlockingCollection<WorkItem>();
 
-                // not used anymore. Initially for filtering while scanning *1
-                // _pathFilter = new CompiledPathFilter(_settings.ExcludedPaths);
                 _workerFileBatches = new ConcurrentBag<List<FileSystemEntry>>();
 
                 ReportProgress(rootPath, progress, true);
@@ -423,9 +415,6 @@ namespace c2flux
             bool isDirectory = attributes.HasFlag(FileAttributes.Directory);
             string fullPath = Path.Combine(directoryEntry.FullPath, name);
 
-            // not used anymore. Initially for filtering while scanning *1
-            // if (_pathFilter.IsExcluded(fullPath))
-            //    return 0;
 
             if (isDirectory)
             {
@@ -568,41 +557,7 @@ namespace c2flux
             SafeFileHandle directoryHandle,
             out DirectoryIdentity directoryIdentity)
         {
-            directoryIdentity = default;
-
-            FILE_ID_INFO fileIdInfo;
-            bool hasExtendedId =
-                GetFileInformationByHandleEx(
-                    directoryHandle,
-                    FileIdInfoClass,
-                    out fileIdInfo,
-                    (uint)Marshal.SizeOf(typeof(FILE_ID_INFO))) &&
-                (fileIdInfo.FileId.LowPart != 0 ||
-                 fileIdInfo.FileId.HighPart != 0);
-
-            bool hasLegacyId =
-                GetFileInformationByHandle(
-                    directoryHandle,
-                    out BY_HANDLE_FILE_INFORMATION fileInformation);
-
-            if (!hasExtendedId && !hasLegacyId)
-                return false;
-
-            ulong legacyFileId = hasLegacyId
-                ? ((ulong)fileInformation.nFileIndexHigh << 32) |
-                    fileInformation.nFileIndexLow
-                : 0;
-
-            directoryIdentity = new DirectoryIdentity(
-                hasExtendedId,
-                hasExtendedId ? fileIdInfo.VolumeSerialNumber : 0,
-                hasExtendedId ? fileIdInfo.FileId.LowPart : 0,
-                hasExtendedId ? fileIdInfo.FileId.HighPart : 0,
-                hasLegacyId,
-                hasLegacyId ? fileInformation.dwVolumeSerialNumber : 0,
-                legacyFileId);
-
-            return true;
+            return DirectoryIdentity.TryRead(directoryHandle, out directoryIdentity);
         }
 
         private static UNICODE_STRING CreateUnicodeString(string text, out IntPtr buffer)
@@ -878,99 +833,11 @@ namespace c2flux
             IntPtr fileName,
             [MarshalAs(UnmanagedType.U1)] bool restartScan);
 
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool GetFileInformationByHandleEx(
-            SafeFileHandle hFile,
-            int fileInformationClass,
-            out FILE_ID_INFO lpFileInformation,
-            uint dwBufferSize);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool GetFileInformationByHandle(
-            SafeFileHandle hFile,
-            out BY_HANDLE_FILE_INFORMATION lpFileInformation);
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct FILE_ID_128
-        {
-            public ulong LowPart;
-            public ulong HighPart;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct FILE_ID_INFO
-        {
-            public ulong VolumeSerialNumber;
-            public FILE_ID_128 FileId;
-        }
-
         [StructLayout(LayoutKind.Sequential)]
         private struct FILETIME
         {
             public uint dwLowDateTime;
             public uint dwHighDateTime;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct BY_HANDLE_FILE_INFORMATION
-        {
-            public FileAttributes dwFileAttributes;
-            public FILETIME ftCreationTime;
-            public FILETIME ftLastAccessTime;
-            public FILETIME ftLastWriteTime;
-            public uint dwVolumeSerialNumber;
-            public uint nFileSizeHigh;
-            public uint nFileSizeLow;
-            public uint nNumberOfLinks;
-            public uint nFileIndexHigh;
-            public uint nFileIndexLow;
-        }
-
-        private readonly struct DirectoryIdentity
-        {
-            public DirectoryIdentity(
-                bool hasExtendedId,
-                ulong extendedVolumeSerialNumber,
-                ulong extendedFileIdLow,
-                ulong extendedFileIdHigh,
-                bool hasLegacyId,
-                uint legacyVolumeSerialNumber,
-                ulong legacyFileId)
-            {
-                HasExtendedId = hasExtendedId;
-                ExtendedVolumeSerialNumber = extendedVolumeSerialNumber;
-                ExtendedFileIdLow = extendedFileIdLow;
-                ExtendedFileIdHigh = extendedFileIdHigh;
-                HasLegacyId = hasLegacyId;
-                LegacyVolumeSerialNumber = legacyVolumeSerialNumber;
-                LegacyFileId = legacyFileId;
-            }
-
-            public bool HasExtendedId { get; }
-            public ulong ExtendedVolumeSerialNumber { get; }
-            public ulong ExtendedFileIdLow { get; }
-            public ulong ExtendedFileIdHigh { get; }
-            public bool HasLegacyId { get; }
-            public uint LegacyVolumeSerialNumber { get; }
-            public ulong LegacyFileId { get; }
-
-            public bool Matches(DirectoryIdentity other)
-            {
-                if (HasExtendedId && other.HasExtendedId)
-                {
-                    return ExtendedVolumeSerialNumber == other.ExtendedVolumeSerialNumber &&
-                        ExtendedFileIdLow == other.ExtendedFileIdLow &&
-                        ExtendedFileIdHigh == other.ExtendedFileIdHigh;
-                }
-
-                if (HasLegacyId && other.HasLegacyId)
-                {
-                    return LegacyVolumeSerialNumber == other.LegacyVolumeSerialNumber &&
-                        LegacyFileId == other.LegacyFileId;
-                }
-
-                return false;
-            }
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -999,102 +866,6 @@ namespace c2flux
             public IntPtr Information;
         }
 
-        // not used anymore. Initially for filtering while scanning *1
-        /*
-        private sealed class CompiledPathFilter
-        {
-            private readonly List<string> _pathPrefixes =
-                new List<string>();
-
-            private readonly List<Regex> _wildcardPatterns =
-                new List<Regex>();
-
-            public CompiledPathFilter(IEnumerable<string> patterns)
-            {
-                if (patterns == null)
-                    return;
-
-                foreach (string rawPattern in patterns)
-                {
-                    if (string.IsNullOrWhiteSpace(rawPattern))
-                        continue;
-
-                    string pattern = rawPattern.Trim();
-                    string normalizedPattern = Normalize(pattern);
-
-                    if (pattern.IndexOfAny(new[] { '*', '?' }) >= 0)
-                    {
-                        string regexPattern =
-                            "^" +
-                            Regex.Escape(normalizedPattern)
-                                .Replace(@"\*", ".*")
-                                .Replace(@"\?", ".") +
-                            "$";
-
-                        _wildcardPatterns.Add(
-                            new Regex(
-                                regexPattern,
-                                RegexOptions.IgnoreCase |
-                                RegexOptions.CultureInvariant |
-                                RegexOptions.Compiled));
-                    }
-                    else
-                    {
-                        _pathPrefixes.Add(normalizedPattern);
-                    }
-                }
-            }
-
-            public bool IsExcluded(string fullPath)
-            {
-                if (string.IsNullOrWhiteSpace(fullPath))
-                    return false;
-
-                string normalizedPath = fullPath.TrimEnd(
-                    Path.DirectorySeparatorChar,
-                    Path.AltDirectorySeparatorChar);
-
-                foreach (string pathPrefix in _pathPrefixes)
-                {
-                    if (normalizedPath.Equals(
-                            pathPrefix,
-                            StringComparison.OrdinalIgnoreCase) ||
-                        normalizedPath.StartsWith(
-                            pathPrefix + Path.DirectorySeparatorChar,
-                            StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-                }
-
-                foreach (Regex wildcardPattern in _wildcardPatterns)
-                {
-                    if (wildcardPattern.IsMatch(normalizedPath))
-                        return true;
-                }
-
-                return false;
-            }
-
-            private static string Normalize(string path)
-            {
-                try
-                {
-                    return Path.GetFullPath(path)
-                        .TrimEnd(
-                            Path.DirectorySeparatorChar,
-                            Path.AltDirectorySeparatorChar);
-                }
-                catch
-                {
-                    return path.Trim()
-                        .TrimEnd(
-                            Path.DirectorySeparatorChar,
-                            Path.AltDirectorySeparatorChar);
-                }
-            }
-        }
-        */
 
         private sealed class FileInformationConfiguration
         {

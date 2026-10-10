@@ -409,7 +409,7 @@ namespace c2flux
                 TimeSpan sizeAggregationElapsed = phaseStopwatch.Elapsed;
 
                 phaseStopwatch.Restart();
-                SortChildrenRecursive(rootEntry);
+                ScanTree.SortChildrenBySizeDescending(rootEntry);
                 phaseStopwatch.Stop();
                 TimeSpan sortingElapsed = phaseStopwatch.Elapsed;
 
@@ -707,46 +707,6 @@ namespace c2flux
                         current.Entry.SizeBytes += child.SizeBytes;
                     }
                 }
-            }
-        }
-
-        private void SortChildrenRecursive(FileSystemEntry entry)
-        {
-            Stack<(FileSystemEntry Entry, bool Visited)> stack =
-                new Stack<(FileSystemEntry Entry, bool Visited)>();
-
-            stack.Push((entry, false));
-
-            while (stack.Count > 0)
-            {
-                (FileSystemEntry Entry, bool Visited) current = stack.Pop();
-
-                if (!current.Visited)
-                {
-                    stack.Push((current.Entry, true));
-
-                    foreach (FileSystemEntry child in current.Entry.Children)
-                    {
-                        if (child.IsDirectory)
-                        {
-                            stack.Push((child, false));
-                        }
-                    }
-
-                    continue;
-                }
-
-                current.Entry.Children.Sort((left, right) =>
-                {
-                    int sizeCompare = right.SizeBytes.CompareTo(left.SizeBytes);
-
-                    if (sizeCompare != 0)
-                    {
-                        return sizeCompare;
-                    }
-
-                    return string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase);
-                });
             }
         }
 
