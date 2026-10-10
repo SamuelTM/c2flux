@@ -28,6 +28,7 @@ namespace c2flux.AppTests
             TimeZoneInfo.ClearCachedData();
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            Program.RegisterPlatformServices();
         }
 
         public static AppBuilder BuildAvaloniaApp()

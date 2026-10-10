@@ -96,8 +96,7 @@ namespace c2flux
                     context.FillRectangle(Resource("AccentBrush"), new Rect(x, top, NameWidth + SizeWidth + FreeWidth + FreePercentWidth, RowHeight));
                 }
 
-                // shortcut: no drive icon until the file icon service exists;
-                // the name keeps its 24 px offset.
+                context.DrawImage(FileIconCache.Volume(volume.RootPath), new Rect(x + 4, top + Math.Floor((RowHeight - 16) / 2), 16, 16));
                 DrawTextLine(context, volume.RootPath, new Rect(x + 24, top, NameWidth - 28, RowHeight), text);
                 DrawRight(context, SizeFormatter.Format(volume.TotalBytes), new Rect(x + NameWidth, top, SizeWidth, RowHeight), text);
                 DrawRight(context, SizeFormatter.Format(volume.FreeBytes), new Rect(x + NameWidth + SizeWidth, top, FreeWidth, RowHeight), text);

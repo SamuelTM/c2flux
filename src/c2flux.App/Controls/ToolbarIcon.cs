@@ -89,11 +89,8 @@ namespace c2flux
                     break;
 
                 case ToolbarIconKind.OpenFolder:
-                    // shortcut: the WinForms button showed the shell's "open
-                    // folder" stock icon; a drawn folder until the file icon
-                    // service of phase 5 exists.
-                    context.DrawRectangle(new SolidColorBrush(Rgb(224, 168, 40)), null, new RoundedRect(new Rect(1, 3, 6, 4), 1));
-                    context.DrawRectangle(new SolidColorBrush(Rgb(248, 200, 72)), null, new RoundedRect(new Rect(1, 5, 14, 9), 1));
+                    // The shell's "open folder" stock icon, as in WinForms.
+                    context.DrawImage(FileIconCache.OpenFolder, new Rect(-0.5, -0.5, 16, 16));
                     break;
 
                 case ToolbarIconKind.Table:

@@ -86,6 +86,17 @@ namespace c2flux
             Tree.SelectedEntryChanged += OnSelectedEntryChanged;
 
             DriveSelect.ItemsSource = _drives;
+            // Volumes show their icon, added folders the folder icon.
+            DriveSelect.ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<DriveItem>((drive, _) => drive == null ? null : new StackPanel
+            {
+                Orientation = Avalonia.Layout.Orientation.Horizontal,
+                Spacing = 6,
+                Children =
+                {
+                    new Image { Width = 16, Height = 16, Source = Volumes.Find(drive.RootPath) != null ? FileIconCache.Volume(drive.RootPath) : FileIconCache.Folder },
+                    new TextBlock { Text = drive.DisplayName, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center },
+                },
+            });
             DriveSelect.SelectionChanged += OnDriveSelectionChanged;
             ScanButton.Click += OnScanClick;
             PauseButton.Click += OnPauseClick;

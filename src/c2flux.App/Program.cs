@@ -3,7 +3,7 @@ using Avalonia;
 
 namespace c2flux
 {
-    internal static class Program
+    public static class Program
     {
         [STAThread]
         private static void Main(string[] args)
@@ -13,12 +13,23 @@ namespace c2flux
                 : OperatingSystem.IsMacOS() ? MacFileIdentity.TryRead
                 : LinuxFileIdentity.TryRead;
 
+            RegisterPlatformServices();
+
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
+
+        // The native pieces Core and the UI ask for (tests use them too).
+        public static void RegisterPlatformServices()
+        {
             if (OperatingSystem.IsWindows())
             {
                 Volumes.ClusterSizeReader = WindowsClusterSize.Read;
+                FileIcons.Reader = WindowsFileIcons.Read;
             }
-
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            else if (OperatingSystem.IsMacOS())
+            {
+                FileIcons.Reader = MacFileIcons.Read;
+            }
         }
 
         // Also used by the XAML previewer.

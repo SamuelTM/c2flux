@@ -70,8 +70,10 @@ namespace c2flux
 
                 Rect labelBounds = new Rect(contentLeft, y, labelWidth, rowHeight);
                 AddHitArea(labelBounds, item);
-                // shortcut: no file icon yet, only its space; draw it once the
-                // file icon service of phase 5 exists.
+                // The shell icon of the type: folder, or the file's extension.
+                context.DrawImage(
+                    item.IsDirectory ? FileIconCache.Folder : FileIconCache.FileType(item.Name),
+                    new Rect(labelBounds.X, y + Math.Max(0, Math.Floor((rowHeight - IconSize) / 2)), IconSize, IconSize));
                 DrawTextLine(
                     context,
                     item.Name,

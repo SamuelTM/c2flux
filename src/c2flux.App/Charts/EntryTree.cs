@@ -305,12 +305,19 @@ namespace c2flux
                 StatusSymbolRenderer.DrawTreeExpandGlyph(context, GetGlyphBounds(node, y), node.Expanded);
             }
 
-            // shortcut: no file, folder or drive icons yet; they come with the
-            // file icon service of phase 5 (IconLeftOffset keeps their place).
+            // WinForms used one folder and one file icon, and each volume's own
+            // icon for a scanned volume root.
+            double iconTop = y + Math.Max(0, Math.Floor((_rowHeight - 16) / 2));
+            IImage icon = node.Entry == null ? null : FileIconCache.ForEntry(node.Entry, node.Parent == null && IsVolumeRoot(node.Entry.FullPath));
+
+            if (icon != null)
+            {
+                context.DrawImage(icon, new Rect(GetNodeLeft(node) + IconLeftOffset, iconTop, 16, 16));
+            }
+
             if (IsSystemDirectory(node.Entry))
             {
                 double markerSize = Math.Round(StatusSymbolRenderer.DefaultSymbolSize * 0.8);
-                double iconTop = y + Math.Max(0, Math.Floor((_rowHeight - 16) / 2));
                 StatusSymbolRenderer.DrawSymbol(
                     context,
                     new Rect(GetNodeLeft(node) + IconLeftOffset, iconTop + 5, markerSize, markerSize),
@@ -368,9 +375,7 @@ namespace c2flux
 
             if (entry.IsDirectory && !string.IsNullOrWhiteSpace(entry.FullPath))
             {
-                _volumeSizeByRoot ??= Volumes.List()
-                    .GroupBy(volume => volume.RootPath, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(group => group.Key, group => group.First().TotalBytes, StringComparer.OrdinalIgnoreCase);
+                EnsureVolumes();
 
                 if (_volumeSizeByRoot.TryGetValue(entry.FullPath, out long volumeSize))
                 {
@@ -379,6 +384,19 @@ namespace c2flux
             }
 
             return SizeFormatter.Format(displaySizeBytes) + "  " + entry.Name;
+        }
+
+        private bool IsVolumeRoot(string path)
+        {
+            EnsureVolumes();
+            return path != null && _volumeSizeByRoot.ContainsKey(path);
+        }
+
+        private void EnsureVolumes()
+        {
+            _volumeSizeByRoot ??= Volumes.List()
+                .GroupBy(volume => volume.RootPath, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First().TotalBytes, StringComparer.OrdinalIgnoreCase);
         }
 
         private static bool IsSystemDirectory(FileSystemEntry entry)
