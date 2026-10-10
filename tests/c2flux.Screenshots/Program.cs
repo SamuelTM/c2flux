@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -20,6 +20,10 @@ namespace c2flux.Screenshots
     // Usage (from inside the app's publish directory):
     //   c2flux-shots --out <dir> [--scan <path>] [--display 1920x1080]
     //                [--main-size 1280x800] [--only <name>[,<name>...]]
+    //                [--charts <fixture.json>]
+    //
+    // --charts also captures each chart control alone, fed with the scan
+    // result written by tests/fixtures/generate_chart_fixture.py (phase 5.2).
     //
     // Exit codes: 0 all captured, 1 some scenarios failed, 64 invalid arguments.
     internal static class Program
@@ -113,6 +117,7 @@ namespace c2flux.Screenshots
     {
         public string OutputDirectory { get; private set; }
         public string ScanPath { get; private set; }
+        public string ChartsFixture { get; private set; }
         public int DisplayWidth { get; private set; } = 1920;
         public int DisplayHeight { get; private set; } = 1080;
         public int MainWidth { get; private set; } = 1280;
@@ -141,6 +146,10 @@ namespace c2flux.Screenshots
                         break;
                     case "--scan":
                         options.ScanPath = Require(value, argument);
+                        index++;
+                        break;
+                    case "--charts":
+                        options.ChartsFixture = Path.GetFullPath(Require(value, argument));
                         index++;
                         break;
                     case "--display":

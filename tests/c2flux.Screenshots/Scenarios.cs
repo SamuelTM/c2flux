@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -54,6 +54,7 @@ namespace c2flux.Screenshots
 
         public async Task RunAllAsync()
         {
+            await RunChartsAsync();
             await RunMainWindowEmptyAsync();
             await RunMainWindowScannedAsync();
 
@@ -89,6 +90,147 @@ namespace c2flux.Screenshots
             });
             await RunStandaloneAsync("debug-class", () =>
                 _app.CreateForm("DebugClassForm", AppHost.Get(_app.LoadSettings(), "Layout")));
+        }
+
+        // ----- chart controls alone (phase 5.2) ----------------------------
+
+        // Size of the chart area in the 1280x800 main window.
+        private static readonly Size ChartSize = new Size(890, 630);
+
+        private static readonly (string Name, string Type, string[] Setters, Size Size)[] Charts =
+        {
+            ("chart-pie", "Chart_PieChart", new[] { "SetEntry" }, ChartSize),
+            ("chart-bar", "Chart_BarChart", new[] { "SetEntry" }, ChartSize),
+            ("chart-sunburst", "Chart_Sunburst", new[] { "SetEntry" }, ChartSize),
+            ("chart-treemap", "Chart_Treemap", new[] { "SetRootEntry", "SetEntry" }, ChartSize),
+            ("chart-table", "Chart_TableGridChart", new[] { "SetEntry" }, ChartSize),
+            // Size of the tree in the 1280x800 main window.
+            ("chart-tree", "TreeEntrySizeBarView", new[] { "SetRootEntry" }, new Size(360, 450)),
+        };
+
+        public async Task RunChartsAsync()
+        {
+            if (string.IsNullOrEmpty(_options.ChartsFixture))
+            {
+                return;
+            }
+
+            object root;
+
+            try
+            {
+                root = _app.CallStatic("ScanResultFileService", "Load", _options.ChartsFixture);
+            }
+            catch (Exception exception)
+            {
+                Fail("chart-fixture", exception);
+                return;
+            }
+
+            foreach ((string name, string typeName, string[] setters, Size size) in Charts)
+            {
+                if (!_options.ShouldRun(name))
+                {
+                    continue;
+                }
+
+                Form host = null;
+
+                try
+                {
+                    Control chart = (Control)Activator.CreateInstance(_app.GetType(typeName));
+                    chart.Dock = DockStyle.Fill;
+                    host = new Form
+                    {
+                        Text = name,
+                        FormBorderStyle = FormBorderStyle.None,
+                        ClientSize = size,
+                        BackColor = Color.FromArgb(32, 32, 32),
+                    };
+                    host.Controls.Add(chart);
+                    ShowAt(host);
+
+                    foreach (string setter in setters)
+                    {
+                        AppHost.Invoke(chart, setter, root);
+                    }
+
+                    await SettleAsync();
+                    chart.Refresh();
+                    SaveScreen(name, chart.RectangleToScreen(chart.ClientRectangle), typeName, name);
+                }
+                catch (Exception exception)
+                {
+                    Fail(name, exception);
+                }
+                finally
+                {
+                    await CloseAsync(host);
+                }
+            }
+
+            if (_options.ShouldRun("chart-symbols"))
+            {
+                try
+                {
+                    SaveSymbols("chart-symbols");
+                }
+                catch (Exception exception)
+                {
+                    Fail("chart-symbols", exception);
+                }
+            }
+        }
+
+        // Every StatusSymbolKind and both tree glyphs, at the real size (14 px)
+        // and enlarged (48 px), so shapes can be compared.
+        private void SaveSymbols(string name)
+        {
+            Type renderer = _app.GetType("StatusSymbolRenderer");
+            Array kinds = Enum.GetValues(_app.GetType("StatusSymbolKind"));
+            MethodInfo drawSymbol = renderer.GetMethod("DrawSymbol");
+            MethodInfo drawGlyph = renderer.GetMethod("DrawTreeExpandGlyph");
+            int[] sizes = { 14, 48 };
+            int cell = 56;
+
+            using Bitmap bitmap = new Bitmap(cell * (kinds.Length + 2), cell * sizes.Length);
+            using (Graphics graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.Clear(Color.FromArgb(32, 32, 32));
+
+                for (int row = 0; row < sizes.Length; row++)
+                {
+                    float offset = (cell - sizes[row]) / 2f;
+
+                    for (int column = 0; column < kinds.Length + 2; column++)
+                    {
+                        RectangleF box = new RectangleF(column * cell + offset, row * cell + offset, sizes[row], sizes[row]);
+
+                        if (column < kinds.Length)
+                        {
+                            drawSymbol.Invoke(null, new object[] { graphics, box, kinds.GetValue(column) });
+                        }
+                        else
+                        {
+                            drawGlyph.Invoke(null, new object[] { graphics, box, column == kinds.Length + 1 });
+                        }
+                    }
+                }
+            }
+
+            string file = name + ".png";
+            bitmap.Save(Path.Combine(_options.OutputDirectory, file), ImageFormat.Png);
+            _log.Captures.Add(new CaptureRecord
+            {
+                Name = name,
+                File = file,
+                Status = "ok",
+                Method = "StatusSymbolRenderer",
+                FormType = "StatusSymbolRenderer",
+                Title = name,
+                Width = bitmap.Width,
+                Height = bitmap.Height,
+            });
         }
 
         // ----- main window ------------------------------------------------

@@ -24,6 +24,7 @@ on:
       - cross-platform
     paths:
       - "tests/c2flux.Screenshots/**"
+      - "tests/fixtures/generate_chart_fixture.py"
       - ".github/workflows/ui-screenshots.yml"
       - ".github/actions/ntfs-test-volume/**"
       - "src/c2flux.WinForms/**"
@@ -102,7 +103,10 @@ jobs:
       - name: Capture screenshots
         run: |
           $out = Join-Path $env:RUNNER_TEMP 'screenshots'
-          & "$env:RUNNER_TEMP\app\c2flux-shots.exe" --out $out --scan 'T:\' --display $env:DISPLAY_SIZE --main-size $env:MAIN_SIZE
+          # Fixed tree for the chart controls alone (chart-*.png, phase 5.2).
+          $fixture = Join-Path $env:RUNNER_TEMP 'chart-fixture.json'
+          python tools/tests/fixtures/generate_chart_fixture.py $fixture --root 'T:\'
+          & "$env:RUNNER_TEMP\app\c2flux-shots.exe" --out $out --scan 'T:\' --display $env:DISPLAY_SIZE --main-size $env:MAIN_SIZE --charts $fixture
           $code = $LASTEXITCODE
 
           $index = Get-Content (Join-Path $out 'index.json') -Raw | ConvertFrom-Json
