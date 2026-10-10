@@ -1,6 +1,5 @@
 using System;
 using System.Globalization;
-using System.IO;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
@@ -12,29 +11,7 @@ namespace c2flux
     // laid out with the metrics of Segoe UI and TextRenderer.
     public abstract class DrawnControl : Control
     {
-        // The "Open in Explorer" context menu of the WinForms charts: folders
-        // open in the file manager, files are selected in it.
-        protected void ShowRevealMenu(FileSystemEntry entry)
-        {
-            if (string.IsNullOrWhiteSpace(entry?.FullPath))
-            {
-                return;
-            }
-
-            MenuItem reveal = new MenuItem { Header = LocalizationService.GetText("Context.OpenInExplorer") };
-            reveal.Click += (_, _) =>
-            {
-                if (Directory.Exists(entry.FullPath))
-                {
-                    FileManager.Open(entry.FullPath);
-                }
-                else if (File.Exists(entry.FullPath))
-                {
-                    FileManager.Reveal(entry.FullPath);
-                }
-            };
-            new ContextMenu { ItemsSource = new[] { reveal } }.Open(this);
-        }
+        protected void ShowRevealMenu(FileSystemEntry entry) => RevealMenu.Show(this, entry);
 
         protected IBrush Resource(string key) =>
             this.FindResource(ActualThemeVariant, key) as IBrush ?? Brushes.Transparent;

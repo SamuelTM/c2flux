@@ -24,6 +24,8 @@
       <SolidColorBrush x:Key="IconInactiveBrush" Color="#005499" />
       <SolidColorBrush x:Key="UsageBarTrackBrush" Color="#E1E1E1" />
       <SolidColorBrush x:Key="UsageBarFillBrush" Color="#1677FF" />
+      <SolidColorBrush x:Key="TableProgressBackBrush" Color="#E6E6E6" />
+      <SolidColorBrush x:Key="TableProgressFillBrush" Color="#5A8CD2" />
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <SolidColorBrush x:Key="BackgroundPrimaryBrush" Color="#202020" />
@@ -41,6 +43,8 @@
       <SolidColorBrush x:Key="IconInactiveBrush" Color="#5CA9FF" />
       <SolidColorBrush x:Key="UsageBarTrackBrush" Color="#404040" />
       <SolidColorBrush x:Key="UsageBarFillBrush" Color="#4B91E6" />
+      <SolidColorBrush x:Key="TableProgressBackBrush" Color="#3A3A3A" />
+      <SolidColorBrush x:Key="TableProgressFillBrush" Color="#4687DC" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 

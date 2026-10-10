@@ -380,7 +380,7 @@ Portar de GDI+ para `DrawingContext` do Avalonia (ou SkiaSharp direto, se for pr
 
 Ordem sugerida: o que é visto primeiro vem antes.
 
-- [ ] Tabelas: `Chart_TableGridChart`, `Chart_ResponsiveTableGrid` e a tabela de cima do `Chart_Treemap` (vieram da 5.2; são DataGrid, não desenho). Referências: `docs/fidelity/charts/chart-table.png` e `chart-treemap.png`
+- [x] Tabelas: `DrawnTable<T>` próprio (decisão: sem `DataGrid`, descontinuado, nem `TreeDataGrid`/`TableView`, pagos), desenhado como o `AntdUI.Table` — cabeçalho fixo, ordenação em três cliques, colunas redimensionáveis, hover, seleção, teclado, tooltip de texto cortado, só as linhas visíveis desenhadas. `EntryTable` (`Chart_TableGridChart`) e `TreemapView` (o `Chart_Treemap` inteiro: caminho, tabela, divisor e treemap). Diferença média contra a referência: 1,4 e 4,4 níveis por pixel. O `Chart_ResponsiveTableGrid` (base dos resultados da busca) vira um `DrawnTable` junto com o `SearchForm`
 - [ ] `MainForm`: layout principal, barra de ferramentas, seletor de unidade, árvore, painel de gráficos, barra de status (`LayoutMainFormController`, `StatusMainFormController`, `TreeEntryController`, `ExportEntryController`, `PartitionGridController`, `DriveComboBoxController`)
 - [ ] `SearchForm`: busca rápida
 - [ ] `SettingsForm`

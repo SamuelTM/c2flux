@@ -101,12 +101,18 @@ namespace c2flux.AppTests
         public void Treemap()
         {
             FileSystemEntry root = LoadFixture();
-            Treemap chart = new Treemap();
-            chart.SetRootEntry(root);
-            chart.SetEntry(root);
-            // The canvas part of the WinForms Chart_Treemap: the lower 28 %
-            // of the chart area.
-            Capture("chart-treemap-canvas", chart, ChartWidth, ChartHeight * 28 / 100);
+            TreemapView view = new TreemapView();
+            view.SetRootEntry(root);
+            view.SetEntry(root);
+            Capture("chart-treemap", view, ChartWidth, ChartHeight);
+        }
+
+        [AvaloniaFact]
+        public void Table()
+        {
+            EntryTable table = new EntryTable();
+            table.SetEntry(LoadFixture());
+            Capture("chart-table", table, ChartWidth, ChartHeight);
         }
 
         [AvaloniaFact]
