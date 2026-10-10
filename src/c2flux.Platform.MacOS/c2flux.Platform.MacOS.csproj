@@ -36,4 +36,5 @@
 		<ProjectReference Include="..\c2flux.Core\c2flux.Core.csproj" />
 	</ItemGroup>
 
+<ItemGroup><InternalsVisibleTo Include="c2flux.App.Tests" /></ItemGroup>
 </Project>

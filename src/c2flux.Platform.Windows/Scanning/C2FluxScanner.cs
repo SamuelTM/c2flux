@@ -105,20 +105,7 @@ namespace c2flux
             }
         }
 
-        private static bool IsProcessElevated()
-        {
-            try
-            {
-                using System.Security.Principal.WindowsIdentity identity = System.Security.Principal.WindowsIdentity.GetCurrent();
-                System.Security.Principal.WindowsPrincipal principal = new System.Security.Principal.WindowsPrincipal(identity);
-
-                return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
-            }
-            catch
-            {
-                return false;
-            }
-        }
+        private static bool IsProcessElevated() => WindowsElevation.IsElevated();
 
         public Task<FileSystemEntry> ScanAsync(
             string rootPath,

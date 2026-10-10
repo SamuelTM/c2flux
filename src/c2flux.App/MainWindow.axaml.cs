@@ -246,7 +246,7 @@ namespace c2flux
 
             if (!Directory.Exists(drive.RootPath))
             {
-                await MessageBox.ShowAsync(this, LocalizationService.GetText("Message.PathNotFoundPrefix") + drive.RootPath);
+                await AppDialogs.ShowWarningOkAsync(this, LocalizationService.GetText("Message.PathNotFoundPrefix") + drive.RootPath);
                 return;
             }
 
@@ -285,7 +285,7 @@ namespace c2flux
 
             if (string.IsNullOrWhiteSpace(rootPath))
             {
-                await MessageBox.ShowAsync(this, LocalizationService.GetText("Message.NoPathSelected"));
+                await AppDialogs.ShowWarningOkAsync(this, LocalizationService.GetText("Message.NoPathSelected"));
                 return;
             }
 
@@ -298,7 +298,7 @@ namespace c2flux
 
             if (!Directory.Exists(rootPath))
             {
-                await MessageBox.ShowAsync(this, LocalizationService.GetText("Message.PathNotFoundPrefix") + rootPath);
+                await AppDialogs.ShowWarningOkAsync(this, LocalizationService.GetText("Message.PathNotFoundPrefix") + rootPath);
                 return;
             }
 

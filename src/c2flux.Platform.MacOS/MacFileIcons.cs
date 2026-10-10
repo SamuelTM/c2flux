@@ -15,8 +15,18 @@ namespace c2flux
         private const string CoreGraphics = "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics";
         private const uint PremultipliedFirstLittleEndian = 2 | (2 << 12);
 
+        // NSWorkspace lives in AppKit, which only a GUI process has loaded
+        // (objc_getClass returns nil otherwise).
+        private static readonly bool AppKitLoaded =
+            NativeLibrary.TryLoad("/System/Library/Frameworks/AppKit.framework/AppKit", out _);
+
         public static IconPixels Read(string path, FileIconKind kind, int size)
         {
+            if (!AppKitLoaded)
+            {
+                return null;
+            }
+
             IntPtr pool = objc_autoreleasePoolPush();
 
             try

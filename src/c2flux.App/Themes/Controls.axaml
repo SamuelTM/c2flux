@@ -38,6 +38,19 @@
     <Setter Property="Foreground" Value="White" />
   </Style>
 
+  <!-- AntdUI.Button Type = Primary (dialog default buttons). -->
+  <Style Selector="Button.ant.primary">
+    <Setter Property="Height" Value="32" />
+    <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.ant.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource IconInactiveBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource IconInactiveBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+
   <!-- AntdUI.Select of the drive list: 2 px border, radius 8. -->
   <Style Selector="ComboBox.ant">
     <Setter Property="Height" Value="28" />
