@@ -16,8 +16,8 @@
   <Application.Styles>
     <FluentTheme>
       <FluentTheme.Palettes>
-        <ColorPaletteResources x:Key="Light" Accent="#0078D7" RegionColor="#FFFFFF" BaseHigh="#000000" />
-        <ColorPaletteResources x:Key="Dark" Accent="#0078D7" RegionColor="#202020" BaseHigh="#FFFFFF" />
+        <ColorPaletteResources x:Key="Light" Accent="#0078D4" RegionColor="#FFFFFF" BaseHigh="#000000" />
+        <ColorPaletteResources x:Key="Dark" Accent="#0078D4" RegionColor="#202020" BaseHigh="#FFFFFF" />
       </FluentTheme.Palettes>
     </FluentTheme>
     <Style Selector="Window">

@@ -104,7 +104,7 @@ jobs:
         run: |
           $out = Join-Path $env:RUNNER_TEMP 'screenshots'
           # Fixed tree for the chart controls alone (chart-*.png, phase 5.2).
-          $fixture = Join-Path $env:RUNNER_TEMP 'chart-fixture.json'
+          $fixture = Join-Path $env:RUNNER_TEMP 'chart-fixture'
           python tools/tests/fixtures/generate_chart_fixture.py $fixture --root 'T:\'
           & "$env:RUNNER_TEMP\app\c2flux-shots.exe" --out $out --scan 'T:\' --display $env:DISPLAY_SIZE --main-size $env:MAIN_SIZE --charts $fixture
           $code = $LASTEXITCODE

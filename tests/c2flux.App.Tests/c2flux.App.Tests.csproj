@@ -23,7 +23,7 @@
 
 	<!-- Written by tests/fixtures/generate_chart_fixture.py (root /fixture). -->
 	<ItemGroup>
-		<None Include="..\fixtures\chart-tree.json" Link="chart-tree.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Include="..\fixtures\charts\*.json" Link="charts\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 	<ItemGroup>

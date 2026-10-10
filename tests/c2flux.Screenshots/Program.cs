@@ -20,10 +20,10 @@ namespace c2flux.Screenshots
     // Usage (from inside the app's publish directory):
     //   c2flux-shots --out <dir> [--scan <path>] [--display 1920x1080]
     //                [--main-size 1280x800] [--only <name>[,<name>...]]
-    //                [--charts <fixture.json>]
+    //                [--charts <fixture-dir>]
     //
-    // --charts also captures each chart control alone, fed with the scan
-    // result written by tests/fixtures/generate_chart_fixture.py (phase 5.2).
+    // --charts also captures each chart control alone, fed with the data
+    // written by tests/fixtures/generate_chart_fixture.py (phase 5.2).
     //
     // Exit codes: 0 all captured, 1 some scenarios failed, 64 invalid arguments.
     internal static class Program

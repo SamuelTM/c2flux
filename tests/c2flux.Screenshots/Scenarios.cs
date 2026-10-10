@@ -97,16 +97,58 @@ namespace c2flux.Screenshots
         // Size of the chart area in the 1280x800 main window.
         private static readonly Size ChartSize = new Size(890, 630);
 
-        private static readonly (string Name, string Type, string[] Setters, Size Size)[] Charts =
+        // Name, control type, size and how to feed it the fixture data.
+        private (string Name, string Type, Size Size, Action<Control> Bind)[] CreateCharts(string fixtureDirectory)
         {
-            ("chart-pie", "Chart_PieChart", new[] { "SetEntry" }, ChartSize),
-            ("chart-bar", "Chart_BarChart", new[] { "SetEntry" }, ChartSize),
-            ("chart-sunburst", "Chart_Sunburst", new[] { "SetEntry" }, ChartSize),
-            ("chart-treemap", "Chart_Treemap", new[] { "SetRootEntry", "SetEntry" }, ChartSize),
-            ("chart-table", "Chart_TableGridChart", new[] { "SetEntry" }, ChartSize),
-            // Size of the tree in the 1280x800 main window.
-            ("chart-tree", "TreeEntrySizeBarView", new[] { "SetRootEntry" }, new Size(360, 450)),
-        };
+            object root = _app.CallStatic("ScanResultFileService", "Load", Path.Combine(fixtureDirectory, "chart-tree.json"));
+            Action<Control> entry = chart => AppHost.Invoke(chart, "SetEntry", root);
+
+            return new (string, string, Size, Action<Control>)[]
+            {
+                ("chart-pie", "Chart_PieChart", ChartSize, entry),
+                ("chart-bar", "Chart_BarChart", ChartSize, entry),
+                ("chart-sunburst", "Chart_Sunburst", ChartSize, entry),
+                ("chart-treemap", "Chart_Treemap", ChartSize, chart =>
+                {
+                    AppHost.Invoke(chart, "SetRootEntry", root);
+                    AppHost.Invoke(chart, "SetEntry", root);
+                }),
+                ("chart-table", "Chart_TableGridChart", ChartSize, entry),
+                // Size of the tree in the 1280x800 main window. It gets its
+                // colors and row height explicitly; no shell file icons here.
+                ("chart-tree", "TreeEntrySizeBarView", new Size(360, 450), chart =>
+                {
+                    _app.CallStatic("AntdThemeService", "ApplyTreeEntryView", chart);
+                    AppHost.Invoke(chart, "SetRootEntry", root);
+                }),
+                // Sizes in the Storage history and Scan history windows.
+                ("chart-storage-history", "StorageHistoryChart", new Size(660, 520), chart =>
+                {
+                    AppHost.Invoke(chart, "ApplyTheme", true);
+                    AppHost.Invoke(chart, "SetGradientIntensity", 55);
+                    AppHost.Invoke(
+                        chart,
+                        "SetRecords",
+                        ReadFixture(fixtureDirectory, "chart-storage-history.json", typeof(List<>).MakeGenericType(_app.GetType("StorageHistoryRecord"))),
+                        Enum.Parse(_app.GetType("StorageHistoryDisplayMode"), "FreeSpace"));
+                }),
+                ("chart-growth-overview", "ScanHistoryGrowthOverviewControl", new Size(1080, 520), chart =>
+                    AppHost.Invoke(chart, "BindResult", ReadFixture(fixtureDirectory, "chart-scan-comparison.json", _app.GetType("ScanHistoryComparisonResult")))),
+            };
+        }
+
+        // Read-only list properties (ScanHistoryComparisonResult.NewFiles, ...)
+        // are filled in place.
+        private static object ReadFixture(string directory, string name, Type type)
+        {
+            return System.Text.Json.JsonSerializer.Deserialize(
+                File.ReadAllText(Path.Combine(directory, name)),
+                type,
+                new System.Text.Json.JsonSerializerOptions
+                {
+                    PreferredObjectCreationHandling = System.Text.Json.Serialization.JsonObjectCreationHandling.Populate,
+                });
+        }
 
         public async Task RunChartsAsync()
         {
@@ -115,11 +157,11 @@ namespace c2flux.Screenshots
                 return;
             }
 
-            object root;
+            (string Name, string Type, Size Size, Action<Control> Bind)[] charts;
 
             try
             {
-                root = _app.CallStatic("ScanResultFileService", "Load", _options.ChartsFixture);
+                charts = CreateCharts(_options.ChartsFixture);
             }
             catch (Exception exception)
             {
@@ -127,7 +169,7 @@ namespace c2flux.Screenshots
                 return;
             }
 
-            foreach ((string name, string typeName, string[] setters, Size size) in Charts)
+            foreach ((string name, string typeName, Size size, Action<Control> bind) in charts)
             {
                 if (!_options.ShouldRun(name))
                 {
@@ -155,18 +197,7 @@ namespace c2flux.Screenshots
                     };
                     host.Controls.Add(chart);
                     ShowAt(host);
-
-                    // The tree gets its colors and row height explicitly (no
-                    // file icons here: those come from the shell).
-                    if (typeName == "TreeEntrySizeBarView")
-                    {
-                        _app.CallStatic("AntdThemeService", "ApplyTreeEntryView", chart);
-                    }
-
-                    foreach (string setter in setters)
-                    {
-                        AppHost.Invoke(chart, setter, root);
-                    }
+                    bind(chart);
 
                     await SettleAsync();
                     chart.Refresh();

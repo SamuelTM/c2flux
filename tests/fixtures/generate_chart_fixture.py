@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Writes a fixed scan result (ScanResultFileService JSON) for chart captures.
+"""Writes fixed chart data for chart captures, in <output-dir>:
+
+- chart-tree.json: a scan result (ScanResultFileService JSON)
+- chart-storage-history.json: StorageHistoryRecord list for StorageHistoryChart
+- chart-scan-comparison.json: ScanHistoryComparisonResult for the growth overview
 
 The WinForms charts (captured on Windows by c2flux-shots --charts) and the
 Avalonia charts (rendered headless on any OS) load the same tree, so their
@@ -9,7 +13,7 @@ Paths use the separator of the OS that renders them, because the charts split
 paths with System.IO.Path. Everything else (names, sizes, dates) is identical,
 including the root's name.
 
-Usage: generate_chart_fixture.py <output.json> [--root T:\\]
+Usage: generate_chart_fixture.py <output-dir> [--root T:\\]
 """
 
 import argparse
@@ -106,19 +110,93 @@ def build(root, sep):
     return root_node
 
 
+def storage_history(root):
+    """Eight measurements over ten days of a 500 GB volume filling up."""
+    gib = 1024 ** 3
+    free = [182, 176, 171, 160, 158, 141, 126, 119]
+    return [
+        {
+            "Path": root,
+            "RecordedAtUtc": "2026-01-%02dT%02d:00:00Z" % (1 + day, 9 + day % 3 * 4),
+            "SizeBytes": (500 - free_gib) * gib,
+            "TotalCapacityBytes": 500 * gib,
+            "FreeSpaceBytes": free_gib * gib,
+        }
+        for day, free_gib in zip([0, 1, 2, 4, 5, 7, 8, 9], free)
+    ]
+
+
+def scan_comparison(root, sep):
+    """Two scans of root: one folder grew, one shrank, a few files changed."""
+    mib = 1024 ** 2
+
+    def path(*parts):
+        return root.rstrip(sep) + sep + sep.join(parts)
+
+    def scan(scan_id, created, size):
+        return {
+            "ScanId": scan_id, "CreatedUtc": created, "RootPath": root,
+            "RootSizeBytes": size, "FileCount": 262, "DirectoryCount": 27,
+        }
+
+    def change(parts, before, after):
+        return {
+            "Path": path(*parts), "ParentPath": path(*parts[:-1]),
+            "BaselineSizeBytes": before, "CompareSizeBytes": after, "DeltaBytes": after - before,
+        }
+
+    def folder(parts, before, after, new=0, changed=0):
+        return {
+            "Path": path(*parts), "BaselineSizeBytes": before, "CompareSizeBytes": after,
+            "DeltaBytes": after - before, "NewFileCount": new, "ChangedFileCount": changed,
+        }
+
+    baseline, compare = 340 * mib, 376 * mib
+    return {
+        "BaselineScan": scan("baseline", "2026-01-01T09:00:00Z", baseline),
+        "CompareScan": scan("compare", "2026-01-10T17:00:00Z", compare),
+        "BaselineSizeBytes": baseline, "CompareSizeBytes": compare, "SizeDeltaBytes": compare - baseline,
+        "BaselineFileCount": 259, "CompareFileCount": 262,
+        "NewFileCount": 3, "DeletedFileCount": 1, "ChangedFileCount": 2,
+        "NewFiles": [
+            change(["media", "concert.mp4"], 0, 41 * mib),
+            change(["tree", "group-001", "file-00.zip"], 0, 3 * mib),
+            change(["notes.txt"], 0, 2560),
+        ],
+        "DeletedFiles": [change(["old.log"], 6 * mib, 0)],
+        "ChangedFiles": [
+            change(["pagefile.sys"], 16 * mib, 24 * mib),
+            change(["tree", "group-000", "sub-1", "file-02.pdf"], 9 * mib, 4 * mib),
+        ],
+        "FolderGrowth": [
+            folder(["media"], 96 * mib, 137 * mib, new=1),
+            folder(["tree"], 197 * mib, 189 * mib, new=1, changed=1),
+            folder(["tree", "group-001"], 44 * mib, 47 * mib, new=1),
+            folder(["tree", "group-000"], 92 * mib, 87 * mib, changed=1),
+        ],
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("output")
+    parser.add_argument("output_dir")
     parser.add_argument("--root", default="T:\\" if os.name == "nt" else "/fixture")
     args = parser.parse_args()
 
     sep = "\\" if "\\" in args.root else "/"
+    os.makedirs(args.output_dir, exist_ok=True)
     tree = build(args.root, sep)
+    files = {
+        "chart-tree.json": tree,
+        "chart-storage-history.json": storage_history(args.root),
+        "chart-scan-comparison.json": scan_comparison(args.root, sep),
+    }
 
-    with open(args.output, "w", encoding="utf-8") as handle:
-        json.dump(tree, handle, ensure_ascii=False)
+    for name, data in files.items():
+        with open(os.path.join(args.output_dir, name), "w", encoding="utf-8") as handle:
+            json.dump(data, handle, ensure_ascii=False)
 
-    print("%s: %d files, %d bytes" % (args.output, len(tree["AllFiles"]), tree["SizeBytes"]))
+    print("%s: %d files, %d bytes" % (args.output_dir, len(tree["AllFiles"]), tree["SizeBytes"]))
 
 
 if __name__ == "__main__":

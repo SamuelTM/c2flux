@@ -22,7 +22,10 @@ namespace c2flux.AppTests
             string home = Path.Combine(Path.GetTempPath(), "c2flux-app-tests-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(home);
             Environment.SetEnvironmentVariable(AppPaths.HomeVariable, home);
-            // Numbers formatted like the reference captures (en-US runner).
+            // Dates in UTC and numbers in en-US, like the Windows runner of
+            // the reference captures (TZ is read on macOS and Linux).
+            Environment.SetEnvironmentVariable("TZ", "UTC");
+            TimeZoneInfo.ClearCachedData();
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
         }

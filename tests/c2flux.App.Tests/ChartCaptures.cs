@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -13,10 +16,17 @@ namespace c2flux.AppTests
 {
     // Renders the Avalonia charts like c2flux-shots --charts renders the
     // WinForms ones (chart-*.png), for side-by-side comparison (phase 5.2).
-    // Files go to $C2FLUX_CHART_OUT, or charts/ next to the test binaries.
+    // Files go to $C2FLUX_CHART_OUT, or chart-captures/ next to the test
+    // binaries.
     public class ChartCaptures
     {
         private static readonly Color Background = Color.FromRgb(32, 32, 32);
+
+        // English, like the reference captures.
+        public ChartCaptures()
+        {
+            LocalizationService.Load("en");
+        }
 
         [AvaloniaFact]
         public void Symbols()
@@ -99,9 +109,40 @@ namespace c2flux.AppTests
             Capture("chart-treemap-canvas", chart, ChartWidth, ChartHeight * 28 / 100);
         }
 
+        [AvaloniaFact]
+        public void StorageHistory()
+        {
+            StorageHistoryChart chart = new StorageHistoryChart();
+            chart.SetGradientIntensity(55);
+            chart.SetRecords(ReadFixture<List<StorageHistoryRecord>>("chart-storage-history.json"), StorageHistoryDisplayMode.FreeSpace);
+            Capture("chart-storage-history", chart, 660, 520);
+        }
+
+        [AvaloniaFact]
+        public void GrowthOverview()
+        {
+            GrowthOverview overview = new GrowthOverview();
+            overview.BindResult(ReadFixture<ScanHistoryComparisonResult>("chart-scan-comparison.json"));
+            Capture("chart-growth-overview", overview, 1080, 520);
+        }
+
+        // Read-only list properties (ScanHistoryComparisonResult.NewFiles, ...)
+        // are filled in place.
+        internal static T ReadFixture<T>(string name)
+        {
+            return JsonSerializer.Deserialize<T>(
+                File.ReadAllText(FixturePath(name)),
+                new JsonSerializerOptions { PreferredObjectCreationHandling = JsonObjectCreationHandling.Populate });
+        }
+
         internal static FileSystemEntry LoadFixture()
         {
-            return ScanResultFileService.Load(Path.Combine(AppContext.BaseDirectory, "chart-tree.json"));
+            return ScanResultFileService.Load(FixturePath("chart-tree.json"));
+        }
+
+        internal static string FixturePath(string name)
+        {
+            return Path.Combine(AppContext.BaseDirectory, "charts", name);
         }
 
         // The control alone in a borderless window of the given size.
@@ -125,7 +166,7 @@ namespace c2flux.AppTests
         private static string OutputPath(string name)
         {
             string directory = Environment.GetEnvironmentVariable("C2FLUX_CHART_OUT") ??
-                Path.Combine(AppContext.BaseDirectory, "charts");
+                Path.Combine(AppContext.BaseDirectory, "chart-captures");
             Directory.CreateDirectory(directory);
             return Path.Combine(directory, name + ".png");
         }
