@@ -295,7 +295,7 @@ public sealed class ScanOptions
 - [x] **Medir antes:** no Ubuntu do CI, o `ManagedScanner` **já é mais rápido que o `du`** em `/usr` (2,1 × 2,6 s, 629 mil arquivos, cache aquecido). O `FileSystemEnumerable` do .NET no Linux já usa `getdents64` e `fstatat`, e o motor do `managed` lê várias pastas em paralelo. Um scanner com `getdents64` + `statx` próprios não se paga: descartado
 - [x] O que faltava no Linux era **correção**: varrendo `/`, o `managed` entraria em `/proc`, `/sys`, `/dev`, `/run` e em outros discos. `src/c2flux.Platform.Linux/Scanning/LinuxScanner.cs` lê `/proc/self/mountinfo` uma vez por varredura e não entra em nenhum ponto de montagem abaixo da raiz (como o `du -x`). Os sistemas de arquivos virtuais também são montagens, então a mesma regra os cobre, sem lista de tipos. A leitura das pastas continua sendo a do `managed`. Cadeia do Linux: `LinuxScanner` → `ManagedScanner` (`LinuxScanners`)
 - [x] Testes do parser do `mountinfo` (incluindo os caminhos com espaço, que vêm em octal) e da regra de montagem, nos três SOs. No CI do Ubuntu: conformidade com o `LinuxScanner` e varredura de `/`, que reprova se houver qualquer entrada dentro de `/proc`, `/sys`, `/dev` ou `/run`
-- [ ] Confirmar no CI
+- [x] Confirmado no CI (`1ffc4d7`): conformidade do `LinuxScanner` ✅; varredura de `/` no Ubuntu com 905.989 arquivos e 147.089 pastas em 20,9 s, sem nenhuma entrada dentro de `/proc`, `/sys`, `/dev` ou `/run`
 - [ ] **Adiado:** hardlinks contados uma vez e tamanho alocado (`stx_blocks`), pelos mesmos motivos do macOS
 
 #### 3.3 Linux: `IoUringStatxScanner`
