@@ -140,12 +140,23 @@ namespace c2flux.Screenshots
                 {
                     Control chart = (Control)Activator.CreateInstance(_app.GetType(typeName));
                     chart.Dock = DockStyle.Fill;
+
+                    if (typeName == "TreeEntrySizeBarView")
+                    {
+                        SetProperty(chart, "RowHeight", 22);
+                    }
+
+                    // In the main window the charts inherit these from their
+                    // panel (ambient properties), as set by AntdThemeService.
+                    Type theme = _app.GetType("AntdThemeService");
                     host = new Form
                     {
                         Text = name,
                         FormBorderStyle = FormBorderStyle.None,
                         ClientSize = size,
-                        BackColor = Color.FromArgb(32, 32, 32),
+                        BackColor = (Color)theme.GetProperty("BackgroundPrimary").GetValue(null),
+                        ForeColor = (Color)theme.GetProperty("TextPrimary").GetValue(null),
+                        Font = (Font)theme.GetProperty("DefaultFont").GetValue(null),
                     };
                     host.Controls.Add(chart);
                     ShowAt(host);

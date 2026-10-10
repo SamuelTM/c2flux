@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Avalonia;
@@ -21,6 +22,9 @@ namespace c2flux.AppTests
             string home = Path.Combine(Path.GetTempPath(), "c2flux-app-tests-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(home);
             Environment.SetEnvironmentVariable(AppPaths.HomeVariable, home);
+            // Numbers formatted like the reference captures (en-US runner).
+            CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
         }
 
         public static AppBuilder BuildAvaloniaApp()

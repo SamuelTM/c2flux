@@ -24,6 +24,7 @@
       <Setter Property="FlowDirection" Value="{Binding FlowDirection, Source={x:Static l:Loc.Instance}}" />
       <Setter Property="Background" Value="{DynamicResource BackgroundPrimaryBrush}" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="FontSize" Value="{DynamicResource ControlContentThemeFontSize}" />
     </Style>
   </Application.Styles>
 

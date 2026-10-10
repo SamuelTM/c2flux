@@ -44,6 +44,10 @@
 		<ProjectReference Include="..\c2flux.Platform.Linux\c2flux.Platform.Linux.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="c2flux.App.Tests" />
+	</ItemGroup>
+
 	<!-- Shared with the WinForms app until phase 7 removes it. -->
 	<ItemGroup>
 		<AvaloniaResource Include="..\c2flux.WinForms\Ressources\c2flux.png" Link="Assets\c2flux.png" />
