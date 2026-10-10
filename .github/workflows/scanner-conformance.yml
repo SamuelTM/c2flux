@@ -1,0 +1,157 @@
+name: Scanner conformance
+
+# Runs every scanner available on each OS over the synthetic test tree and
+# compares what it saw with the generator's manifest, entry by entry.
+# See ROADMAP.md, phase 2. Report only for now: the findings decide the
+# expected semantics before this becomes a gate.
+
+on:
+  pull_request:
+    paths: &conformance-paths
+      - "src/c2flux.Core/**"
+      - "src/c2flux.Platform.Windows/**"
+      - "libs/NtfsReader/**"
+      - "tests/c2flux.Benchmarks/**"
+      - "tests/conformance/**"
+      - "tests/fixtures/**"
+      - ".github/actions/ntfs-test-volume/**"
+      - ".github/workflows/scanner-conformance.yml"
+  push:
+    branches:
+      - cross-platform
+    paths: *conformance-paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scanner-conformance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Conformance (windows-latest)
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Publish app and benchmark tool
+        run: |
+          dotnet publish src/c2flux.WinForms/c2flux.csproj --configuration Release --runtime win-x64 --self-contained false --output "$env:RUNNER_TEMP\app"
+          dotnet publish tests/c2flux.Benchmarks/c2flux.Benchmarks.csproj --configuration Release --output "$env:RUNNER_TEMP\bench"
+
+      - name: Create NTFS test volume (T:)
+        id: volume
+        uses: ./.github/actions/ntfs-test-volume
+        with:
+          generator: tests/fixtures/generate_test_tree.py
+          profile: small
+          manifest: ${{ runner.temp }}/manifest.json
+          required: "true"
+
+      - name: Scan and compare
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP 'conformance'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          "## Scanner conformance (Windows)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+
+          # MFT scanners read the whole volume; the others scan the tree folder.
+          $targets = @(
+            @{ Scanner = 'c2flux';    Path = 'T:\';     Subtree = 'tree' },
+            @{ Scanner = 'ntfsmft';   Path = 'T:\';     Subtree = 'tree' },
+            @{ Scanner = 'ntquery';   Path = 'T:\tree'; Subtree = '' },
+            @{ Scanner = 'win32find'; Path = 'T:\tree'; Subtree = '' },
+            @{ Scanner = 'managed';   Path = 'T:\tree'; Subtree = '' }
+          )
+
+          foreach ($target in $targets) {
+            $dump = Join-Path $out "$($target.Scanner).dump"
+            & "$env:RUNNER_TEMP\bench\c2flux-bench.exe" --app "$env:RUNNER_TEMP\app" --scanner $target.Scanner --path $target.Path --dump $dump | Out-File -FilePath (Join-Path $out "$($target.Scanner).json") -Encoding utf8
+            if (-not (Test-Path $dump)) {
+              Write-Warning "$($target.Scanner) produced no result"
+              "$($target.Scanner): no result (see artifact)`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+              continue
+            }
+            python tests/conformance/check_conformance.py --manifest "$env:RUNNER_TEMP\manifest.json" --dump $dump --subtree $target.Subtree --scanner "$($target.Scanner) (Windows)" --json-out (Join-Path $out "$($target.Scanner).conformance.json") --summary-out $env:GITHUB_STEP_SUMMARY
+          }
+          exit 0
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scanner-conformance-windows-${{ github.run_number }}
+          path: |
+            ${{ runner.temp }}/conformance
+            ${{ runner.temp }}/manifest.json
+          retention-days: 14
+
+  unix:
+    name: Conformance (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # Only c2flux.Core (plain net10.0) is needed: the managed scanner lives there.
+      - name: Build Core and benchmark tool
+        run: |
+          dotnet build src/c2flux.Core/c2flux.Core.csproj --configuration Release --output "$RUNNER_TEMP/core"
+          dotnet build tests/c2flux.Benchmarks/c2flux.Benchmarks.csproj --configuration Release --output "$RUNNER_TEMP/bench"
+
+      - name: Generate test tree
+        run: python tests/fixtures/generate_test_tree.py "$RUNNER_TEMP/tree" --profile small --manifest "$RUNNER_TEMP/manifest.json"
+
+      - name: Scan and compare
+        run: |
+          mkdir -p "$RUNNER_TEMP/conformance"
+          echo "## Scanner conformance (${{ matrix.os }})" >> "$GITHUB_STEP_SUMMARY"
+          dotnet "$RUNNER_TEMP/bench/c2flux-bench.dll" --app "$RUNNER_TEMP/core" --main-assembly c2flux.Core.dll --scanner managed --path "$RUNNER_TEMP/tree" --dump "$RUNNER_TEMP/conformance/managed.dump" > "$RUNNER_TEMP/conformance/managed.json" || true
+          python tests/conformance/check_conformance.py --manifest "$RUNNER_TEMP/manifest.json" --dump "$RUNNER_TEMP/conformance/managed.dump" --scanner "managed (${{ matrix.os }})" --json-out "$RUNNER_TEMP/conformance/managed.conformance.json" --summary-out "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scanner-conformance-${{ matrix.os }}-${{ github.run_number }}
+          path: |
+            ${{ runner.temp }}/conformance
+            ${{ runner.temp }}/manifest.json
+          retention-days: 14

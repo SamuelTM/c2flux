@@ -25,6 +25,7 @@ on:
     paths:
       - "tests/c2flux.Screenshots/**"
       - ".github/workflows/ui-screenshots.yml"
+      - ".github/actions/ntfs-test-volume/**"
       - "src/c2flux.WinForms/**"
 
 permissions:
@@ -90,22 +91,13 @@ jobs:
 
       # Same fixed content as the scanner benchmark, so the charts look the
       # same in every run and the scanned path reads T:\ in the UI.
-      - name: Create NTFS volume with the synthetic test tree (T:)
-        run: |
-          $vhd = Join-Path $env:RUNNER_TEMP 'c2flux-ui.vhdx'
-          $script = Join-Path $env:RUNNER_TEMP 'diskpart.txt'
-          @(
-            "create vdisk file=`"$vhd`" maximum=4096 type=expandable",
-            "select vdisk file=`"$vhd`"",
-            "attach vdisk",
-            "convert mbr",
-            "create partition primary",
-            "format fs=ntfs quick label=C2BENCH",
-            "assign letter=T"
-          ) | Set-Content -Path $script -Encoding ascii
-          diskpart /s $script
-          if ($LASTEXITCODE -ne 0 -or -not (Test-Path 'T:\')) { throw "Could not create the T: volume." }
-          python tools/tests/fixtures/generate_test_tree.py T:\tree --profile medium --manifest "$env:RUNNER_TEMP\test-tree-manifest.json"
+      - name: Create NTFS test volume (T:)
+        uses: ./tools/.github/actions/ntfs-test-volume
+        with:
+          generator: tools/tests/fixtures/generate_test_tree.py
+          profile: medium
+          manifest: ${{ runner.temp }}/test-tree-manifest.json
+          required: "true"
 
       - name: Capture screenshots
         run: |

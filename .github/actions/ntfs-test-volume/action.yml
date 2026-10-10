@@ -1,0 +1,73 @@
+name: NTFS test volume
+description: >
+  Creates a 4 GiB NTFS virtual disk mounted as T: and fills it with the
+  synthetic test tree. Nothing else writes to it, so every scanner, including
+  the MFT ones (which only scan whole volumes), sees exactly the same files.
+
+inputs:
+  generator:
+    description: Path to generate_test_tree.py
+    required: true
+  profile:
+    description: Test tree profile (small, medium)
+    default: medium
+  manifest:
+    description: Where to write the test tree manifest
+    required: true
+  required:
+    description: Fail when the volume cannot be created (otherwise fall back to a folder on C:)
+    default: "false"
+
+outputs:
+  root:
+    description: Root of the volume (T:\) or of the fallback folder
+    value: ${{ steps.volume.outputs.root }}
+  tree:
+    description: Folder that contains the test tree
+    value: ${{ steps.volume.outputs.tree }}
+  is-volume:
+    description: "true when T: was created"
+    value: ${{ steps.volume.outputs.is-volume }}
+
+runs:
+  using: composite
+  steps:
+    - id: volume
+      shell: pwsh
+      run: |
+        $vhd = Join-Path $env:RUNNER_TEMP 'c2flux-test.vhdx'
+        $script = Join-Path $env:RUNNER_TEMP 'diskpart.txt'
+        @(
+          "create vdisk file=`"$vhd`" maximum=4096 type=expandable",
+          "select vdisk file=`"$vhd`"",
+          "attach vdisk",
+          "convert mbr",
+          "create partition primary",
+          "format fs=ntfs quick label=C2BENCH",
+          "assign letter=T"
+        ) | Set-Content -Path $script -Encoding ascii
+
+        diskpart /s $script
+        if ($LASTEXITCODE -eq 0 -and (Test-Path 'T:\')) {
+          $root = 'T:\'
+          $tree = 'T:\tree'
+          $isVolume = 'true'
+        }
+        elseif ('${{ inputs.required }}' -eq 'true') {
+          throw 'Could not create the T: volume.'
+        }
+        else {
+          # Without the volume the MFT scanners report "unsupported" for the
+          # static target; directory scanners still get an exact comparison.
+          Write-Warning 'Could not create the virtual NTFS volume; using a folder on C: instead.'
+          $root = Join-Path $env:RUNNER_TEMP 'static-tree'
+          $tree = $root
+          $isVolume = 'false'
+        }
+
+        python '${{ inputs.generator }}' $tree --profile '${{ inputs.profile }}' --manifest '${{ inputs.manifest }}'
+        if ($LASTEXITCODE -ne 0) { throw 'Test tree generation failed.' }
+
+        "root=$root" >> $env:GITHUB_OUTPUT
+        "tree=$tree" >> $env:GITHUB_OUTPUT
+        "is-volume=$isVolume" >> $env:GITHUB_OUTPUT

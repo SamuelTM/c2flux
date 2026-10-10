@@ -20,6 +20,12 @@ namespace c2flux.Benchmarks
         public int MaxDepth { get; set; }
         public string Digest { get; set; }
 
+        // The sorted entry lines the digest is computed from, one per entry:
+        // "D|/relative/path|size|lastWriteUtcTicks" or "F|...". Paths are
+        // relative to the scanned root, with "/" separators.
+        [System.Text.Json.Serialization.JsonIgnore]
+        public IReadOnlyList<string> Lines { get; private set; }
+
         public static TreeFingerprint Compute(object rootEntry)
         {
             if (rootEntry == null)
@@ -66,6 +72,7 @@ namespace c2flux.Benchmarks
 
             // Scanners may return children in different orders.
             lines.Sort(StringComparer.Ordinal);
+            fingerprint.Lines = lines;
 
             using (IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
             {

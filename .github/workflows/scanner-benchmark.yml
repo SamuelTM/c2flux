@@ -17,6 +17,7 @@ on:
       - "libs/NtfsReader/**"
       - "tests/c2flux.Benchmarks/**"
       - "tests/fixtures/**"
+      - ".github/actions/ntfs-test-volume/**"
       - ".github/workflows/scanner-benchmark.yml"
   push:
     branches:
@@ -119,41 +120,19 @@ jobs:
       - name: Publish benchmark tool
         run: dotnet publish candidate/tests/c2flux.Benchmarks/c2flux.Benchmarks.csproj --configuration Release --output "$env:RUNNER_TEMP\bench"
 
-      # A dedicated NTFS volume that nothing else writes to, so every scanner
-      # (including the MFT ones, which only scan whole volumes) sees exactly the
-      # same files in every run and results can be compared byte for byte.
-      - name: Create static NTFS volume (T:)
-        run: |
-          $vhd = Join-Path $env:RUNNER_TEMP 'c2flux-bench.vhdx'
-          $script = Join-Path $env:RUNNER_TEMP 'diskpart.txt'
-          @(
-            "create vdisk file=`"$vhd`" maximum=4096 type=expandable",
-            "select vdisk file=`"$vhd`"",
-            "attach vdisk",
-            "convert mbr",
-            "create partition primary",
-            "format fs=ntfs quick label=C2BENCH",
-            "assign letter=T"
-          ) | Set-Content -Path $script -Encoding ascii
-
-          diskpart /s $script
-          if ($LASTEXITCODE -eq 0 -and (Test-Path 'T:\')) {
-            "STATIC_ROOT=T:\" >> $env:GITHUB_ENV
-            "TREE_ROOT=T:\tree" >> $env:GITHUB_ENV
-          }
-          else {
-            # Without the volume the MFT scanners report "unsupported" for the
-            # static target; directory scanners still get an exact comparison.
-            Write-Warning "Could not create the virtual NTFS volume; using a folder on C: instead."
-            $fallback = Join-Path $env:RUNNER_TEMP 'static-tree'
-            "STATIC_ROOT=$fallback" >> $env:GITHUB_ENV
-            "TREE_ROOT=$fallback" >> $env:GITHUB_ENV
-          }
-
-      - name: Generate synthetic test tree
-        run: python candidate/tests/fixtures/generate_test_tree.py $env:TREE_ROOT --profile $env:PROFILE --manifest "$env:RUNNER_TEMP\test-tree-manifest.json"
+      # A dedicated NTFS volume with the synthetic test tree that nothing else
+      # writes to, so results can be compared byte for byte.
+      - name: Create NTFS test volume (T:)
+        id: volume
+        uses: ./candidate/.github/actions/ntfs-test-volume
+        with:
+          generator: candidate/tests/fixtures/generate_test_tree.py
+          profile: ${{ env.PROFILE }}
+          manifest: ${{ runner.temp }}/test-tree-manifest.json
 
       - name: Run benchmark
+        env:
+          STATIC_ROOT: ${{ steps.volume.outputs.root }}
         run: |
           $arguments = @(
             'candidate/tests/c2flux.Benchmarks/run_benchmark.py',

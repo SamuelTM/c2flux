@@ -16,7 +16,7 @@ namespace c2flux.Benchmarks
     internal static class Program
     {
         private const string Usage =
-            "Usage: c2flux-bench --app <app build dir or c2flux.dll> --scanner <key> --path <path>\n" +
+            "Usage: c2flux-bench --app <app build dir or c2flux.dll> --scanner <key> --path <path> [--dump <file>]\n" +
             "       c2flux-bench --list";
 
         private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
@@ -136,6 +136,11 @@ namespace c2flux.Benchmarks
             result.ProgressReports = invocation.Progress.Count;
             result.Tree = TreeFingerprint.Compute(rootEntry);
 
+            if (!string.IsNullOrEmpty(options.DumpPath))
+            {
+                System.IO.File.WriteAllLines(options.DumpPath, result.Tree.Lines);
+            }
+
             GC.KeepAlive(rootEntry);
             return 0;
         }
@@ -165,6 +170,7 @@ namespace c2flux.Benchmarks
             public string MainAssemblyName { get; private set; } = "c2flux.dll";
             public string ScannerKey { get; private set; }
             public string Path { get; private set; }
+            public string DumpPath { get; private set; }
             public bool List { get; private set; }
 
             public static Options Parse(string[] args)
@@ -185,6 +191,9 @@ namespace c2flux.Benchmarks
                             break;
                         case "--scanner":
                             options.ScannerKey = NextValue(args, ref index, argument);
+                            break;
+                        case "--dump":
+                            options.DumpPath = NextValue(args, ref index, argument);
                             break;
                         case "--path":
                             options.Path = NextValue(args, ref index, argument);
