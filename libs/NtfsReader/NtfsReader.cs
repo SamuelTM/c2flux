@@ -52,6 +52,22 @@ public sealed partial class NtfsReader : IDisposable
     ///<remarks>
     /// In order to mimize memory usage, we reuse string as much as possible.
     ///</remarks>
+    // $FILE_NAME namespaces: 1 Win32 and 3 Win32+DOS are the names users see,
+    // 0 POSIX is a long name too, 2 DOS is the 8.3 short name.
+    private static int FileNameRank(byte nameType)
+    {
+        switch (nameType)
+        {
+            case 1:
+            case 3:
+                return 2;
+            case 0:
+                return 1;
+            default:
+                return 0;
+        }
+    }
+
     private int GetNameIndex(string name)
     {
         if (_nameIndex.TryGetValue(name, out int existingIndex))
@@ -497,6 +513,11 @@ public sealed partial class NtfsReader : IDisposable
     private unsafe void ProcessAttributes(ref Node node, uint nodeIndex, byte* ptr, ulong BufLength, ushort instance, int depth, List<Stream> streams, bool isMftNode)
     {
         Attribute* attribute = null;
+
+        // Rank of the $FILE_NAME taken so far; -1 = none yet. Name index 0 is
+        // a real name (the first in the table), so it cannot mean "none".
+        int fileNameRank = -1;
+
         for (uint AttributeOffset = 0; AttributeOffset < BufLength; AttributeOffset += attribute->Length)
         {
             attribute = (Attribute*)(ptr + AttributeOffset);
@@ -536,8 +557,14 @@ public sealed partial class NtfsReader : IDisposable
                         // A file with hard links has one $FILE_NAME per link. Name and
                         // parent must come from the same one: taking the parent from
                         // every attribute paired one link's name with another's folder.
-                        if (attributeFileName->NameType == 1 || node.NameIndex == 0)
+                        // The long name wins over the 8.3 DOS one, which is the only
+                        // one left here when the long name sits in an extension record
+                        // (those are not read).
+                        int rank = FileNameRank(attributeFileName->NameType);
+
+                        if (rank > fileNameRank)
                         {
+                            fileNameRank = rank;
                             //node.ParentNodeIndex = ((ulong)attributeFileName->ParentDirectory.InodeNumberHighPart << 32) + attributeFileName->ParentDirectory.InodeNumberLowPart;
                             node.ParentNodeIndex = attributeFileName->ParentDirectory.InodeNumberLowPart;
                             node.NameIndex = GetNameIndex(new string(&attributeFileName->Name, 0, attributeFileName->NameLength));
