@@ -22,6 +22,8 @@ namespace c2flux.Benchmarks
             new ScannerDefinition("win32find", false, "c2flux.DirectoryScanner"),
             // Portable scanner in c2flux.Core since phase 2; absent in older versions.
             new ScannerDefinition("managed", false, "c2flux.ManagedScanner"),
+            // macOS getattrlistbulk scanner (c2flux.Platform.MacOS, phase 3).
+            new ScannerDefinition("attrlistbulk", false, "c2flux.GetAttrListBulkScanner"),
         };
 
         private ScannerDefinition(string key, bool requiresMft, params string[] typeNames)
@@ -207,7 +209,10 @@ namespace c2flux.Benchmarks
                 .FirstOrDefault(candidate =>
                 {
                     ParameterInfo[] parameters = candidate.GetParameters();
-                    return parameters.Length == 1 && parameters[0].ParameterType.Name == "AppSettings";
+                    // AppSettings first; any further parameters must be optional.
+                    return parameters.Length >= 1 &&
+                        parameters[0].ParameterType.Name == "AppSettings" &&
+                        parameters.Skip(1).All(parameter => parameter.HasDefaultValue);
                 });
 
             if (constructor == null)
@@ -220,7 +225,10 @@ namespace c2flux.Benchmarks
             // that both versions run with identical options.
             Type settingsType = constructor.GetParameters()[0].ParameterType;
             object settings = Activator.CreateInstance(settingsType);
-            object scanner = constructor.Invoke(new[] { settings });
+            object scanner = constructor.Invoke(
+                new[] { settings }
+                    .Concat(constructor.GetParameters().Skip(1).Select(parameter => parameter.DefaultValue))
+                    .ToArray());
 
             // Extra parameters are allowed as long as they are optional; they get
             // their default values, as when the app calls the method.

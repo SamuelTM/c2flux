@@ -9,6 +9,31 @@ using RawFileSystemEntry = System.IO.Enumeration.FileSystemEntry;
 
 namespace c2flux
 {
+    // One entry of a directory listing, as a DirectoryReader reports it.
+    public readonly struct DirectoryEntryData
+    {
+        public DirectoryEntryData(string name, bool isDirectory, bool isLink, long length, DateTime lastWriteTimeUtc)
+        {
+            Name = name;
+            IsDirectory = isDirectory;
+            IsLink = isLink;
+            Length = length;
+            LastWriteTimeUtc = lastWriteTimeUtc;
+        }
+
+        public string Name { get; }
+        public bool IsDirectory { get; }
+        public bool IsLink { get; }
+        public long Length { get; }
+        public DateTime LastWriteTimeUtc { get; }
+    }
+
+    // Lists one directory into entries. Throws UnauthorizedAccessException or
+    // IOException when it cannot be read (the directory is reported as
+    // skipped). Adds nothing for a directory that must not be entered (another
+    // volume, or a duplicate view of one): it stays as an empty entry.
+    public delegate void DirectoryReader(string directoryPath, List<DirectoryEntryData> entries);
+
     // Portable scanner built only on .NET's FileSystemEnumerable, so it runs
     // on every OS. It is the last fallback of every platform's pipeline and,
     // until the native macOS and Linux scanners exist (phase 3), the only
@@ -38,10 +63,15 @@ namespace c2flux
         };
 
         private readonly AppSettings _settings;
+        private readonly Func<string, DirectoryReader> _createReader;
 
-        public ManagedScanner(AppSettings settings)
+        // createReader: a DirectoryReader for one scan, given its root path;
+        // native scanners plug their system calls in here and reuse the
+        // parallel walk, tree building and progress of this class.
+        public ManagedScanner(AppSettings settings, Func<string, DirectoryReader> createReader = null)
         {
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            _createReader = createReader ?? (_ => ReadWithFileSystemEnumerable);
         }
 
         public string Name => "ManagedScanner";
@@ -77,6 +107,21 @@ namespace c2flux
                 TaskScheduler.Default);
         }
 
+        private static void ReadWithFileSystemEnumerable(string directoryPath, List<DirectoryEntryData> entries)
+        {
+            FileSystemEnumerable<DirectoryEntryData> enumerable = new FileSystemEnumerable<DirectoryEntryData>(
+                directoryPath,
+                (ref RawFileSystemEntry entry) => new DirectoryEntryData(
+                    entry.FileName.ToString(),
+                    entry.IsDirectory,
+                    (entry.Attributes & FileAttributes.ReparsePoint) != 0,
+                    entry.IsDirectory ? 0 : entry.Length,
+                    entry.LastWriteTimeUtc.UtcDateTime),
+                DirectoryEnumerationOptions);
+
+            entries.AddRange(enumerable);
+        }
+
         // State of one scan; the scanner itself stays reusable.
         private sealed class Scan
         {
@@ -86,6 +131,7 @@ namespace c2flux
             private readonly CancellationToken _cancellationToken;
             private readonly PauseToken _pauseToken;
             private readonly bool _showFilesInTree;
+            private readonly DirectoryReader _reader;
 
             private readonly BlockingCollection<DirectoryNode> _pendingDirectories = new BlockingCollection<DirectoryNode>();
             private readonly ConcurrentBag<List<FileSystemEntry>> _fileBatches = new ConcurrentBag<List<FileSystemEntry>>();
@@ -115,6 +161,7 @@ namespace c2flux
                 _cancellationToken = cancellationToken;
                 _pauseToken = pauseToken;
                 _showFilesInTree = owner._settings.ShowFilesInTree;
+                _reader = owner._createReader(Path.GetFullPath(rootPath));
             }
 
             public FileSystemEntry Run()
@@ -170,6 +217,7 @@ namespace c2flux
             private void WorkerLoop()
             {
                 List<FileSystemEntry> files = new List<FileSystemEntry>();
+                List<DirectoryEntryData> listing = new List<DirectoryEntryData>();
                 _fileBatches.Add(files);
 
                 try
@@ -185,7 +233,7 @@ namespace c2flux
 
                         try
                         {
-                            ReadDirectory(directory, files);
+                            ReadDirectory(directory, files, listing);
                         }
                         finally
                         {
@@ -207,7 +255,7 @@ namespace c2flux
                 }
             }
 
-            private void ReadDirectory(DirectoryNode node, List<FileSystemEntry> files)
+            private void ReadDirectory(DirectoryNode node, List<FileSystemEntry> files, List<DirectoryEntryData> listing)
             {
                 FileSystemEntry directory = node.Entry;
                 List<DirectoryNode> subdirectories = new List<DirectoryNode>();
@@ -215,15 +263,13 @@ namespace c2flux
 
                 try
                 {
-                    FileSystemEnumerable<RawEntry> entries = new FileSystemEnumerable<RawEntry>(
-                        directory.FullPath,
-                        (ref RawFileSystemEntry entry) => RawEntry.From(ref entry),
-                        DirectoryEnumerationOptions);
+                    listing.Clear();
+                    _reader(directory.FullPath, listing);
 
-                    foreach (RawEntry raw in entries)
+                    foreach (DirectoryEntryData raw in listing)
                     {
                         string fullPath = Path.Join(directory.FullPath, raw.Name);
-                        bool isLink = (raw.Attributes & FileAttributes.ReparsePoint) != 0;
+                        bool isLink = raw.IsLink;
 
                         if (raw.IsDirectory && !isLink)
                         {
@@ -423,27 +469,6 @@ namespace c2flux
 
             // Bytes of the files found so far below this directory.
             public long LiveBytes;
-        }
-
-        private readonly struct RawEntry
-        {
-            public string Name { get; init; }
-            public bool IsDirectory { get; init; }
-            public long Length { get; init; }
-            public DateTime LastWriteTimeUtc { get; init; }
-            public FileAttributes Attributes { get; init; }
-
-            public static RawEntry From(ref RawFileSystemEntry entry)
-            {
-                return new RawEntry
-                {
-                    Name = entry.FileName.ToString(),
-                    IsDirectory = entry.IsDirectory,
-                    Length = entry.IsDirectory ? 0 : entry.Length,
-                    LastWriteTimeUtc = entry.LastWriteTimeUtc.UtcDateTime,
-                    Attributes = entry.Attributes,
-                };
-            }
         }
     }
 }

@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+		macOS-only implementations behind the Core abstractions: the
+		getattrlistbulk scanner. Plain net10.0, marked as macOS-only.
+		See ROADMAP.md, phase 3.1.
+	-->
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>disable</Nullable>
+		<ImplicitUsings>disable</ImplicitUsings>
+		<AssemblyName>c2flux.Platform.MacOS</AssemblyName>
+		<RootNamespace>c2flux</RootNamespace>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+		<Authors>Daniel Capilla</Authors>
+		<Company>Daniel Capilla</Company>
+		<Product>c² flux - Tree Scanner</Product>
+		<Copyright>Copyright © Daniel Capilla</Copyright>
+
+		<Version>1.4.1</Version>
+		<AssemblyVersion>1.4.1</AssemblyVersion>
+		<FileVersion>1.4.1</FileVersion>
+		<InformationalVersion>1.4.1</InformationalVersion>
+		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute">
+			<_Parameter1>macos</_Parameter1>
+		</AssemblyAttribute>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\c2flux.Core\c2flux.Core.csproj" />
+	</ItemGroup>
+
+</Project>

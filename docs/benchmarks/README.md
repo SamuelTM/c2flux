@@ -26,3 +26,15 @@ O `T:` é um disco virtual NTFS de 4 GiB criado no job, com a árvore de teste g
   - `ntquery` soma exatamente os bytes que o usuário consegue ler, segundo o manifesto da árvore (687.069.899). Ele não entra na pasta sem permissão e conta os 2 symlinks de arquivo como arquivos de 0 bytes.
   - Os scanners de MFT somam 718.544.683 bytes (+31,5 MB). Eles leem o volume diretamente, ignorando permissões, e incluem os arquivos internos do NTFS (`$MFT`, `$LogFile` etc.) e a pasta `System Volume Information`.
 - **c2flux vs ntfsmft no `C:\`:** o c2flux é cerca de 2× mais rápido e usa metade da memória, com o mesmo resultado em arquivos e pastas.
+
+## macOS: `GetAttrListBulkScanner` × `ManagedScanner` × `du`
+
+Medido em 10/10/2026 num Mac com Apple M4 (macOS 26, SSD interno APFS), com o cache do sistema já aquecido. Os tempos são os melhores de 3 rodadas, e o do `du -sk` é o de uma rodada. Os dois scanners encontraram exatamente os mesmos arquivos, pastas e bytes, e o dump da árvore de teste foi idêntico byte a byte.
+
+| Pasta | Arquivos | Pastas | `getattrlistbulk` | `managed` | `du -sk` |
+|---|---|---|---|---|---|
+| `/Applications` | 228.557 | 35.044 | 519 ms | 1.028 ms | 826 ms |
+| `/usr` | 27.202 | 1.980 | 83 ms | 505 ms | 67 ms |
+| `/System/Library` | 285.836 | 145.482 | 3.421 ms | 9.750 ms | 2.906 ms |
+
+O scanner nativo é de 2× a 6× mais rápido que o `managed` e fica no nível do `du`. O `du` usa `fts`, que no macOS também lê as pastas com `getattrlistbulk`, mas não monta árvore nenhuma.

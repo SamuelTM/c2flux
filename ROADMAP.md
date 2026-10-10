@@ -279,17 +279,16 @@ public sealed class ScanOptions
 
 #### 3.1 macOS: `GetAttrListBulkScanner`
 
-- [ ] P/Invoke para `open(O_RDONLY | O_DIRECTORY)`, `getattrlistbulk`, `close`
-- [ ] Atributos solicitados numa única chamada por lote: `ATTR_CMN_NAME`, `ATTR_CMN_OBJTYPE`, `ATTR_CMN_DEVID`, `ATTR_CMN_FILEID`, `ATTR_CMN_MODTIME`, `ATTR_CMN_FLAGS`, `ATTR_FILE_LINKCOUNT`, `ATTR_FILE_DATALENGTH`, `ATTR_FILE_ALLOCSIZE`
-- [ ] Buffer grande reutilizado por thread (`ArrayPool`), parsing do formato empacotado com `Span<byte>`, sem alocações por entrada além do nome
-- [ ] Paralelismo: fila de diretórios com N workers (work-stealing), N padrão = núcleos lógicos, ajustável
-- [ ] **Firmlinks do APFS:** detectar `/System/Volumes/Data` e deduplicar por `(devid, fileid)` para não contar o mesmo dado duas vezes ao varrer `/`
-- [ ] **Hardlinks:** contar o tamanho uma vez só quando `linkcount > 1` (conjunto `(devid, fileid)`)
-- [ ] Não atravessar outros volumes (comparar `devid`), exceto se `CrossMountPoints`
-- [ ] Ignorar volumes de sistema somente leitura e snapshots quando apropriado
-- [ ] **Acesso Total ao Disco:** detectar falhas `EPERM` em pastas protegidas (`~/Library/Mail`, `~/Library/Safari` etc.) e mostrar um aviso único na UI com um botão que abre *Ajustes do Sistema → Privacidade e Segurança → Acesso Total ao Disco*
-- [ ] Tamanho lógico (`DATALENGTH`) e alocado (`ALLOCSIZE`) disponíveis para o modo de exibição
-- [ ] Benchmark contra o `ManagedScanner` e contra `du -sk` no mesmo volume
+- [x] Medir antes: o `ManagedScanner` ficou de 1,2× a 7× atrás do `du -sk` (`/usr`: 505 × 67 ms; `/System/Library`: 9,7 × 2,6 s), o que justificou o scanner nativo
+- [x] `src/c2flux.Platform.MacOS/Scanning/GetAttrListBulkScanner.cs`: `open` + `getattrlistbulk` em lotes num buffer de 256 KB (`ArrayPool`), lendo nome, tipo, data e tamanho lógico (`ATTR_FILE_DATALENGTH`, o mesmo `st_size` do `managed`). Cadeia do macOS: `GetAttrListBulkScanner` → `ManagedScanner` (`MacScanners`)
+- [x] **Sem duplicar código:** o `ManagedScanner` ganhou uma função de leitura de pasta trocável (`DirectoryReader`). O scanner do macOS só troca essa leitura e reaproveita os workers, a árvore, os tamanhos e o progresso
+- [x] Não atravessa outros volumes: antes de ler cada pasta, compara o devid dela (`fgetattrlist`) com o da raiz. Verificado: varrendo `/Volumes`, o `SSD` (outro volume) fica vazio, e `Macintosh HD` (link para `/`) não é seguido
+- [x] **Firmlinks do APFS:** o `stat` mostra `/` e `/System/Volumes/Data` com o **mesmo** devid, então a regra de volume não basta. Ao varrer `/`, a pasta `/System/Volumes/Data` não é lida, porque o volume de dados já aparece pelos firmlinks da raiz (`/Users`, `/Applications`…). Não testado varrendo `/` de verdade, para não disparar os pedidos de privacidade do macOS
+- [x] Resultado: dump da árvore de teste **idêntico** ao do `managed`; de 2× a 6× mais rápido que ele, no nível do `du` (números em `docs/benchmarks/README.md`). Conformidade no CI do macOS
+- [ ] ~~Paralelismo próprio, buffer por thread~~: desnecessário, vem do motor do `managed`
+- [ ] **Adiado:** hardlinks contados uma vez e tamanho alocado (`ATTR_FILE_LINKCOUNT`/`ALLOCSIZE`). Hardlinks são raros no macOS; o tamanho alocado só faz sentido quando a interface tiver esse modo de exibição (`shortcut:` no código)
+- [ ] **Adiado para a Fase 5:** aviso de **Acesso Total ao Disco** com botão para os Ajustes. O scanner já reporta as pastas protegidas como puladas (`EPERM`); falta a interface
+- [ ] ~~Ignorar volumes de sistema somente leitura e snapshots~~: coberto pela regra de volume (VM, Preboot, Update etc. têm devid próprio)
 
 #### 3.2 Linux: `GetDentsStatxScanner`
 

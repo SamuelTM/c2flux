@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "c2flux.Core.Tests", "tests\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "c2flux.Platform.Windows", "src\c2flux.Platform.Windows\c2flux.Platform.Windows.csproj", "{9D7BAB5B-C2FF-4092-A994-74709AA71B38}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "c2flux.Platform.MacOS", "src\c2flux.Platform.MacOS\c2flux.Platform.MacOS.csproj", "{557CD5C9-DB82-4DF5-8E87-25E5D98A81A7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -119,6 +121,18 @@ Global
 		{9D7BAB5B-C2FF-4092-A994-74709AA71B38}.Release|x64.Build.0 = Release|Any CPU
 		{9D7BAB5B-C2FF-4092-A994-74709AA71B38}.Release|x86.ActiveCfg = Release|Any CPU
 		{9D7BAB5B-C2FF-4092-A994-74709AA71B38}.Release|x86.Build.0 = Release|Any CPU
+		{557CD5C9-DB82-4DF5-8E87-25E5D98A81A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{557CD5C9-DB82-4DF5-8E87-25E5D98A81A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{557CD5C9-DB82-4DF5-8E87-25E5D98A81A7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{557CD5C9-DB82-4DF5-8E87-25E5D98A81A7}.Debug|x64.Build.0 = Debug|Any CPU
+		{557CD5C9-DB82-4DF5-8E87-25E5D98A81A7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{557CD5C9-DB82-4DF5-8E87-25E5D98A81A7}.Debug|x86.Build.0 = Debug|Any CPU
+		{557CD5C9-DB82-4DF5-8E87-25E5D98A81A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{557CD5C9-DB82-4DF5-8E87-25E5D98A81A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{557CD5C9-DB82-4DF5-8E87-25E5D98A81A7}.Release|x64.ActiveCfg = Release|Any CPU
+		{557CD5C9-DB82-4DF5-8E87-25E5D98A81A7}.Release|x64.Build.0 = Release|Any CPU
+		{557CD5C9-DB82-4DF5-8E87-25E5D98A81A7}.Release|x86.ActiveCfg = Release|Any CPU
+		{557CD5C9-DB82-4DF5-8E87-25E5D98A81A7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -132,5 +146,6 @@ Global
 		{452A2A37-CDD0-4CF7-AACE-A7E787D8E148} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{25903DBB-9F7A-4B0D-920E-2F54B1541C44} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{9D7BAB5B-C2FF-4092-A994-74709AA71B38} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{557CD5C9-DB82-4DF5-8E87-25E5D98A81A7} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

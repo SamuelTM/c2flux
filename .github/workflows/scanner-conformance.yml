@@ -9,6 +9,7 @@ on:
     paths: &conformance-paths
       - "src/c2flux.Core/**"
       - "src/c2flux.Platform.Windows/**"
+      - "src/c2flux.Platform.MacOS/**"
       - "libs/NtfsReader/**"
       - "tests/c2flux.Benchmarks/**"
       - "tests/conformance/**"
@@ -134,10 +135,19 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Only c2flux.Core (plain net10.0) is needed: the managed scanner lives there.
-      - name: Build Core and benchmark tool
+      # The platform project of this OS (it brings c2flux.Core with the
+      # managed scanner); Linux has no native scanner yet, so only Core.
+      - name: Build scanners and benchmark tool
         run: |
-          dotnet build src/c2flux.Core/c2flux.Core.csproj --configuration Release --output "$RUNNER_TEMP/core"
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            dotnet build src/c2flux.Platform.MacOS/c2flux.Platform.MacOS.csproj --configuration Release --output "$RUNNER_TEMP/scanners"
+            echo "MAIN_ASSEMBLY=c2flux.Platform.MacOS.dll" >> "$GITHUB_ENV"
+            echo "SCANNERS=attrlistbulk managed" >> "$GITHUB_ENV"
+          else
+            dotnet build src/c2flux.Core/c2flux.Core.csproj --configuration Release --output "$RUNNER_TEMP/scanners"
+            echo "MAIN_ASSEMBLY=c2flux.Core.dll" >> "$GITHUB_ENV"
+            echo "SCANNERS=managed" >> "$GITHUB_ENV"
+          fi
           dotnet build tests/c2flux.Benchmarks/c2flux.Benchmarks.csproj --configuration Release --output "$RUNNER_TEMP/bench"
 
       - name: Generate test tree
@@ -147,8 +157,31 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/conformance"
           echo "## Scanner conformance (${{ matrix.os }})" >> "$GITHUB_STEP_SUMMARY"
-          dotnet "$RUNNER_TEMP/bench/c2flux-bench.dll" --app "$RUNNER_TEMP/core" --main-assembly c2flux.Core.dll --scanner managed --path "$RUNNER_TEMP/tree" --dump "$RUNNER_TEMP/conformance/managed.dump" > "$RUNNER_TEMP/conformance/managed.json"
-          python tests/conformance/check_conformance.py --manifest "$RUNNER_TEMP/manifest.json" --dump "$RUNNER_TEMP/conformance/managed.dump" --scanner "managed (${{ matrix.os }})" --json-out "$RUNNER_TEMP/conformance/managed.conformance.json" --summary-out "$GITHUB_STEP_SUMMARY"
+          failed=""
+          for scanner in $SCANNERS; do
+            dotnet "$RUNNER_TEMP/bench/c2flux-bench.dll" --app "$RUNNER_TEMP/scanners" --main-assembly "$MAIN_ASSEMBLY" --scanner "$scanner" --path "$RUNNER_TEMP/tree" --dump "$RUNNER_TEMP/conformance/$scanner.dump" > "$RUNNER_TEMP/conformance/$scanner.json"
+            python tests/conformance/check_conformance.py --manifest "$RUNNER_TEMP/manifest.json" --dump "$RUNNER_TEMP/conformance/$scanner.dump" --scanner "$scanner (${{ matrix.os }})" --json-out "$RUNNER_TEMP/conformance/$scanner.conformance.json" --summary-out "$GITHUB_STEP_SUMMARY" || failed="$failed $scanner"
+          done
+          if [ -n "$failed" ]; then echo "Conformance failed:$failed"; exit 1; fi
+
+      # Rough speed against du on a large system folder, to judge whether a
+      # native scanner is worth it on this OS (phase 3). Informational.
+      - name: Speed probe (scanners vs du on /usr)
+        run: |
+          echo "### Speed probe: /usr (${{ matrix.os }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          for scanner in $SCANNERS; do
+            for run in 1 2 3; do
+              dotnet "$RUNNER_TEMP/bench/c2flux-bench.dll" --app "$RUNNER_TEMP/scanners" --main-assembly "$MAIN_ASSEMBLY" --scanner "$scanner" --path /usr \
+                | python -c "import json,sys; d=json.load(sys.stdin); t=d.get('tree') or {}; print('- %s run %s: %.0f ms, %s files, %s directories' % ('$scanner', '$run', d.get('elapsed_ms', 0), t.get('files'), t.get('directories')))" >> "$GITHUB_STEP_SUMMARY"
+            done
+          done
+          for run in 1 2 3; do
+            start=$(date +%s%N 2>/dev/null || python -c 'import time; print(time.time_ns())')
+            du -sk /usr > /dev/null 2>&1 || true
+            end=$(date +%s%N 2>/dev/null || python -c 'import time; print(time.time_ns())')
+            echo "- du run $run: $(( (end - start) / 1000000 )) ms" >> "$GITHUB_STEP_SUMMARY"
+          done
 
       - name: Upload results
         if: always()
