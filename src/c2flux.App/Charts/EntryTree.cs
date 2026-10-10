@@ -88,7 +88,8 @@ namespace c2flux
         private readonly List<Node> _rootNodes = new List<Node>();
         private readonly List<Node> _visibleNodes = new List<Node>();
         private readonly HashSet<string> _expandedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, long> _driveSizeByRoot = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+        // Volume sizes by root path, read again on each SetRootEntry.
+        private Dictionary<string, long> _volumeSizeByRoot;
         private Node _selectedNode;
         private double _rowHeight = 22;
         private double _virtualWidth;
@@ -128,6 +129,7 @@ namespace c2flux
                 return;
             }
 
+            _volumeSizeByRoot = null;
             string previousSelectedKey = _selectedNode?.Key;
             string rootKey = GetEntryKey(rootEntry, null);
             Node rootNode = _rootNodes.FirstOrDefault(node => string.Equals(node.Key, rootKey, StringComparison.OrdinalIgnoreCase));
@@ -366,15 +368,13 @@ namespace c2flux
 
             if (entry.IsDirectory && !string.IsNullOrWhiteSpace(entry.FullPath))
             {
-                if (!_driveSizeByRoot.TryGetValue(entry.FullPath, out long driveSize))
-                {
-                    driveSize = Volumes.List().FirstOrDefault(volume => string.Equals(volume.RootPath, entry.FullPath, StringComparison.OrdinalIgnoreCase))?.TotalBytes ?? -1;
-                    _driveSizeByRoot[entry.FullPath] = driveSize;
-                }
+                _volumeSizeByRoot ??= Volumes.List()
+                    .GroupBy(volume => volume.RootPath, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(group => group.Key, group => group.First().TotalBytes, StringComparer.OrdinalIgnoreCase);
 
-                if (driveSize >= 0)
+                if (_volumeSizeByRoot.TryGetValue(entry.FullPath, out long volumeSize))
                 {
-                    displaySizeBytes = driveSize;
+                    displaySizeBytes = volumeSize;
                 }
             }
 
@@ -545,10 +545,15 @@ namespace c2flux
             }
 
             // As wide as the longest row plus 80 px, for the horizontal
-            // scroll bar.
+            // scroll bar. Measuring every row took seconds with 200 000 rows;
+            // the 20 longest texts of each level are enough to find it.
             _virtualWidth = _visibleNodes.Count == 0
                 ? 0
-                : _visibleNodes.Max(node => GetTextLeft(node) + CreateText(GetNodeText(node.Entry), null).WidthIncludingTrailingWhitespace + 80);
+                : _visibleNodes
+                    .Select(node => (Node: node, Text: GetNodeText(node.Entry)))
+                    .GroupBy(row => row.Node.Level)
+                    .SelectMany(level => level.OrderByDescending(row => row.Text.Length).Take(20))
+                    .Max(row => GetTextLeft(row.Node) + CreateText(row.Text, null).WidthIncludingTrailingWhitespace + 80);
 
             InvalidateMeasure();
             InvalidateVisual();

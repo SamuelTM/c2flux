@@ -375,7 +375,7 @@ Portar de GDI+ para `DrawingContext` do Avalonia (ou SkiaSharp direto, se for pr
 - [x] `ScanHistoryGrowthOverviewControl` → `GrowthOverview` (o seletor de visão usa o `ComboBox` do Fluent até o tema dos controles da 5.3)
 - [x] `StatusSymbolRenderer`
 - [x] **Comparação:** `tests/fixtures/generate_chart_fixture.py` gera uma árvore fixa; `c2flux-shots --charts` desenha cada gráfico do WinForms com ela (`docs/fidelity/charts/`) e os testes do app desenham o port com os mesmos dados (`ChartCaptures`). Achados: o WinForms mistura transparência em luz linear (`ChartColors.BlendLinear`); o texto segue as métricas da Segoe UI e do `TextRenderer` (`DrawnControl`); com `PixelOffsetMode.Half`, um traço de 1 px em *c* acende o pixel *c* − 1; o destaque do sistema é `#0078D4`. Diferença média de 1 a 7 níveis por pixel em todos os gráficos (`docs/fidelity/README.md`)
-- [ ] Virtualização e cache de renderização para árvores com milhões de entradas
+- [x] Virtualização e cache de renderização para árvores com milhões de entradas: a árvore desenha só as linhas visíveis (200 mil filhos expandidos em 215 ms, eram 2 s antes de medir a largura só pelos textos mais longos); o treemap guarda o desenho num bitmap (redesenho em 0 ms) e limita 160 blocos por pasta (1 milhão de arquivos em ~0,6 s, como o algoritmo original). Medido no macOS, headless, Release
 
 #### 5.3 Janelas e controles
 
