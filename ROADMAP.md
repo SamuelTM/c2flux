@@ -339,9 +339,11 @@ public sealed class ScanOptions
 - [ ] ~~Lixeira~~: o app não exclui arquivos hoje; seria um recurso novo
 - [ ] ~~Elevação~~: não se aplica ao macOS e é opcional no Linux. No Windows fica o código atual do WinForms
 - [ ] ~~Substituir as chamadas do WinForms pelas interfaces~~: o WinForms só roda no Windows e será removido na Fase 7
-- [ ] Confirmar no CI (testes dos três SOs, incluindo identidade com hardlink no Linux)
+- [x] Confirmado no CI (`a5f1568`): 33 testes do Core nos três SOs (incluindo identidade com hardlink no Linux e a lista de volumes de cada runner); conformidade, benchmark e capturas sem mudança (aba Redundâncias idêntica)
 
-**Entregável:** nenhuma chamada específica de SO fora dos projetos `Platform.*`.
+**Entregável (revisto):** análise de duplicados, lista de volumes e gerenciador de arquivos funcionando nos três SOs, prontos para a Fase 5.
+
+**Situação:** ✅ concluída em 10/10/2026, na versão enxuta.
 
 ---
 
