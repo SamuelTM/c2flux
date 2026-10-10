@@ -13,6 +13,11 @@ namespace c2flux
                 : OperatingSystem.IsMacOS() ? MacFileIdentity.TryRead
                 : LinuxFileIdentity.TryRead;
 
+            if (OperatingSystem.IsWindows())
+            {
+                Volumes.ClusterSizeReader = WindowsClusterSize.Read;
+            }
+
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
 

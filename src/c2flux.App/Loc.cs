@@ -45,9 +45,41 @@ namespace c2flux
 
         public string Key { get; set; }
 
+        // Drops leading symbols ("◔ Pie chart" -> "Pie chart"), as the WinForms
+        // toolbar did for texts shown next to a drawn icon.
+        public bool StripSymbol { get; set; }
+
         public override object ProvideValue(IServiceProvider serviceProvider)
         {
-            return new ReflectionBinding("[" + Key + "]") { Source = Loc.Instance, Mode = BindingMode.OneWay };
+            return new ReflectionBinding("[" + Key + "]")
+            {
+                Source = Loc.Instance,
+                Mode = BindingMode.OneWay,
+                Converter = StripSymbol ? StripSymbolConverter.Instance : null,
+            };
+        }
+
+        private sealed class StripSymbolConverter : Avalonia.Data.Converters.IValueConverter
+        {
+            public static readonly StripSymbolConverter Instance = new StripSymbolConverter();
+
+            public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+            {
+                string text = (value as string ?? string.Empty).Trim();
+                int start = 0;
+
+                while (start < text.Length && !char.IsLetterOrDigit(text[start]))
+                {
+                    start++;
+                }
+
+                return start < text.Length ? text.Substring(start) : text;
+            }
+
+            public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+            {
+                throw new NotSupportedException();
+            }
         }
     }
 }

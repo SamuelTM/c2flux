@@ -20,7 +20,7 @@ namespace c2flux
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                desktop.MainWindow = new MainWindow();
+                desktop.MainWindow = new MainWindow(settings);
             }
 
             base.OnFrameworkInitializationCompleted();

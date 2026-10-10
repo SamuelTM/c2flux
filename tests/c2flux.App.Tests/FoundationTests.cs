@@ -14,20 +14,21 @@ namespace c2flux.AppTests
         {
             MainWindow window = new MainWindow();
             window.Show();
-            TextBlock status = window.FindControl<TextBlock>("StatusText");
+            TextBlock status = window.FindControl<TextBlock>("DriveLabel");
 
             try
             {
                 SwitchLanguage("en");
-                Assert.Equal("Ready", status.Text);
+                Assert.Equal("Drive:", status.Text);
                 Assert.Equal(FlowDirection.LeftToRight, window.FlowDirection);
 
                 SwitchLanguage("de");
-                Assert.Equal("Bereit", status.Text);
+                Assert.Equal(LocalizationService.GetText("Toolbar.Drive"), status.Text);
+                Assert.NotEqual("Drive:", status.Text);
 
                 SwitchLanguage("ar");
-                Assert.Equal(LocalizationService.GetText("Common.Ready"), status.Text);
-                Assert.NotEqual("Ready", status.Text);
+                Assert.Equal(LocalizationService.GetText("Toolbar.Drive"), status.Text);
+                Assert.NotEqual("Drive:", status.Text);
                 Assert.Equal(FlowDirection.RightToLeft, window.FlowDirection);
             }
             finally

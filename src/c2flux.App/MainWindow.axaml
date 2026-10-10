@@ -2,17 +2,133 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:l="using:c2flux"
         x:Class="c2flux.MainWindow"
-        Title="c² flux"
+        Title="c² flux - Tree Scanner"
         Icon="avares://c2flux.App/Assets/c2flux.png"
-        Width="1280" Height="800" MinWidth="800" MinHeight="500"
+        Width="1180" Height="760" MinWidth="780" MinHeight="490"
         WindowStartupLocation="CenterScreen">
 
-  <!-- The main window is built in phase 5.3; for now only the status bar. -->
+  <!-- Port of the WinForms MainForm: menu, toolbar, the tree over the
+       partition list on the left, the selected view on the right and the
+       status bar. -->
   <DockPanel>
-    <Border DockPanel.Dock="Bottom" Background="{DynamicResource HeaderBackgroundBrush}"
-            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="8,4">
-      <TextBlock x:Name="StatusText" Text="{l:T Common.Ready}" />
+    <!-- Shows the menu inside the window on Windows and Linux; on macOS the
+         same menu goes to the system menu bar. -->
+    <Border DockPanel.Dock="Top" Background="{DynamicResource BackgroundSecondaryBrush}"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
+      <NativeMenuBar Height="32" />
     </Border>
-    <Panel />
+
+    <!-- Toolbar: the four groups of the WinForms tool strips. -->
+    <!-- 56 px band with the 28 px buttons centered, as in WinForms. -->
+    <Border DockPanel.Dock="Top" Background="{DynamicResource BackgroundSecondaryBrush}" Padding="8,14,8,14">
+      <WrapPanel x:Name="Toolbar" Orientation="Horizontal">
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
+          <Rectangle Classes="grip" />
+          <TextBlock x:Name="DriveLabel" Text="{l:T Toolbar.Drive}" VerticalAlignment="Center" />
+          <ComboBox x:Name="DriveSelect" Classes="ant" Width="270" />
+          <Button x:Name="ScanButton" Classes="ant" Padding="5,0">
+            <l:ToolbarIcon x:Name="ScanIcon" Kind="Scan" />
+          </Button>
+          <Button x:Name="PauseButton" Classes="ant" Padding="5,0" IsEnabled="False">
+            <l:ToolbarIcon x:Name="PauseIcon" Kind="Pause" />
+          </Button>
+          <Button x:Name="OpenFolderButton" Classes="ant" Padding="5,0">
+            <l:ToolbarIcon Kind="OpenFolder" />
+          </Button>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
+          <Rectangle Classes="grip" />
+          <ToggleButton x:Name="TableButton" Classes="ant view" Tag="Table">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <l:ToolbarIcon Kind="Table" IsActive="{Binding #TableButton.IsChecked}" />
+              <TextBlock Text="{l:T Toolbar.Table, StripSymbol=True}" />
+            </StackPanel>
+          </ToggleButton>
+          <ToggleButton x:Name="PieButton" Classes="ant view" Tag="PieChart">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <l:ToolbarIcon Kind="PieChart" IsActive="{Binding #PieButton.IsChecked}" />
+              <TextBlock Text="{l:T Toolbar.PieChart, StripSymbol=True}" />
+            </StackPanel>
+          </ToggleButton>
+          <ToggleButton x:Name="BarButton" Classes="ant view" Tag="BarChart">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <l:ToolbarIcon Kind="BarChart" IsActive="{Binding #BarButton.IsChecked}" />
+              <TextBlock Text="{l:T Toolbar.BarChart, StripSymbol=True}" />
+            </StackPanel>
+          </ToggleButton>
+          <ToggleButton x:Name="SunburstButton" Classes="ant view" Tag="Sunburst">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <l:ToolbarIcon Kind="Sunburst" IsActive="{Binding #SunburstButton.IsChecked}" />
+              <TextBlock Text="{l:T Toolbar.Sunburst, StripSymbol=True}" />
+            </StackPanel>
+          </ToggleButton>
+          <ToggleButton x:Name="TreemapButton" Classes="ant view" Tag="Treemap">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <l:ToolbarIcon Kind="Treemap" IsActive="{Binding #TreemapButton.IsChecked}" />
+              <TextBlock Text="{l:T Toolbar.Treemap, StripSymbol=True}" />
+            </StackPanel>
+          </ToggleButton>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
+          <Rectangle Classes="grip" />
+          <Button x:Name="ExportButton" Classes="ant" IsEnabled="False">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <l:ToolbarIcon Kind="Export" />
+              <TextBlock Text="{l:T Toolbar.Export}" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Rectangle Classes="grip" />
+          <ToggleButton x:Name="AnalysisButton" Classes="ant" IsEnabled="False">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <l:ToolbarIcon Kind="Analysis" IsActive="{Binding #AnalysisButton.IsChecked}" />
+              <TextBlock Text="{l:T Menu.Analysis}" />
+            </StackPanel>
+          </ToggleButton>
+          <!-- WinForms keeps the Compare scans button hidden; "Scan History" is
+               the storage history view. -->
+          <ToggleButton x:Name="StorageHistoryButton" Classes="ant" IsEnabled="False">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <l:ToolbarIcon Kind="StorageHistory" IsActive="{Binding #StorageHistoryButton.IsChecked}" />
+              <TextBlock Text="{l:T Menu.SpaceHistory}" />
+            </StackPanel>
+          </ToggleButton>
+          <Button x:Name="SearchButton" Classes="ant">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <l:ToolbarIcon Kind="Search" />
+              <TextBlock Text="{l:T Search.Title}" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </WrapPanel>
+    </Border>
+
+    <!-- Status bar: alert counters, summary text, scan progress. -->
+    <Border DockPanel.Dock="Bottom" Height="30" Margin="3,3,3,0"
+            Background="{DynamicResource BackgroundSecondaryBrush}"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="8,4">
+      <DockPanel>
+        <StackPanel x:Name="AlertCounters" DockPanel.Dock="Left" Orientation="Horizontal" Spacing="8" Margin="0,0,8,0" Background="Transparent" Cursor="Hand" />
+        <l:ScanProgressBar x:Name="ScanProgress" DockPanel.Dock="Right" Width="200" IsVisible="False" />
+        <TextBlock x:Name="StatusText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+      </DockPanel>
+    </Border>
+
+    <Grid x:Name="Body" ColumnDefinitions="360,6,*" Margin="3,3,3,0">
+      <Grid x:Name="LeftPane" RowDefinitions="*,6,180">
+        <Border Classes="pane">
+          <l:EntryTree x:Name="Tree" />
+        </Border>
+        <GridSplitter Grid.Row="1" ResizeDirection="Rows" Background="{DynamicResource BorderBrush}" />
+        <Border Grid.Row="2" Classes="pane">
+          <ScrollViewer x:Name="PartitionHost" />
+        </Border>
+      </Grid>
+      <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="{DynamicResource BorderBrush}" />
+      <Border Grid.Column="2" Classes="pane">
+        <Panel x:Name="ViewHost" />
+      </Border>
+    </Grid>
   </DockPanel>
 </Window>

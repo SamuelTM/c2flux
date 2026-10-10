@@ -25,6 +25,11 @@
       <SolidColorBrush x:Key="UsageBarTrackBrush" Color="#E1E1E1" />
       <SolidColorBrush x:Key="UsageBarFillBrush" Color="#1677FF" />
       <SolidColorBrush x:Key="TableProgressBackBrush" Color="#E6E6E6" />
+      <SolidColorBrush x:Key="ButtonBackgroundBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="ButtonBorderBrush" Color="#D9D9D9" />
+      <SolidColorBrush x:Key="ButtonDisabledBackgroundBrush" Color="#0A000000" />
+      <SolidColorBrush x:Key="PrimaryBrush" Color="#1677FF" />
+      <SolidColorBrush x:Key="SelectBorderBrush" Color="#A0A0A0" />
       <SolidColorBrush x:Key="TableProgressFillBrush" Color="#5A8CD2" />
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
@@ -44,12 +49,20 @@
       <SolidColorBrush x:Key="UsageBarTrackBrush" Color="#404040" />
       <SolidColorBrush x:Key="UsageBarFillBrush" Color="#4B91E6" />
       <SolidColorBrush x:Key="TableProgressBackBrush" Color="#3A3A3A" />
+      <!-- Ant Design dark component tokens, as measured in the WinForms toolbar. -->
+      <SolidColorBrush x:Key="ButtonBackgroundBrush" Color="#141414" />
+      <SolidColorBrush x:Key="ButtonBorderBrush" Color="#424242" />
+      <SolidColorBrush x:Key="ButtonDisabledBackgroundBrush" Color="#14FFFFFF" />
+      <SolidColorBrush x:Key="PrimaryBrush" Color="#1668DC" />
+      <SolidColorBrush x:Key="SelectBorderBrush" Color="#505050" />
       <SolidColorBrush x:Key="TableProgressFillBrush" Color="#4687DC" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 
   <CornerRadius x:Key="ControlCornerRadius">6</CornerRadius>
   <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
-  <!-- Segoe UI 9 pt (SystemFonts.MessageBoxFont) is 12 px at 100 %. -->
+  <!-- Segoe UI 9 pt (SystemFonts.MessageBoxFont) is 12 px at 100 %;
+       Selawik has its metrics (see AppFonts). -->
+  <FontFamily x:Key="ContentControlThemeFontFamily">avares://c2flux.App/Assets/Fonts#Selawik</FontFamily>
   <x:Double x:Key="ControlContentThemeFontSize">12</x:Double>
 </ResourceDictionary>

@@ -19,11 +19,22 @@ namespace c2flux
     // it also returns internal and virtual mounts, which are filtered out here.
     public static class Volumes
     {
+        // DriveInfo.GetDrives uses getmntinfo on macOS, whose buffer is shared
+        // by all threads: two calls at once crash the process (access
+        // violation in Interop.Sys.GetAllMountPoints). One call at a time.
+        private static readonly object GetDrivesLock = new object();
+
         public static IReadOnlyList<VolumeInfo> List()
         {
             List<VolumeInfo> volumes = new List<VolumeInfo>();
+            DriveInfo[] drives;
 
-            foreach (DriveInfo drive in DriveInfo.GetDrives())
+            lock (GetDrivesLock)
+            {
+                drives = DriveInfo.GetDrives();
+            }
+
+            foreach (DriveInfo drive in drives)
             {
                 try
                 {
@@ -49,6 +60,57 @@ namespace c2flux
             }
 
             return volumes;
+        }
+
+        // The volume whose root is path (ignoring a trailing separator), or
+        // null for any other folder.
+        public static VolumeInfo Find(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return null;
+            }
+
+            string normalized = TrimSeparator(path);
+            return List().FirstOrDefault(volume => string.Equals(TrimSeparator(volume.RootPath), normalized, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Allocation unit of the volume holding path, in bytes; 0 if unknown.
+        // Windows registers GetDiskFreeSpace at startup; elsewhere statvfs.
+        public static Func<string, long> ClusterSizeReader { get; set; } = ReadClusterSizeWithStatvfs;
+
+        public static long GetClusterSize(string path)
+        {
+            try
+            {
+                return string.IsNullOrWhiteSpace(path) ? 0 : ClusterSizeReader(path);
+            }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException || exception is DllNotFoundException || exception is EntryPointNotFoundException)
+            {
+                return 0;
+            }
+        }
+
+        // struct statvfs starts with unsigned long f_bsize, f_frsize on both
+        // macOS and Linux (64-bit); f_frsize is the allocation unit.
+        private static unsafe long ReadClusterSizeWithStatvfs(string path)
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                return 0;
+            }
+
+            byte* buffer = stackalloc byte[512];
+            return statvfs(path, buffer) == 0 ? (long)*(ulong*)(buffer + 8) : 0;
+        }
+
+        [System.Runtime.InteropServices.DllImport("libc", SetLastError = true)]
+        private static extern unsafe int statvfs(string path, byte* buffer);
+
+        private static string TrimSeparator(string path)
+        {
+            string trimmed = path.Trim().TrimEnd('/', '\\');
+            return trimmed.Length == 0 ? path.Trim().Substring(0, 1) : trimmed;
         }
 
         private static readonly string[] LinuxSystemPrefixes = { "/proc", "/sys", "/dev", "/run", "/snap" };

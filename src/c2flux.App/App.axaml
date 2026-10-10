@@ -20,6 +20,7 @@
         <ColorPaletteResources x:Key="Dark" Accent="#0078D4" RegionColor="#202020" BaseHigh="#FFFFFF" />
       </FluentTheme.Palettes>
     </FluentTheme>
+    <StyleInclude Source="avares://c2flux.App/Themes/Controls.axaml" />
     <Style Selector="Window">
       <Setter Property="FlowDirection" Value="{Binding FlowDirection, Source={x:Static l:Loc.Instance}}" />
       <Setter Property="Background" Value="{DynamicResource BackgroundPrimaryBrush}" />

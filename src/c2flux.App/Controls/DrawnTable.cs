@@ -27,8 +27,12 @@ namespace c2flux
         // Defaults to the text.
         public Func<TRow, IComparable> SortKey { get; set; }
 
-        // Width in pixels; the last visible column also takes what is left.
+        // Width in pixels (the minimum when Percent is set); the last visible
+        // column also takes what is left.
         public double Width { get; set; } = 120;
+
+        // Share of the table's width, 0..1, as AntdUI's "22%" widths.
+        public double Percent { get; set; }
 
         // Sized to the header and the cells' text instead of Width.
         public bool AutoWidth { get; set; }
@@ -218,7 +222,9 @@ namespace c2flux
 
                 foreach (TableColumn<TRow> column in visible)
                 {
-                    double width = column.AutoWidth ? MeasureAutoWidth(column) : column.Width;
+                    double width = column.AutoWidth
+                        ? MeasureAutoWidth(column)
+                        : Math.Max(column.Width, Math.Floor(column.Percent * (Bounds.Width - 4)));
                     _layout.Add((column, x, width));
                     x += width;
                 }

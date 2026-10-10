@@ -57,5 +57,29 @@ namespace c2flux.Core.Tests
                 Assert.DoesNotContain(volumes, volume => volume.RootPath.StartsWith("/System/Volumes", StringComparison.Ordinal));
             }
         }
+
+        [Fact]
+        public void The_root_volume_is_found_and_has_a_cluster_size()
+        {
+            string root = System.IO.Path.GetPathRoot(System.IO.Path.GetFullPath("."));
+            VolumeInfo volume = Volumes.Find(root);
+
+            Assert.NotNull(volume);
+            Assert.Null(Volumes.Find(System.IO.Path.Combine(root, "c2flux-no-such-folder")));
+
+            if (!System.OperatingSystem.IsWindows())
+            {
+                long clusterSize = Volumes.GetClusterSize(root);
+                Assert.True(clusterSize >= 512 && (clusterSize & (clusterSize - 1)) == 0, "cluster size " + clusterSize);
+            }
+        }
+
+        // Regression: concurrent DriveInfo.GetDrives crashed the process on
+        // macOS (shared getmntinfo buffer).
+        [Fact]
+        public void Volumes_can_be_listed_from_many_threads_at_once()
+        {
+            System.Threading.Tasks.Parallel.For(0, 64, _ => Assert.NotEmpty(Volumes.List()));
+        }
     }
 }

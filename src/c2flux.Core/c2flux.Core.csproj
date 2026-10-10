@@ -13,6 +13,7 @@
 		<ImplicitUsings>disable</ImplicitUsings>
 		<AssemblyName>c2flux.Core</AssemblyName>
 		<RootNamespace>c2flux</RootNamespace>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
 		<Authors>Daniel Capilla</Authors>
 		<Company>Daniel Capilla</Company>
@@ -36,6 +37,7 @@
 	     and the platform scanners. -->
 	<ItemGroup>
 		<InternalsVisibleTo Include="c2flux" />
+		<InternalsVisibleTo Include="c2flux.App" />
 		<InternalsVisibleTo Include="c2flux.Platform.Windows" />
 		<InternalsVisibleTo Include="c2flux.Core.Tests" />
 	</ItemGroup>

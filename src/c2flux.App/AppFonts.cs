@@ -5,14 +5,15 @@ namespace c2flux
 {
     public static class AppFonts
     {
-        // Inter on every OS, also for FontFamily.Default (drawn text);
-        // WithInterFont alone leaves the default at the system font.
-        // Scripts Inter lacks (CJK, Thai, Devanagari) fall back to system fonts.
+        // Selawik (SIL OFL, Microsoft): metric-compatible with Segoe UI, the
+        // font of the WinForms app, so text has the same widths on every OS.
+        // Scripts it lacks (CJK, Thai, Devanagari, ...) fall back to system
+        // fonts.
+        public const string Family = "avares://c2flux.App/Assets/Fonts#Selawik";
+
         public static AppBuilder UseAppFonts(this AppBuilder builder)
         {
-            return builder
-                .WithInterFont()
-                .With(new FontManagerOptions { DefaultFamilyName = "fonts:Inter#Inter" });
+            return builder.With(new FontManagerOptions { DefaultFamilyName = Family });
         }
     }
 }

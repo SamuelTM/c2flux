@@ -29,7 +29,7 @@ namespace c2flux
 
         public TreemapView()
         {
-            _table.Columns.Add(new TableColumn<Row>(LocalizationService.GetText("Common.Name"), row => row.Entry.Name) { Width = 120 });
+            _table.Columns.Add(new TableColumn<Row>(LocalizationService.GetText("Common.Name"), row => row.Entry.Name) { Width = 120, Percent = 0.22 });
             _table.Columns.Add(new TableColumn<Row>(LocalizationService.GetText("Common.Size"), row => SizeFormatter.Format(row.Entry.SizeBytes))
             {
                 Width = 90,

@@ -24,11 +24,11 @@ namespace c2flux
 
         public EntryTable()
         {
-            // AntdUI computed the percentage widths against a tiny control,
-            // so in practice every column had its minimum width.
+            // As measured in the main window: Name takes 22 % (at least 120 px),
+            // the sizes fit their text, Path takes the rest.
             _columns = new Dictionary<string, TableColumn<Row>>
             {
-                [NameColumn] = new TableColumn<Row>(LocalizationService.GetText("Common.Name"), row => row.Entry.Name) { Width = 120 },
+                [NameColumn] = new TableColumn<Row>(LocalizationService.GetText("Common.Name"), row => row.Entry.Name) { Width = 120, Percent = 0.22 },
                 [PercentColumn] = new TableColumn<Row>(LocalizationService.GetText("Chart.TableUsage"), row => row.Percent.ToString("0.0", CultureInfo.CurrentCulture))
                 {
                     Width = 116,

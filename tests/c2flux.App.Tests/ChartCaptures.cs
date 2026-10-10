@@ -28,6 +28,28 @@ namespace c2flux.AppTests
             LocalizationService.Load("en");
         }
 
+        // The client area of the 1280x800 reference window (main-empty.png
+        // from x = 8, y = 31: WinForms draws borders and a title bar).
+        [AvaloniaFact]
+        public void MainEmpty()
+        {
+            MainWindow window = new MainWindow(new AppSettings()) { Width = 1264, Height = 761 };
+            window.Show();
+
+            try
+            {
+                Dispatcher.UIThread.RunJobs();
+                System.Threading.Thread.Sleep(500);
+                Dispatcher.UIThread.RunJobs();
+                using WriteableBitmap frame = window.CaptureRenderedFrame();
+                frame.Save(OutputPath("main-empty"));
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
         [AvaloniaFact]
         public void Symbols()
         {

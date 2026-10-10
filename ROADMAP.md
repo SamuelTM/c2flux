@@ -357,7 +357,7 @@ public sealed class ScanOptions
 - [x] Temas claro, escuro e "seguir o sistema" (`AppLayout`: `WindowsDefault` segue o SO). O `AppSettings` do Core deixou de forçar o escuro; quem força agora é o WinForms, que só tem o escuro pronto
 - [x] Integração do `LocalizationService` com binding: `{l:T Chave}` no XAML, atualizado pelo evento `LocalizationService.LanguageChanged`
 - [x] **RTL:** árabe, hebraico, persa e urdu (`LocalizationService.IsRightToLeft`) viram `FlowDirection.RightToLeft` em todas as janelas. Espelhamento de cada tela: conferir nas capturas da Fase 5.3 em diante
-- [x] Fontes: Inter embutida (`Avalonia.Fonts.Inter`) em todos os SOs. **Desvio:** CJK, tailandês e devanágari usam o *fallback* automático para as fontes do sistema (conferido no macOS com japonês, hindi e árabe), em vez de fontes embutidas (Noto CJK sozinha tem mais de 15 MB). No Linux, o pacote da Fase 6 deve depender de `fonts-noto-cjk`
+- [x] Fontes: **Selawik** embutida (SIL OFL, da Microsoft, com as métricas da Segoe UI do WinForms: larguras de texto iguais às do original em todos os SOs). Na 5.1 era a Inter, ~15% mais larga, o que quebrava a barra de ferramentas em duas linhas; a troca baixou a diferença de todos os gráficos. CJK, tailandês e devanágari usam o *fallback* automático para fontes do sistema. No Linux, o pacote da Fase 6 deve depender de `fonts-noto-cjk`
 - [x] Ícone do app (o mesmo `c2flux.png`/`.ico` do WinForms) e decorações nativas da janela. Barra customizada: não por enquanto; reavaliar depois das capturas da Fase 5.3
 - [x] Menu de aplicativo nativo no macOS: Sobre e Ajustes (⌘,) no menu do app, desabilitados até as janelas existirem (Fase 5.4); Ocultar, Serviços e Sair (⌘Q) o Avalonia já adiciona. Atalhos da Fase 5.3: usar `PlatformHotkeyConfiguration.CommandModifiers` (⌘ no macOS, Ctrl nos outros), nunca `Ctrl` fixo
 
@@ -382,6 +382,12 @@ Ordem sugerida: o que é visto primeiro vem antes.
 
 - [x] Tabelas: `DrawnTable<T>` próprio (decisão: sem `DataGrid`, descontinuado, nem `TreeDataGrid`/`TableView`, pagos), desenhado como o `AntdUI.Table` — cabeçalho fixo, ordenação em três cliques, colunas redimensionáveis, hover, seleção, teclado, tooltip de texto cortado, só as linhas visíveis desenhadas. `EntryTable` (`Chart_TableGridChart`) e `TreemapView` (o `Chart_Treemap` inteiro: caminho, tabela, divisor e treemap). Diferença média contra a referência: 1,4 e 4,4 níveis por pixel. O `Chart_ResponsiveTableGrid` (base dos resultados da busca) vira um `DrawnTable` junto com o `SearchForm`
 - [ ] `MainForm`: layout principal, barra de ferramentas, seletor de unidade, árvore, painel de gráficos, barra de status (`LayoutMainFormController`, `StatusMainFormController`, `TreeEntryController`, `ExportEntryController`, `PartitionGridController`, `DriveComboBoxController`)
+  - [x] Janela, menu (nativo no macOS, dentro da janela no Windows/Linux), barra de ferramentas com os ícones desenhados, árvore, painel de partições, visualizações e barra de status (contadores de alerta, resumo com tamanho de cluster, progresso)
+  - [x] Varredura: sessões por unidade, progresso, árvore ao vivo, pausar e cancelar, histórico de armazenamento (com detalhes) e de varreduras, aviso de pastas puladas. Teste headless varre uma pasta de ponta a ponta
+  - [x] Achado: `DriveInfo.GetDrives` em paralelo derruba o processo no macOS (`getmntinfo` não é seguro entre threads); `Volumes.List` serializa as chamadas
+  - [ ] Menus de contexto (árvore, barra de ferramentas), exportação, salvar e carregar varredura, Sobre, verificação de atualização, argumentos de inicialização, reordenar e ocultar grupos da barra
+  - [ ] Ícones de arquivo, pasta e unidade (serviço por SO); elevação no Windows; aviso de Acesso Total ao Disco no macOS
+  - [ ] Visões embutidas: Análise (`AdvancedFeaturesForm`) e Histórico de armazenamento (`StorageHistoryForm`); hoje os botões ficam desabilitados
 - [ ] `SearchForm`: busca rápida
 - [ ] `SettingsForm`
 - [ ] `ScanHistoryForm`
