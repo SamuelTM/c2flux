@@ -34,6 +34,9 @@ namespace c2flux
         // Share of the table's width, 0..1, as AntdUI's "22%" widths.
         public double Percent { get; set; }
 
+        // Takes the remaining width instead of the last column.
+        public bool Fill { get; set; }
+
         // Sized to the header and the cells' text instead of Width.
         public bool AutoWidth { get; set; }
 
@@ -45,6 +48,16 @@ namespace c2flux
 
         // Draws the cell instead of its text (cell bounds, row, selected).
         public Action<DrawingContext, Rect, TRow, bool> Paint { get; set; }
+    }
+
+    public enum TableStyle
+    {
+        // AntdUI.Table: rounded frame, 32 px bold header with sort arrows,
+        // 30 px rows, column lines.
+        Ant,
+        // A themed WinForms DataGridView (AntdThemeService.ApplyTable): 40 px
+        // header, 36 px alternating rows, only row lines.
+        Classic
     }
 
     // The tables of the WinForms app (AntdUI.Table): a fixed header with sort
@@ -72,6 +85,13 @@ namespace c2flux
         }
 
         public List<TableColumn<TRow>> Columns { get; } = new List<TableColumn<TRow>>();
+
+        public TableStyle Style { get; set; } = TableStyle.Ant;
+
+        // Ctrl and Shift extend the selection.
+        public bool MultiSelect { get; set; }
+
+        public IReadOnlyList<TRow> SelectedItems => _canvas.SelectedRows;
 
         public event Action<TRow> SelectionChanged;
 
@@ -108,7 +128,7 @@ namespace c2flux
 
         internal void UpdateScrollBars(double contentWidth, double contentHeight, double viewportWidth, double viewportHeight)
         {
-            Configure(_verticalScrollBar, contentHeight, viewportHeight, TableCanvas.RowHeight);
+            Configure(_verticalScrollBar, contentHeight, viewportHeight, Style == TableStyle.Classic ? 36 : 30);
             Configure(_horizontalScrollBar, contentWidth, viewportWidth, 24);
         }
 
@@ -146,8 +166,12 @@ namespace c2flux
 
         private sealed class TableCanvas : DrawnControl
         {
-            public const double RowHeight = 30;
-            private const double HeaderHeight = 32;
+            private bool Classic => _owner.Style == TableStyle.Classic;
+            private double RowHeight => Classic ? 36 : 30;
+            private double HeaderHeight => Classic ? 40 : 32;
+            // Ant: header, its line and the frame's top pixel above the rows.
+            private double RowsTop => Classic ? HeaderHeight : HeaderHeight + 2;
+            private double ColumnsLeft => Classic ? 0 : 2;
             private const double CellPadding = 8;
             private const double SortIconWidth = 7;
             private const double SortIconRightGap = 10;
@@ -161,6 +185,8 @@ namespace c2flux
             private TableColumn<TRow> _sortColumn;
             private SortDirection _sortDirection;
             private int _selectedIndex = -1;
+            private int _anchorIndex = -1;
+            private readonly HashSet<TRow> _selected = new HashSet<TRow>();
             private int _hoverIndex = -1;
             private (TableColumn<TRow> Column, double StartX, double StartWidth)? _resize;
             private string _toolTipText;
@@ -176,11 +202,14 @@ namespace c2flux
 
             public TRow SelectedRow => _selectedIndex >= 0 && _selectedIndex < _rows.Count ? _rows[_selectedIndex] : default;
 
+            public IReadOnlyList<TRow> SelectedRows => _rows.Where(_selected.Contains).ToList();
+
             public void SetRows(List<TRow> rows)
             {
                 TRow selected = SelectedRow;
                 _sourceRows = rows;
                 ApplySort();
+                _selected.IntersectWith(rows);
                 _selectedIndex = selected == null ? -1 : _rows.IndexOf(selected);
                 _hoverIndex = -1;
                 RefreshLayout();
@@ -218,7 +247,7 @@ namespace c2flux
             {
                 _layout.Clear();
                 List<TableColumn<TRow>> visible = _owner.Columns.Where(column => column.Visible).ToList();
-                double x = 2;
+                double x = ColumnsLeft;
 
                 foreach (TableColumn<TRow> column in visible)
                 {
@@ -231,12 +260,18 @@ namespace c2flux
 
                 if (_layout.Count > 0)
                 {
-                    double available = Bounds.Width - 2 - x;
+                    double available = Bounds.Width - ColumnsLeft - x;
 
                     if (available > 0)
                     {
-                        var last = _layout[^1];
-                        _layout[^1] = (last.Column, last.X, last.Width + available);
+                        int fill = _layout.FindIndex(item => item.Column.Fill);
+                        fill = fill < 0 ? _layout.Count - 1 : fill;
+
+                        for (int index = fill; index < _layout.Count; index++)
+                        {
+                            var item = _layout[index];
+                            _layout[index] = (item.Column, item.X + (index == fill ? 0 : available), item.Width + (index == fill ? available : 0));
+                        }
                     }
                 }
             }
@@ -246,16 +281,16 @@ namespace c2flux
                 // Header: padding, title, then the sort arrows and their gap
                 // to the separator, as DrawHeader lays them out.
                 double header = CellPadding + MeasureHeader(column.Title) +
-                    (column.Sortable ? 4 + SortIconWidth + SortIconRightGap : CellPadding) + 1;
+                    (column.Sortable && !Classic ? 4 + SortIconWidth + SortIconRightGap : CellPadding) + 1;
                 double cells = _rows.Count == 0
                     ? 0
                     : _rows.Take(500).Max(row => Math.Ceiling(CreateText(column.Text(row) ?? string.Empty, null).WidthIncludingTrailingWhitespace)) + CellPadding * 2 + 1;
                 return Math.Ceiling(Math.Max(header, cells));
             }
 
-            private double ContentWidth => _layout.Count == 0 ? 0 : _layout[^1].X + _layout[^1].Width + 2;
+            private double ContentWidth => _layout.Count == 0 ? 0 : _layout[^1].X + _layout[^1].Width + ColumnsLeft;
 
-            private double ViewportRowsHeight => Math.Max(0, Bounds.Height - HeaderHeight - 2);
+            private double ViewportRowsHeight => Math.Max(0, Bounds.Height - RowsTop);
 
             private void UpdateScrollBars()
             {
@@ -276,7 +311,21 @@ namespace c2flux
 
                 double offsetX = _owner.HorizontalOffset;
                 double offsetY = _owner.VerticalOffset;
-                double rowsTop = HeaderHeight + 2;
+                double rowsTop = RowsTop;
+
+                if (Classic)
+                {
+                    context.FillRectangle(Resource("BackgroundSecondaryBrush"), new Rect(0, 0, width, HeaderHeight));
+                    DrawRows(context, rowsTop, Bounds.Height, offsetX, offsetY, Resource("GridLineBrush"));
+
+                    using (context.PushClip(new Rect(0, 0, width, HeaderHeight)))
+                    {
+                        DrawHeader(context, offsetX);
+                    }
+
+                    return;
+                }
+
                 double contentBottom = Math.Min(Bounds.Height - 1, rowsTop + _rows.Count * RowHeight - offsetY);
                 contentBottom = Math.Max(rowsTop - 1, contentBottom);
                 Rect frame = new Rect(1, 1, width - 2, contentBottom - 1);
@@ -317,7 +366,17 @@ namespace c2flux
                     double x = columnX - offsetX;
                     double textRight = x + columnWidth - CellPadding - 1;
 
-                    if (column.Sortable)
+                    if (Classic)
+                    {
+                        // DataGridView: one glyph, only on the sorted column.
+                        if (_sortColumn == column && _sortDirection != SortDirection.None)
+                        {
+                            double iconLeft = x + columnWidth - SortIconRightGap - SortIconWidth;
+                            DrawSortIcon(context, iconLeft, HeaderHeight / 2, _sortDirection == SortDirection.Ascending ? foreground : null, _sortDirection == SortDirection.Descending ? foreground : null);
+                            textRight = iconLeft - 4;
+                        }
+                    }
+                    else if (column.Sortable)
                     {
                         double iconRight = x + columnWidth - SortIconRightGap;
                         DrawSortIcon(
@@ -330,8 +389,13 @@ namespace c2flux
                     }
 
                     FormattedText title = CreateText(column.Title ?? string.Empty, foreground);
-                    title.SetFontWeight(FontWeight.Bold);
-                    DrawAligned(context, title, new Rect(x + CellPadding, 1, Math.Max(0, textRight - x - CellPadding), HeaderHeight), column.Alignment);
+
+                    if (!Classic)
+                    {
+                        title.SetFontWeight(FontWeight.Bold);
+                    }
+
+                    DrawAligned(context, title, new Rect(x + CellPadding, Classic ? 0 : 1, Math.Max(0, textRight - x - CellPadding), HeaderHeight), column.Alignment);
                 }
             }
 
@@ -353,8 +417,15 @@ namespace c2flux
                     return geometry;
                 }
 
-                context.DrawGeometry(up, null, Triangle(centerY - 6, centerY - 1.5));
-                context.DrawGeometry(down, null, Triangle(centerY + 6, centerY + 1.5));
+                if (up != null)
+                {
+                    context.DrawGeometry(up, null, Triangle(centerY - 6, centerY - 1.5));
+                }
+
+                if (down != null)
+                {
+                    context.DrawGeometry(down, null, Triangle(centerY + 6, centerY + 1.5));
+                }
             }
 
             private void DrawRows(DrawingContext context, double rowsTop, double contentBottom, double offsetX, double offsetY, IBrush border)
@@ -368,6 +439,7 @@ namespace c2flux
                 int first = Math.Max(0, (int)(offsetY / RowHeight));
                 IBrush hover = Resource("SurfaceHighlightBrush");
                 IBrush selected = Resource("AccentBrush");
+                IBrush alternate = Resource("BackgroundSecondaryBrush");
 
                 for (int index = first; index < _rows.Count; index++)
                 {
@@ -378,16 +450,22 @@ namespace c2flux
                         break;
                     }
 
-                    bool isSelected = index == _selectedIndex;
-                    Rect rowBounds = new Rect(1, top, Bounds.Width - 2, RowHeight - 1);
+                    bool isSelected = _selected.Contains(_rows[index]);
+                    Rect rowBounds = Classic
+                        ? new Rect(0, top, Bounds.Width, RowHeight - 1)
+                        : new Rect(1, top, Bounds.Width - 2, RowHeight - 1);
 
                     if (isSelected)
                     {
                         context.FillRectangle(selected, rowBounds);
                     }
-                    else if (index == _hoverIndex)
+                    else if (index == _hoverIndex && !Classic)
                     {
                         context.FillRectangle(hover, rowBounds);
+                    }
+                    else if (Classic && index % 2 == 1)
+                    {
+                        context.FillRectangle(alternate, rowBounds);
                     }
 
                     foreach (var (column, columnX, columnWidth) in _layout)
@@ -405,7 +483,11 @@ namespace c2flux
                         }
                     }
 
-                    if (index < _rows.Count - 1)
+                    if (Classic)
+                    {
+                        context.FillRectangle(border, new Rect(0, top + RowHeight - 1, Bounds.Width, 1));
+                    }
+                    else if (index < _rows.Count - 1)
                     {
                         context.FillRectangle(border, new Rect(1, top + RowHeight - 1, Bounds.Width - 2, 1));
                     }
@@ -451,7 +533,9 @@ namespace c2flux
                 }
                 else
                 {
-                    _sortDirection = _sortDirection == SortDirection.Ascending ? SortDirection.Descending : SortDirection.None;
+                    _sortDirection = _sortDirection == SortDirection.Ascending ? SortDirection.Descending
+                        : Classic ? SortDirection.Ascending
+                        : SortDirection.None;
                 }
 
                 TRow selected = SelectedRow;
@@ -478,7 +562,7 @@ namespace c2flux
 
             private int RowAt(Point point)
             {
-                double rowsTop = HeaderHeight + 2;
+                double rowsTop = RowsTop;
 
                 if (point.Y < rowsTop)
                 {
@@ -491,7 +575,7 @@ namespace c2flux
 
             private TableColumn<TRow> ColumnEdgeAt(Point point)
             {
-                if (point.Y > HeaderHeight + 1)
+                if (point.Y > HeaderHeight)
                 {
                     return null;
                 }
@@ -522,7 +606,7 @@ namespace c2flux
                     return;
                 }
 
-                if (point.Y <= HeaderHeight + 1)
+                if (point.Y < RowsTop)
                 {
                     TableColumn<TRow> column = ColumnAt(point.X).Column;
 
@@ -542,7 +626,22 @@ namespace c2flux
                     return;
                 }
 
-                SetSelectedIndex(index, raiseEvent: true);
+                KeyModifiers modifiers = e.KeyModifiers;
+                bool rightClickOnSelection = e.GetCurrentPoint(this).Properties.IsRightButtonPressed && _selected.Contains(_rows[index]);
+
+                if (_owner.MultiSelect && (modifiers & KeyModifiers.Shift) != 0 && _anchorIndex >= 0)
+                {
+                    SelectRange(_anchorIndex, index);
+                }
+                else if (_owner.MultiSelect && (modifiers & (KeyModifiers.Control | KeyModifiers.Meta)) != 0)
+                {
+                    ToggleRow(index);
+                }
+                else if (!rightClickOnSelection)
+                {
+                    SetSelectedIndex(index, raiseEvent: true);
+                }
+
                 _owner.RaiseRowPressed(_rows[index], e);
 
                 if (e.ClickCount == 2 && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
@@ -665,18 +764,54 @@ namespace c2flux
 
             private void SetSelectedIndex(int index, bool raiseEvent)
             {
-                if (index == _selectedIndex)
+                bool unchanged = index == _selectedIndex && _selected.Count == (index >= 0 ? 1 : 0);
+                _selectedIndex = index;
+                _anchorIndex = index;
+                _selected.Clear();
+
+                if (index >= 0)
+                {
+                    _selected.Add(_rows[index]);
+                }
+
+                if (unchanged)
                 {
                     return;
                 }
 
-                _selectedIndex = index;
                 InvalidateVisual();
 
                 if (raiseEvent)
                 {
                     _owner.RaiseSelectionChanged(SelectedRow);
                 }
+            }
+
+            private void SelectRange(int from, int to)
+            {
+                _selected.Clear();
+
+                for (int index = Math.Min(from, to); index <= Math.Max(from, to); index++)
+                {
+                    _selected.Add(_rows[index]);
+                }
+
+                _selectedIndex = to;
+                InvalidateVisual();
+                _owner.RaiseSelectionChanged(SelectedRow);
+            }
+
+            private void ToggleRow(int index)
+            {
+                if (!_selected.Remove(_rows[index]))
+                {
+                    _selected.Add(_rows[index]);
+                }
+
+                _selectedIndex = index;
+                _anchorIndex = index;
+                InvalidateVisual();
+                _owner.RaiseSelectionChanged(SelectedRow);
             }
 
             private void EnsureVisible(int index)

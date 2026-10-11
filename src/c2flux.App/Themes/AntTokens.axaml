@@ -30,6 +30,7 @@
       <SolidColorBrush x:Key="ButtonDisabledBackgroundBrush" Color="#0A000000" />
       <SolidColorBrush x:Key="PrimaryBrush" Color="#1677FF" />
       <SolidColorBrush x:Key="SelectBorderBrush" Color="#A0A0A0" />
+      <SolidColorBrush x:Key="GridLineBrush" Color="#C8C8C8" />
       <SolidColorBrush x:Key="TableProgressFillBrush" Color="#5A8CD2" />
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
@@ -55,6 +56,8 @@
       <SolidColorBrush x:Key="ButtonDisabledBackgroundBrush" Color="#14FFFFFF" />
       <SolidColorBrush x:Key="PrimaryBrush" Color="#1668DC" />
       <SolidColorBrush x:Key="SelectBorderBrush" Color="#505050" />
+      <!-- ControlPaint.Dark(BackgroundSecondary, 0.2), measured. -->
+      <SolidColorBrush x:Key="GridLineBrush" Color="#181818" />
       <SolidColorBrush x:Key="TableProgressFillBrush" Color="#4687DC" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>

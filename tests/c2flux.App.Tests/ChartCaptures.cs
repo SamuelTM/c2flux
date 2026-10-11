@@ -50,6 +50,30 @@ namespace c2flux.AppTests
             }
         }
 
+        // Client area of alert-history-entries.png (from x = 8, y = 31).
+        [AvaloniaFact]
+        public void AlertHistory()
+        {
+            AppAlertLog.DeleteAll();
+            AppAlertLog.AddInformation("Scan", "Scan of T:\\ completed.");
+            AppAlertLog.AddWarning("Scan", "3 folders could not be read.", "T:\\tree\\unreadable\\locked-dir\nAccess is denied.");
+            AppAlertLog.AddError("Export", "The CSV file could not be written.", "The file is in use by another process.");
+            AlertHistoryWindow window = new AlertHistoryWindow { Width = 804, Height = 461 };
+            window.Show();
+
+            try
+            {
+                Dispatcher.UIThread.RunJobs();
+                using WriteableBitmap frame = window.CaptureRenderedFrame();
+                frame.Save(OutputPath("alert-history-entries"));
+            }
+            finally
+            {
+                window.Close();
+                AppAlertLog.DeleteAll();
+            }
+        }
+
         [AvaloniaFact]
         public void Symbols()
         {

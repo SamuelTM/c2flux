@@ -1321,6 +1321,11 @@ namespace c2flux
             }
 
             UpdateAlertCounters();
+            AlertCounters.PointerPressed += async (_, e) =>
+            {
+                e.Handled = true;
+                await new AlertHistoryWindow().ShowDialog(this);
+            };
         }
 
         private void OnAlertLogChanged(object sender, EventArgs e) => Dispatcher.UIThread.Post(UpdateAlertCounters);
