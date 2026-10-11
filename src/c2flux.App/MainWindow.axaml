@@ -88,7 +88,7 @@
           </ToggleButton>
           <!-- WinForms keeps the Compare scans button hidden; "Scan History" is
                the storage history view. -->
-          <ToggleButton x:Name="StorageHistoryButton" Classes="ant" IsEnabled="False">
+          <ToggleButton x:Name="StorageHistoryButton" Classes="ant">
             <StackPanel Orientation="Horizontal" Spacing="4">
               <l:ToolbarIcon Kind="StorageHistory" IsActive="{Binding #StorageHistoryButton.IsChecked}" />
               <TextBlock Text="{l:T Menu.SpaceHistory}" />

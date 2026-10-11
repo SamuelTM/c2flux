@@ -24,6 +24,7 @@ namespace c2flux
         private readonly AppSettings _settings;
         private GridLength _partitionPanelHeight = new GridLength(180);
         private SearchWindow _searchWindow;
+        private StorageHistoryView _storageHistory;
         private readonly ScannerPipeline _scannerPipeline;
         private readonly IStorageHistorySnapshotSource _storageHistorySnapshotSource;
         private readonly Dictionary<string, ScanSession> _sessions = new Dictionary<string, ScanSession>(StringComparer.OrdinalIgnoreCase);
@@ -81,6 +82,20 @@ namespace c2flux
                 ViewHost.Children.Add(view);
                 button.Click += (_, _) => SetViewMode(mode, save: true);
             }
+
+            _storageHistory = new StorageHistoryView(settings) { IsVisible = false };
+            ViewHost.Children.Add(_storageHistory);
+            StorageHistoryButton.Click += (_, _) =>
+            {
+                if (StorageHistoryButton.IsChecked == true)
+                {
+                    ShowStorageHistory();
+                }
+                else
+                {
+                    SetViewMode(_viewMode, save: false);
+                }
+            };
 
             _table.SetShowFiles(settings.ShowFilesInTree);
             _bar.BarHeight = settings.BarChartBarHeight;
@@ -173,7 +188,9 @@ namespace c2flux
                     Item("Toolbar.PieChart", () => SetViewMode(ViewMode.PieChart, save: true)),
                     Item("Toolbar.BarChart", () => SetViewMode(ViewMode.BarChart, save: true)),
                     Item("Toolbar.Sunburst", () => SetViewMode(ViewMode.Sunburst, save: true)),
-                    Item("Toolbar.Treemap", () => SetViewMode(ViewMode.Treemap, save: true))),
+                    Item("Toolbar.Treemap", () => SetViewMode(ViewMode.Treemap, save: true)),
+                    new NativeMenuItemSeparator(),
+                    Item("Menu.SpaceHistory", ShowStorageHistory)),
                 Submenu(
                     "Menu.Tools",
                     Item("Search.Title", () => OpenSearch(null))),
@@ -562,6 +579,11 @@ namespace c2flux
             session.RootEntry = initialRoot;
             _currentRootEntry = initialRoot;
 
+            if (_storageHistory.IsVisible)
+            {
+                SetViewMode(_settings.SelectedViewMode, save: false);
+            }
+
             // Until the scan reports real progress, the bar creeps from 0.5 %
             // to 3 % so the user sees it started.
             bool progressStarted = false;
@@ -784,6 +806,7 @@ namespace c2flux
                 }
 
                 DateTime? recordedAtUtc = StorageHistoryService.AddRecord(rootEntry.FullPath, rootEntry.SizeBytes);
+                StorageHistoryRecorded(recordedAtUtc);
 
                 if (recordedAtUtc.HasValue && _settings.StorageHistoryDetailsEnabled && snapshot != null)
                 {
@@ -808,6 +831,14 @@ namespace c2flux
                 {
                     Title = AppConstants.FullApplicationName;
                 }
+            }
+        }
+
+        private void StorageHistoryRecorded(DateTime? recordedAtUtc)
+        {
+            if (recordedAtUtc.HasValue && _storageHistory.IsVisible)
+            {
+                _storageHistory.RefreshHistory();
             }
         }
 
@@ -1298,6 +1329,8 @@ namespace c2flux
 
             _viewMode = mode;
             _settings.SelectedViewMode = mode;
+            _storageHistory.IsVisible = false;
+            StorageHistoryButton.IsChecked = false;
 
             foreach (var (viewMode, (button, view)) in _views)
             {
@@ -1316,6 +1349,22 @@ namespace c2flux
             {
                 _settings.Save();
             }
+        }
+
+        // The storage history in place of the chart views (WinForms
+        // ShowStorageHistoryView); a view button or a new scan brings them back.
+        private void ShowStorageHistory()
+        {
+            _storageHistory.RefreshHistory();
+
+            foreach (var (_, (button, view)) in _views)
+            {
+                button.IsChecked = false;
+                view.IsVisible = false;
+            }
+
+            _storageHistory.IsVisible = true;
+            StorageHistoryButton.IsChecked = true;
         }
 
         private void SetScanningState(bool scanning)

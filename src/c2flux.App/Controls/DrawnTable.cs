@@ -96,6 +96,15 @@ namespace c2flux
         // taking the rest; columns do not fill the table.
         public bool Responsive { get; set; }
 
+        // Width Responsive keeps free; 0 makes the shares fill the table.
+        public double ResponsiveReserve { get; set; } = 19;
+
+        // Classic header and row heights (the storage history grids use 32
+        // and 28).
+        public double ClassicHeaderHeight { get; set; } = 40;
+
+        public double ClassicRowHeight { get; set; } = 36;
+
         // A click on a header (column, descending).
         public event Action<TableColumn<TRow>, bool> SortChanged;
 
@@ -149,7 +158,7 @@ namespace c2flux
 
         internal void UpdateScrollBars(double contentWidth, double contentHeight, double viewportWidth, double viewportHeight)
         {
-            Configure(_verticalScrollBar, contentHeight, viewportHeight, Style == TableStyle.Classic ? 36 : 30);
+            Configure(_verticalScrollBar, contentHeight, viewportHeight, Style == TableStyle.Classic ? ClassicRowHeight : 30);
             Configure(_horizontalScrollBar, contentWidth, viewportWidth, 24);
         }
 
@@ -188,8 +197,8 @@ namespace c2flux
         private sealed class TableCanvas : DrawnControl
         {
             private bool Classic => _owner.Style == TableStyle.Classic;
-            private double RowHeight => Classic ? 36 : 30;
-            private double HeaderHeight => Classic ? 40 : 32;
+            private double RowHeight => Classic ? _owner.ClassicRowHeight : 30;
+            private double HeaderHeight => Classic ? _owner.ClassicHeaderHeight : 32;
             // Ant: header, its line and the frame's top pixel above the rows.
             private double RowsTop => Classic ? HeaderHeight : HeaderHeight + 2;
             private double ColumnsLeft => Classic ? 0 : 2;
@@ -274,7 +283,7 @@ namespace c2flux
 
                 if (_owner.Responsive)
                 {
-                    double available = Math.Max(visible.Count * 2, _owner.Bounds.Width - 19);
+                    double available = Math.Max(visible.Count * 2, _owner.Bounds.Width - _owner.ResponsiveReserve);
                     double total = visible.Sum(column => column.Percent);
 
                     for (int index = 0; index < visible.Count; index++)

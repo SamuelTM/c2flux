@@ -157,6 +157,19 @@ namespace c2flux.AppTests
             }
         }
 
+        // The right pane of main-storage-history.png (892x632 from 379, 126):
+        // one data point of the temp folder's volume.
+        [AvaloniaFact]
+        public void StorageHistoryView()
+        {
+            string path = Path.GetTempPath();
+            StorageHistoryService.DeleteRecords(path);
+            StorageHistoryService.AddRecord(path, 4L << 30);
+            c2flux.StorageHistoryView view = new c2flux.StorageHistoryView(new AppSettings());
+            view.RefreshHistory();
+            Capture("storage-history-view", view, 892, 632);
+        }
+
         private static void CaptureWindow(string name, Window window)
         {
             window.Show();
