@@ -82,9 +82,27 @@ jobs:
       - name: Test
         run: dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --logger "console;verbosity=normal"
 
-      # The Avalonia app on the headless platform: no display needed.
+      # The Avalonia app on the headless platform: no display needed. The
+      # captures (phase 5.4) are compared with the WinForms references.
       - name: Test app
         run: dotnet test tests/c2flux.App.Tests/c2flux.App.Tests.csproj --configuration Release
+        env:
+          C2FLUX_CHART_OUT: ${{ runner.temp }}/captures
+
+      - name: Compare captures with the references
+        if: always()
+        shell: bash
+        run: |
+          python3 tests/fidelity/compare.py "$RUNNER_TEMP/captures" --out "$RUNNER_TEMP/captures/fidelity.md"
+          cat "$RUNNER_TEMP/captures/fidelity.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload captures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-captures-${{ matrix.os }}
+          path: ${{ runner.temp }}/captures
+          retention-days: 7
 
   test-tree:
     name: Synthetic test tree (${{ matrix.os }})

@@ -95,7 +95,7 @@ def diff(reference, port, offset):
             strong += d > 40
 
     count = width * height
-    print("mean %.1f, >40: %.1f%%" % (total / count, 100 * strong / count))
+    return total / count, 100 * strong / count
 
 
 def scan(path, axis, index, start, end):
@@ -142,7 +142,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == "diff":
-        diff(args.reference, args.port, tuple(int(v) for v in args.offset.split(",")))
+        print("mean %.1f, >40: %.1f%%" % diff(args.reference, args.port, tuple(int(v) for v in args.offset.split(","))))
     elif args.command == "scan":
         scan(args.file, args.axis, args.index, args.start, args.end)
     elif args.command == "pixel":
