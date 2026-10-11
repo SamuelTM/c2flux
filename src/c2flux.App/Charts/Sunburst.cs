@@ -236,7 +236,7 @@ namespace c2flux
             formatted.MaxTextWidth = bounds.Width;
             formatted.MaxTextHeight = bounds.Height;
             formatted.TextAlignment = TextAlignment.Center;
-            formatted.Trimming = TextTrimming.CharacterEllipsis;
+            formatted.Trimming = DotsTrimming.Instance;
 
             if (!wrap)
             {
@@ -299,17 +299,49 @@ namespace c2flux
 
             double radians = (startAngle + sweepAngle / 2) * Math.PI / 180;
             Point labelCenter = new Point(center.X + middleRadius * Math.Cos(radians), center.Y + middleRadius * Math.Sin(radians));
-            Rect label = new Rect(labelCenter.X - labelWidth / 2, labelCenter.Y - labelHeight / 2, labelWidth, labelHeight);
 
-            using (context.PushGeometryClip(segment))
+            // The label is level while the segment curves: narrow it until it
+            // lies inside the segment, so the text is only ever cut at its
+            // end (with "..."), never clipped by the segment's edges.
+            while (labelWidth >= 48 && !FitsInside(segment, labelCenter, labelWidth, labelHeight))
             {
-                DrawCenteredText(context, entry.Name, new Rect(label.X + 4, label.Y, Math.Max(0, label.Width - 8), drawTwoLines ? 17 : label.Height), Brushes.White, wrap: false);
+                labelWidth -= 4;
+            }
 
-                if (drawTwoLines)
+            if (labelWidth < 48)
+            {
+                return;
+            }
+
+            Rect label = new Rect(labelCenter.X - labelWidth / 2, labelCenter.Y - labelHeight / 2, labelWidth, labelHeight);
+            DrawCenteredText(context, entry.Name, new Rect(label.X + 4, label.Y, Math.Max(0, label.Width - 8), drawTwoLines ? 17 : label.Height), Brushes.White, wrap: false);
+
+            if (drawTwoLines)
+            {
+                DrawCenteredText(context, SizeFormatter.Format(entry.SizeBytes), new Rect(label.X + 4, label.Y + 17, Math.Max(0, label.Width - 8), 17), Brushes.White, wrap: false);
+            }
+        }
+
+        // The rectangle's outline, sampled, lies in the segment.
+        internal static bool FitsInside(Geometry segment, Point center, double width, double height)
+        {
+            const int Steps = 6;
+
+            for (int step = 0; step <= Steps; step++)
+            {
+                double x = center.X - width / 2 + width * step / Steps;
+                double y = center.Y - height / 2 + height * step / Steps;
+
+                if (!segment.FillContains(new Point(x, center.Y - height / 2)) ||
+                    !segment.FillContains(new Point(x, center.Y + height / 2)) ||
+                    !segment.FillContains(new Point(center.X - width / 2, y)) ||
+                    !segment.FillContains(new Point(center.X + width / 2, y)))
                 {
-                    DrawCenteredText(context, SizeFormatter.Format(entry.SizeBytes), new Rect(label.X + 4, label.Y + 17, Math.Max(0, label.Width - 8), 17), Brushes.White, wrap: false);
+                    return false;
                 }
             }
+
+            return true;
         }
 
         private static int GetAvailableDepth(FileSystemEntry entry)

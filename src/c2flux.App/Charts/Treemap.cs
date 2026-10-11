@@ -37,6 +37,7 @@ namespace c2flux
         private HitArea _hoverHitArea;
         private TreemapNode _cachedRootNode;
         private RenderTargetBitmap _renderCache;
+        private double _renderCacheScaling;
         private Size _renderCacheSize;
         private bool _renderCacheDirty = true;
 
@@ -122,7 +123,9 @@ namespace c2flux
                 return;
             }
 
-            if (_renderCache == null || _renderCacheDirty)
+            // A screen with another scale (Retina, moving the window) needs a
+            // cache with its pixel count.
+            if (_renderCache == null || _renderCacheDirty || _renderCacheScaling != (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1))
             {
                 RebuildRenderCache();
             }
@@ -133,7 +136,7 @@ namespace c2flux
                 return;
             }
 
-            context.DrawImage(_renderCache, new Rect(_renderCacheSize), clientBounds);
+            context.DrawImage(_renderCache, new Rect(_renderCache.Size), new Rect(_renderCacheSize));
             DrawHoverOverlay(context);
         }
 
@@ -266,15 +269,20 @@ namespace c2flux
             }
 
             double scaling = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
+            _renderCacheScaling = scaling;
             _renderCache?.Dispose();
+            // 96 DPI with the screen's pixel count, scaled by hand below: a
+            // higher DPI made the drawing and the image size disagree on 2x
+            // screens (only the top-left quarter showed, scaled up).
             _renderCache = new RenderTargetBitmap(
                 new PixelSize((int)Math.Ceiling(width * scaling), (int)Math.Ceiling(height * scaling)),
-                new Vector(96 * scaling, 96 * scaling));
+                new Vector(96, 96));
             _renderCacheSize = new Size(width, height);
             _hitAreas.Clear();
             _renderCacheDirty = false;
 
             using DrawingContext context = _renderCache.CreateDrawingContext();
+            using DrawingContext.PushedState scaled = context.PushTransform(Matrix.CreateScale(scaling, scaling));
             // SmoothingMode.None: tiles and borders on whole pixels.
             using DrawingContext.PushedState aliased = context.PushRenderOptions(new RenderOptions { EdgeMode = EdgeMode.Aliased });
 
@@ -652,37 +660,36 @@ namespace c2flux
                 return _cachedRootNode;
             }
 
+            // Files the scan has listed but not yet attached to a folder; the
+            // path maps are only needed to place those.
+            List<FileSystemEntry> pendingFiles = _entry.IsDirectory
+                ? PendingFiles.Of(_rootEntry ?? _entry).Where(file => !string.IsNullOrWhiteSpace(file.FullPath) && EntryTreeCanvas.IsSameOrDescendantPath(file.FullPath, _entry.FullPath)).ToList()
+                : new List<FileSystemEntry>();
+
+            if (pendingFiles.Count == 0)
+            {
+                // Nodes below are made when drawn: most are never drawn.
+                _cachedRootNode = new TreemapNode(_entry, lazyChildren: true);
+                return _cachedRootNode;
+            }
+
             Dictionary<string, TreemapNode> directoriesByPath = new Dictionary<string, TreemapNode>(StringComparer.OrdinalIgnoreCase);
             HashSet<string> includedFilePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             TreemapNode rootNode = BuildDirectoryTree(_entry, directoriesByPath, includedFilePaths);
 
-            if (_entry.IsDirectory)
+            foreach (FileSystemEntry file in pendingFiles)
             {
-                // Files the scan has listed but not yet attached to a folder.
-                FileSystemEntry fileSourceRoot = _rootEntry ?? _entry;
-                List<FileSystemEntry> allFiles;
-
-                lock (fileSourceRoot.AllFiles)
+                if (!includedFilePaths.Add(NormalizePath(file.FullPath)))
                 {
-                    allFiles = new List<FileSystemEntry>(fileSourceRoot.AllFiles);
+                    continue;
                 }
 
-                foreach (FileSystemEntry file in allFiles)
+                string parentPath = Path.GetDirectoryName(file.FullPath);
+
+                if (!string.IsNullOrWhiteSpace(parentPath) &&
+                    directoriesByPath.TryGetValue(NormalizePath(parentPath), out TreemapNode parentNode))
                 {
-                    if (file == null || file.IsDirectory || string.IsNullOrWhiteSpace(file.FullPath) ||
-                        !EntryTreeCanvas.IsSameOrDescendantPath(file.FullPath, _entry.FullPath) ||
-                        !includedFilePaths.Add(NormalizePath(file.FullPath)))
-                    {
-                        continue;
-                    }
-
-                    string parentPath = Path.GetDirectoryName(file.FullPath);
-
-                    if (!string.IsNullOrWhiteSpace(parentPath) &&
-                        directoriesByPath.TryGetValue(NormalizePath(parentPath), out TreemapNode parentNode))
-                    {
-                        parentNode.Children.Add(new TreemapNode(file));
-                    }
+                    parentNode.Children.Add(new TreemapNode(file));
                 }
             }
 
@@ -725,15 +732,17 @@ namespace c2flux
             return node;
         }
 
+        private static int CompareNodes(TreemapNode left, TreemapNode right)
+        {
+            int sizeCompare = GetNodeSize(right).CompareTo(GetNodeSize(left));
+            return sizeCompare != 0
+                ? sizeCompare
+                : string.Compare(left.DisplayName, right.DisplayName, StringComparison.CurrentCultureIgnoreCase);
+        }
+
         private static void SortChildren(TreemapNode node)
         {
-            node.Children.Sort((left, right) =>
-            {
-                int sizeCompare = GetNodeSize(right).CompareTo(GetNodeSize(left));
-                return sizeCompare != 0
-                    ? sizeCompare
-                    : string.Compare(left.DisplayName, right.DisplayName, StringComparison.CurrentCultureIgnoreCase);
-            });
+            node.Children.Sort(CompareNodes);
 
             foreach (TreemapNode child in node.Children)
             {
@@ -1005,10 +1014,17 @@ namespace c2flux
 
         internal sealed class TreemapNode
         {
-            public TreemapNode(FileSystemEntry entry)
+            private List<TreemapNode> _children;
+
+            public TreemapNode(FileSystemEntry entry, bool lazyChildren = false)
             {
                 Entry = entry;
                 DisplayName = entry?.Name ?? string.Empty;
+
+                if (!lazyChildren)
+                {
+                    _children = new List<TreemapNode>();
+                }
             }
 
             private TreemapNode(string displayName, long explicitSizeBytes, int aggregateCount, FileSystemEntry aggregateParentEntry)
@@ -1026,12 +1042,37 @@ namespace c2flux
             public long ExplicitSizeBytes { get; }
             public int AggregateCount { get; }
             public bool IsAggregate { get; }
-            public List<TreemapNode> Children { get; } = new List<TreemapNode>();
+            public List<TreemapNode> Children => _children ??= CreateChildren();
 
             // Not localized in WinForms either.
             public static TreemapNode CreateAggregate(long sizeBytes, int count, FileSystemEntry aggregateParentEntry)
             {
                 return new TreemapNode("Other (" + count + ")", sizeBytes, count, aggregateParentEntry);
+            }
+
+            // Sorted as SortChildren sorts the nodes built up front.
+            private List<TreemapNode> CreateChildren()
+            {
+                List<TreemapNode> children = new List<TreemapNode>();
+
+                if (Entry == null || !Entry.IsDirectory)
+                {
+                    return children;
+                }
+
+                lock (Entry.Children)
+                {
+                    foreach (FileSystemEntry child in Entry.Children)
+                    {
+                        if (child != null)
+                        {
+                            children.Add(new TreemapNode(child, lazyChildren: true));
+                        }
+                    }
+                }
+
+                children.Sort(CompareNodes);
+                return children;
             }
         }
 

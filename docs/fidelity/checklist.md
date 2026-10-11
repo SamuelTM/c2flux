@@ -9,7 +9,7 @@ Legenda: ✓ confere; ~ confere com resíduo conhecido; — não se aplica (jane
 | Símbolos de status (`chart-symbols`) | 1,0 | ✓ | ✓ | — | ✓ | — | — |
 | Barras (`chart-bar`) | 0,8 | ✓ | ✓ | ~ | ✓ | — | ~ |
 | Pizza (`chart-pie`) | 2,0 | ✓ | ✓ | ~ | — | — | ~ |
-| Sunburst (`chart-sunburst`) | 3,8 | ✓ | ✓ | ~ | — | — | ~ |
+| Sunburst (`chart-sunburst`) | 3,9 | ✓ | ✓ | ~ | — | — | ~ |
 | Árvore (`chart-tree`) | 4,0 | ✓ | ✓ | ~ | ~ | ✓ | ~ |
 | Treemap (`chart-treemap`) | 5,8 | ✓ | ✓ | ~ | — | — | ~ |
 | Tabela (`chart-table`) | 2,4 | ✓ | ✓ | ~ | — | ✓ | ~ |

@@ -432,13 +432,15 @@ namespace c2flux
                 return;
             }
 
+            // A scanned drive shows its result; another one waits for the scan
+            // button (choosing it does not start a scan).
             if (_sessions.ContainsKey(NormalizeScanPath(drive.RootPath)))
             {
                 ShowScanSession(drive.RootPath);
                 return;
             }
 
-            await StartScanAsync(drive.RootPath);
+            UpdateStatusForDrive(drive.RootPath);
         }
 
         private async void OnOpenFolderClick(object sender, RoutedEventArgs e)
@@ -1090,13 +1092,11 @@ namespace c2flux
             }
 
             string prefix = NormalizeScanPath(entry.FullPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            HashSet<FileSystemEntry> attached = PendingFiles.AttachedFiles(entry);
 
-            lock (_currentRootEntry.AllFiles)
-            {
-                return _currentRootEntry.AllFiles.Count(file =>
-                    file != null && !file.IsDirectory && file.FullPath != null &&
-                    file.FullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
-            }
+            return attached.Count + PendingFiles.Of(_currentRootEntry).Count(file =>
+                file.FullPath != null && !attached.Contains(file) &&
+                file.FullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
         }
 
         // ----- toolbar groups and button visibility ------------------------

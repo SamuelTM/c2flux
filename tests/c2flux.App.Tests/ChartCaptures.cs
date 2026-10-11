@@ -1,3 +1,4 @@
+using Avalonia.Platform;
 using System.Linq;
 using Avalonia.Input;
 using Avalonia.VisualTree;
@@ -326,6 +327,51 @@ namespace c2flux.AppTests
             {
                 owner.Close();
             }
+        }
+
+        // On a 2x screen (Retina) the treemap shows the same picture as on a
+        // 1x one, at twice the pixels: its cache once drew only its top-left
+        // quarter, scaled up.
+        [AvaloniaFact]
+        public void Treemap_on_a_2x_screen_matches_1x()
+        {
+            FileSystemEntry root = LoadFixture();
+            byte[] Render(double scaling, out int width)
+            {
+                Treemap treemap = new Treemap();
+                treemap.SetRootEntry(root);
+                treemap.SetEntry(root);
+                Window window = new Window { Width = 400, Height = 300, Content = treemap };
+                window.Show();
+                window.SetRenderScaling(scaling);
+                Dispatcher.UIThread.RunJobs();
+                using WriteableBitmap frame = window.CaptureRenderedFrame();
+                using ILockedFramebuffer buffer = frame.Lock();
+                width = frame.PixelSize.Width;
+                byte[] pixels = new byte[buffer.RowBytes * frame.PixelSize.Height];
+                System.Runtime.InteropServices.Marshal.Copy(buffer.Address, pixels, 0, pixels.Length);
+                window.Close();
+                return pixels;
+            }
+
+            byte[] single = Render(1, out int singleWidth);
+            byte[] doubled = Render(2, out int doubleWidth);
+            Assert.Equal(singleWidth * 2, doubleWidth);
+            long difference = 0;
+            int samples = 0;
+
+            for (int y = 10; y < 290; y += 7)
+            {
+                for (int x = 10; x < 390; x += 7)
+                {
+                    int a = (y * singleWidth + x) * 4;
+                    int b = (y * 2 * doubleWidth + x * 2) * 4;
+                    difference += Math.Abs(single[a] - doubled[b]) + Math.Abs(single[a + 1] - doubled[b + 1]) + Math.Abs(single[a + 2] - doubled[b + 2]);
+                    samples++;
+                }
+            }
+
+            Assert.True(difference / (double)(samples * 3) < 20, "mean difference " + difference / (double)(samples * 3));
         }
 
         private static void CaptureWindow(string name, Window window)

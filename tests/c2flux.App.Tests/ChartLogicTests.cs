@@ -122,5 +122,49 @@ namespace c2flux.AppTests
 
             Assert.Equal(expected, PieChart.SliceContains(bounds, -90, 90, new Point(x, y)));
         }
+
+        [Fact]
+        public void Header_clicks_cycle_ascending_descending_original_and_start_again()
+        {
+            DrawnTable<string> table = new DrawnTable<string>();
+            TableColumn<string> column = new TableColumn<string>("Name", row => row);
+            table.Columns.Add(column);
+            table.SetItems(new[] { "b", "a", "c" });
+
+            string Order() => string.Concat(table.SortedItems);
+            table.ClickHeader(column);
+            Assert.Equal("abc", Order());
+            table.ClickHeader(column);
+            Assert.Equal("cba", Order());
+            table.ClickHeader(column);
+            Assert.Equal("bac", Order());
+            table.ClickHeader(column);
+            Assert.Equal("abc", Order());
+        }
+
+        // Files in AllFiles but not yet in a folder's Children, refreshed
+        // when AllFiles grows.
+        [Fact]
+        public void Pending_files_are_the_listed_files_not_yet_attached()
+        {
+            FileSystemEntry root = new FileSystemEntry { Name = "root", FullPath = "/root", IsDirectory = true };
+            FileSystemEntry folder = new FileSystemEntry { Name = "a", FullPath = "/root/a", IsDirectory = true };
+            FileSystemEntry attached = new FileSystemEntry { Name = "x", FullPath = "/root/a/x", SizeBytes = 1 };
+            FileSystemEntry pending = new FileSystemEntry { Name = "y", FullPath = "/root/a/y", SizeBytes = 2 };
+            root.Children.Add(folder);
+            folder.Children.Add(attached);
+            root.AllFiles.AddRange(new[] { attached, pending });
+
+            Assert.Equal(new[] { pending }, PendingFiles.Of(root));
+            Assert.Equal(new[] { attached }, PendingFiles.AttachedFiles(root));
+
+            FileSystemEntry later = new FileSystemEntry { Name = "z", FullPath = "/root/z", SizeBytes = 3 };
+            root.AllFiles.Add(later);
+            Assert.Equal(new[] { pending, later }, PendingFiles.Of(root));
+
+            folder.Children.Add(pending);
+            root.AllFiles.Remove(later);
+            Assert.Empty(PendingFiles.Of(root));
+        }
     }
 }

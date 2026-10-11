@@ -176,17 +176,9 @@ namespace c2flux
                 }
             }
 
-            FileSystemEntry fileSourceRoot = _rootEntry ?? directory;
-            List<FileSystemEntry> allFiles;
-
-            lock (fileSourceRoot.AllFiles)
+            foreach (FileSystemEntry file in PendingFiles.Of(_rootEntry ?? directory))
             {
-                allFiles = new List<FileSystemEntry>(fileSourceRoot.AllFiles);
-            }
-
-            foreach (FileSystemEntry file in allFiles)
-            {
-                if (file != null && !file.IsDirectory && !string.IsNullOrWhiteSpace(file.FullPath) &&
+                if (!string.IsNullOrWhiteSpace(file.FullPath) &&
                     PathsEqual(Path.GetDirectoryName(file.FullPath), directory.FullPath) &&
                     yielded.Add(NormalizePath(file.FullPath)))
                 {

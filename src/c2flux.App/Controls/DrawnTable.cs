@@ -144,6 +144,9 @@ namespace c2flux
             _canvas.SetSort(column, descending);
         }
 
+        // A click on a column's header (tests).
+        internal void ClickHeader(TableColumn<TRow> column) => _canvas.ToggleSort(column);
+
         internal void RaiseSortChanged(TableColumn<TRow> column, bool descending) => SortChanged?.Invoke(column, descending);
 
         // After changing Columns (titles, visibility, widths).
@@ -588,10 +591,11 @@ namespace c2flux
                 InvalidateVisual();
             }
 
-            // AntdUI cycles ascending, descending, original order.
-            private void ToggleSort(TableColumn<TRow> column)
+            // AntdUI cycles ascending, descending, original order; after the
+            // original order a click starts again.
+            internal void ToggleSort(TableColumn<TRow> column)
             {
-                if (_sortColumn != column)
+                if (_sortColumn != column || _sortDirection == SortDirection.None)
                 {
                     _sortColumn = column;
                     _sortDirection = column.DescendingFirst ? SortDirection.Descending : SortDirection.Ascending;
