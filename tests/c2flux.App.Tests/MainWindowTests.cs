@@ -74,9 +74,17 @@ namespace c2flux.AppTests
                 Assert.Equal(new[] { "b.bin" }, search.Results.Select(result => result.Name));
                 search.Close();
 
-                await window.Export.CopyCsvAsync(root);
+                // While a copy runs, export is off and a second request is ignored.
+                Button export = window.FindControl<Button>("ExportButton");
+                Assert.True(export.IsEnabled);
+                Task copy = window.Export.CopyCsvAsync(root);
+                Assert.False(export.IsEnabled);
+                Assert.True(window.Export.CopyTreeTextAsync(root).IsCompleted);
+                await copy;
+                Assert.True(export.IsEnabled);
                 string csv = await Avalonia.Input.Platform.ClipboardExtensions.TryGetTextAsync(window.Clipboard);
                 Assert.Contains("sub", csv);
+                Assert.DoesNotContain("└─", csv);
             }
             finally
             {
@@ -252,6 +260,29 @@ namespace c2flux.AppTests
                 }
 
                 Assert.False(slow.Result.Completed);
+
+                // finish runs once, with the result, after work past the dialog's delay.
+                int finished = 0;
+                Task<(bool Completed, int Result)> withFinish = AppDialogs.RunWithProgressAsync<int>(owner, "finish", (report, token) =>
+                {
+                    System.Threading.Thread.Sleep(600);
+                    return 3;
+                }, finish: result =>
+                {
+                    finished += result;
+                    return Task.CompletedTask;
+                });
+                deadline = DateTime.UtcNow.AddSeconds(5);
+
+                while (!withFinish.IsCompleted && DateTime.UtcNow < deadline)
+                {
+                    Dispatcher.UIThread.RunJobs();
+                    System.Threading.Thread.Sleep(10);
+                }
+
+                Assert.Equal((true, 3), withFinish.Result);
+                Assert.Equal(3, finished);
+                Assert.Empty(owner.OwnedWindows);
             }
             finally
             {

@@ -42,6 +42,7 @@ namespace c2flux
         private readonly ExportActions _export;
         private NativeMenuItem _menuSaveScan;
         private NativeMenuItem _menuExport;
+        private bool _scanning;
         private FileSystemEntry _currentRootEntry;
         private FileSystemEntry _selectedEntry;
         private ViewMode _viewMode;
@@ -137,6 +138,7 @@ namespace c2flux
 
             _export = new ExportActions(settings, this, SetStatusText);
             ExportButton.Click += async (_, _) => await _export.ExportAsync(_currentRootEntry);
+            _export.BusyChanged += UpdateExportAvailability;
             Tree.EntryPressed += OnTreeEntryPressed;
             BuildMenu();
 
@@ -1396,10 +1398,14 @@ namespace c2flux
                 items.Add(Command(LocalizationService.Format("Context.RemoveFromTreePane", rootName.Length == 0 ? root.FullPath : rootName), () => RemoveFromTreePane(entry)));
             }
 
-            items.Add(Command(LocalizationService.GetText("Context.Export"), async () => await _export.ExportAsync(entry)));
+            MenuItem export = Command(LocalizationService.GetText("Context.Export"), async () => await _export.ExportAsync(entry));
+            MenuItem copyText = Command(_export.TreeCopyMenuText("Context.CopyTreeText"), async () => await _export.CopyTreeTextAsync(entry));
+            MenuItem copyCsv = Command(_export.TreeCopyMenuText("Context.CopyTreeCsv"), async () => await _export.CopyCsvAsync(entry));
+            export.IsEnabled = copyText.IsEnabled = copyCsv.IsEnabled = !_export.IsBusy;
+            items.Add(export);
             items.Add(Command(LocalizationService.GetText("Context.CopyPath"), async () => await _export.CopyPathAsync(entry)));
-            items.Add(Command(_export.TreeCopyMenuText("Context.CopyTreeText"), async () => await _export.CopyTreeTextAsync(entry)));
-            items.Add(Command(_export.TreeCopyMenuText("Context.CopyTreeCsv"), async () => await _export.CopyCsvAsync(entry)));
+            items.Add(copyText);
+            items.Add(copyCsv);
             items.Add(new Separator());
             items.Add(Command(LocalizationService.GetText("Context.OpenInExplorer"), () => FileManager.Open(entry.FullPath)));
             items.Add(new Separator());
@@ -1661,14 +1667,27 @@ namespace c2flux
                 PauseIcon.Kind = ToolbarIconKind.Pause;
             }
 
+            _scanning = scanning;
             bool hasResult = !scanning && _currentRootEntry != null;
-            ExportButton.IsEnabled = hasResult;
             AnalysisButton.IsEnabled = hasResult;
+
+            if (_menuSaveScan != null)
+            {
+                _menuSaveScan.IsEnabled = hasResult;
+            }
+
+            UpdateExportAvailability();
+        }
+
+        // Export needs a result and no export already running.
+        private void UpdateExportAvailability()
+        {
+            bool canExport = !_scanning && _currentRootEntry != null && !_export.IsBusy;
+            ExportButton.IsEnabled = canExport;
 
             if (_menuExport != null)
             {
-                _menuExport.IsEnabled = hasResult;
-                _menuSaveScan.IsEnabled = hasResult;
+                _menuExport.IsEnabled = canExport;
             }
         }
 

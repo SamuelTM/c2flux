@@ -37,31 +37,69 @@ namespace c2flux
             }
         }
 
-        public async Task CopyTreeTextAsync(FileSystemEntry entry)
-        {
-            (bool completed, string text) = entry == null ? (false, null) : await RunWithProgressAsync(entry, (rowWritten, token) => BuildTreeText(entry, _settings.ExportMaxDepth, rowWritten, token));
+        // An export or a tree copy is running: the window disables them,
+        // and another request is ignored (the progress dialog that blocks
+        // the window only shows after a moment).
+        public bool IsBusy { get; private set; }
 
-            if (completed && !string.IsNullOrWhiteSpace(text))
+        public event Action BusyChanged;
+
+        public Task CopyTreeTextAsync(FileSystemEntry entry) =>
+            CopyAsync(entry, (rowWritten, token) => BuildTreeText(entry, _settings.ExportMaxDepth, rowWritten, token));
+
+        public Task CopyCsvAsync(FileSystemEntry entry) =>
+            CopyAsync(entry, (rowWritten, token) => _csvExportService.ExportToString(new[] { entry }, _settings, rowWritten, token));
+
+        // The clipboard gets the text while the dialog is still up.
+        private async Task CopyAsync(FileSystemEntry entry, Func<Action, CancellationToken, string> build)
+        {
+            if (entry == null)
             {
-                await _owner.Clipboard.SetTextAsync(text);
+                return;
+            }
+
+            (bool completed, string text) = await RunWithProgressAsync(entry, build, async text =>
+            {
+                if (!string.IsNullOrEmpty(text))
+                {
+                    await _owner.Clipboard.SetTextAsync(text);
+                }
+            });
+
+            if (completed && !string.IsNullOrEmpty(text))
+            {
                 _setStatusText(LocalizationService.GetText("Status.ExportCopied") + entry.FullPath);
             }
         }
 
-        public async Task CopyCsvAsync(FileSystemEntry entry)
+        private void SetBusy(bool busy)
         {
-            (bool completed, string csv) = entry == null ? (false, null) : await RunWithProgressAsync(entry, (rowWritten, token) => _csvExportService.ExportToString(new[] { entry }, _settings, rowWritten, token));
-
-            if (completed && !string.IsNullOrEmpty(csv))
-            {
-                await _owner.Clipboard.SetTextAsync(csv);
-                _setStatusText(LocalizationService.GetText("Status.ExportCopied") + entry.FullPath);
-            }
+            IsBusy = busy;
+            BusyChanged?.Invoke();
         }
 
         // The rows are counted first (fast: no text), so the dialog can show
-        // how far the export is.
-        private Task<(bool Completed, T Result)> RunWithProgressAsync<T>(FileSystemEntry entry, Func<Action, CancellationToken, T> export)
+        // how far the export is. Not started while another one runs.
+        private async Task<(bool Completed, T Result)> RunWithProgressAsync<T>(FileSystemEntry entry, Func<Action, CancellationToken, T> export, Func<T, Task> finish = null)
+        {
+            if (IsBusy)
+            {
+                return (false, default);
+            }
+
+            SetBusy(true);
+
+            try
+            {
+                return await RunWithProgressCoreAsync(entry, export, finish);
+            }
+            finally
+            {
+                SetBusy(false);
+            }
+        }
+
+        private Task<(bool Completed, T Result)> RunWithProgressCoreAsync<T>(FileSystemEntry entry, Func<Action, CancellationToken, T> export, Func<T, Task> finish)
         {
             return AppDialogs.RunWithProgressAsync(
                 _owner as Window,
@@ -72,12 +110,13 @@ namespace c2flux
                     int written = 0;
                     return export(() => report(Math.Min(1, ++written / (double)total)), token);
                 },
-                LocalizationService.GetText("Toolbar.Export"));
+                LocalizationService.GetText("Toolbar.Export"),
+                finish);
         }
 
         public async Task ExportAsync(FileSystemEntry entry)
         {
-            if (entry == null)
+            if (entry == null || IsBusy)
             {
                 return;
             }

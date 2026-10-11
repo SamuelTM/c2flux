@@ -124,8 +124,11 @@ namespace c2flux
         // Runs work off the UI thread. When it takes more than a moment, a
         // dialog shows its progress (work reports 0 to 1) with a cancel
         // button; cancel (or closing the dialog) cancels work's token.
-        // Completed is false when work was canceled.
-        public static async Task<(bool Completed, T Result)> RunWithProgressAsync<T>(Window owner, string message, Func<Action<double>, CancellationToken, T> work, string title = null)
+        // Completed is false when work was canceled. finish, when given,
+        // runs on the UI thread with work's result while the dialog stays
+        // (its bar running, no cancel): a step without progress of its own,
+        // like handing a big text to the clipboard.
+        public static async Task<(bool Completed, T Result)> RunWithProgressAsync<T>(Window owner, string message, Func<Action<double>, CancellationToken, T> work, string title = null, Func<T, Task> finish = null)
         {
             using CancellationTokenSource cancellation = new CancellationTokenSource();
             StrongBox<double> progress = new StrongBox<double>();
@@ -196,13 +199,32 @@ namespace c2flux
                         cancellation.Cancel();
                     }
                 };
-                _ = task.ContinueWith(_ => Dispatcher.UIThread.Post(dialog.Close), TaskScheduler.Default);
+                _ = task.ContinueWith(_ => Dispatcher.UIThread.Post(async () =>
+                {
+                    if (finish != null && task.IsCompletedSuccessfully)
+                    {
+                        bar.IsIndeterminate = true;
+                        percent.IsVisible = false;
+                        cancel.IsEnabled = false;
+                        await finish(task.Result);
+                        finish = null;
+                    }
+
+                    dialog.Close();
+                }), TaskScheduler.Default);
                 await Show(dialog, owner);
             }
 
             try
             {
-                return (true, await task);
+                T result = await task;
+
+                if (finish != null)
+                {
+                    await finish(result);
+                }
+
+                return (true, result);
             }
             catch (OperationCanceledException)
             {
