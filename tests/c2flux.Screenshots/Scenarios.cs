@@ -56,6 +56,7 @@ namespace c2flux.Screenshots
         {
             await RunChartsAsync();
             await RunMainWindowEmptyAsync();
+            await RunStatesAsync();
             await RunMainWindowScannedAsync();
 
             await RunSettingsAsync();
@@ -64,6 +65,7 @@ namespace c2flux.Screenshots
             await RunStandaloneAsync("alert-history", () => _app.CreateForm("AlertHistoryForm", _app.LoadSettings()));
             AddSampleAlerts();
             await RunStandaloneAsync("alert-history-entries", () => _app.CreateForm("AlertHistoryForm", _app.LoadSettings()));
+            await RunResizedAsync("alert-history-entries-min", () => _app.CreateForm("AlertHistoryForm", _app.LoadSettings()), Size.Empty);
 
             await RunScanHistoryAsync();
             await RunStorageHistoryAsync();
@@ -304,6 +306,98 @@ namespace c2flux.Screenshots
                 await CloseAsync(main);
             }
         }
+
+        // ----- states and sizes (phase 5.4) ---------------------------------
+
+        // Hover and pressed controls (the real cursor and button), and
+        // windows at a smaller size: references the static captures lack.
+        private async Task RunStatesAsync()
+        {
+            await RunHoverAsync("state-about-ok-hover", () => _app.CreateForm("AboutForm", _app.LoadSettings()), "buttonOk", press: false);
+            await RunHoverAsync("state-about-ok-pressed", () => _app.CreateForm("AboutForm", _app.LoadSettings()), "buttonOk", press: true);
+            await RunHoverAsync("state-settings-checkbox-hover", () => _app.CreateForm("SettingsForm", _app.LoadSettings()), "checkBoxSkipReparsePoints", press: false);
+            await RunHoverAsync("state-main-toolbar-hover", () => _app.CreateForm("MainForm"), "toolStripButtonTable", press: false);
+
+            await RunResizedAsync("main-empty-small", () => _app.CreateForm("MainForm"), new Size(1000, 650));
+        }
+
+        private async Task RunHoverAsync(string name, Func<Form> create, string controlName, bool press)
+        {
+            if (!_options.ShouldRun(name))
+            {
+                return;
+            }
+
+            Form form = null;
+            Point restore = Cursor.Position;
+
+            try
+            {
+                form = ShowAt(create());
+                await SettleAsync();
+                Control target = Descendants(form).FirstOrDefault(control => control.Name == controlName)
+                    ?? throw new InvalidOperationException(controlName + " not found.");
+                Cursor.Position = target.PointToScreen(new Point(target.Width / 2, target.Height / 2));
+
+                if (press)
+                {
+                    mouse_event(MouseLeftDown, 0, 0, 0, IntPtr.Zero);
+                }
+
+                await SettleAsync();
+                Save(name, form);
+            }
+            catch (Exception exception)
+            {
+                Fail(name, exception);
+            }
+            finally
+            {
+                // Released away from the button, so it does not click.
+                Cursor.Position = new Point(0, 0);
+
+                if (press)
+                {
+                    mouse_event(MouseLeftUp, 0, 0, 0, IntPtr.Zero);
+                }
+
+                Cursor.Position = restore;
+            }
+
+            await CloseAsync(form);
+        }
+
+        // size empty: the form's minimum size.
+        private async Task RunResizedAsync(string name, Func<Form> create, Size size)
+        {
+            if (!_options.ShouldRun(name))
+            {
+                return;
+            }
+
+            Form form = null;
+
+            try
+            {
+                form = ShowAt(create());
+                await SettleAsync();
+                form.Size = size.IsEmpty ? form.MinimumSize : size;
+                await SettleAsync();
+                Save(name, form);
+            }
+            catch (Exception exception)
+            {
+                Fail(name, exception);
+            }
+
+            await CloseAsync(form);
+        }
+
+        private const int MouseLeftDown = 0x0002;
+        private const int MouseLeftUp = 0x0004;
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern void mouse_event(int flags, int dx, int dy, int data, IntPtr extraInfo);
 
         private async Task RunMainWindowScannedAsync()
         {
