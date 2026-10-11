@@ -800,32 +800,6 @@ namespace c2flux
                 return snapshotRoot;
         }
 
-        private string ResolveFilePath(
-            INode node,
-            string normalizedRootPath,
-            Dictionary<uint, INode> directoryNodesByNodeIndex,
-            Dictionary<uint, string> directoryPathsByNodeIndex,
-            List<INode> directoryResolutionBuffer,
-            HashSet<uint> directoryResolutionVisitedNodeIndexes,
-            out string parentPath)
-        {
-            parentPath = ResolveDirectoryPath(
-                node.ParentNodeIndex,
-                normalizedRootPath,
-                directoryNodesByNodeIndex,
-                directoryPathsByNodeIndex,
-                directoryResolutionBuffer,
-                directoryResolutionVisitedNodeIndexes);
-
-            if (string.IsNullOrWhiteSpace(parentPath) ||
-                string.IsNullOrWhiteSpace(node.Name))
-            {
-                return string.Empty;
-            }
-
-            return Path.Combine(parentPath, node.Name);
-        }
-
         private string ResolveDirectoryPath(
             uint nodeIndex,
             string normalizedRootPath,

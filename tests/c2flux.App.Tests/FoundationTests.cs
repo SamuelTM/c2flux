@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
-using Avalonia.Styling;
 using Avalonia.Threading;
 using Xunit;
 
@@ -9,6 +8,26 @@ namespace c2flux.AppTests
 {
     public class FoundationTests
     {
+        // An exception in an async event handler (export, save...) is
+        // logged and shown, not a crash.
+        [AvaloniaFact]
+        public void An_unhandled_exception_on_the_ui_thread_is_logged_and_shown()
+        {
+            System.Exception shown = null;
+            App.KeepRunningOnUnhandledExceptions(exception => shown = exception);
+            AppAlertLog.DeleteAll();
+
+            Dispatcher.UIThread.Post(async () =>
+            {
+                await System.Threading.Tasks.Task.Yield();
+                throw new System.IO.IOException("disk full");
+            });
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal("disk full", shown?.Message);
+            Assert.Contains(AppAlertLog.GetEntries(), entry => entry.Message == "disk full");
+        }
+
         [AvaloniaFact]
         public void Texts_and_direction_follow_the_language_at_runtime()
         {

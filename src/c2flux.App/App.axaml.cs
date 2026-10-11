@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -19,6 +20,48 @@ namespace c2flux
         // As the WinForms Program.Main: settings, log, language, elevation,
         // then the main window (optionally scanning the folder given as the
         // first argument).
+        private static bool _unhandledExceptionsHandled;
+        private static bool _showingUnhandledException;
+
+        // An exception nothing caught (mostly in an async event handler:
+        // export, save, settings, update check) is logged and shown instead
+        // of closing the app.
+        internal static void KeepRunningOnUnhandledExceptions(Action<Exception> show)
+        {
+            if (_unhandledExceptionsHandled)
+            {
+                return;
+            }
+
+            _unhandledExceptionsHandled = true;
+            Dispatcher.UIThread.UnhandledException += (_, e) =>
+            {
+                e.Handled = true;
+                AppAlertLog.AddError("App", e.Exception.Message, e.Exception.ToString());
+
+                // One dialog at a time: an error in the dialog itself must not
+                // open another.
+                if (!_showingUnhandledException)
+                {
+                    _showingUnhandledException = true;
+
+                    try
+                    {
+                        show(e.Exception);
+                    }
+                    finally
+                    {
+                        _showingUnhandledException = false;
+                    }
+                }
+            };
+            TaskScheduler.UnobservedTaskException += (_, e) =>
+            {
+                AppAlertLog.AddError("App", e.Exception.GetBaseException().Message, e.Exception.ToString());
+                e.SetObserved();
+            };
+        }
+
         public override void OnFrameworkInitializationCompleted()
         {
             AppSettings settings = AppSettings.Load();
@@ -39,6 +82,10 @@ namespace c2flux
 
                 MainWindow main = new MainWindow(settings);
                 desktop.MainWindow = main;
+                KeepRunningOnUnhandledExceptions(exception => _ = AppDialogs.ShowErrorOkAsync(
+                    main.IsVisible ? main : null,
+                    exception.Message,
+                    LocalizationService.GetText("Common.Error")));
 
                 // Core services warn through the UI.
                 AppNotifications.WarningHandler = (_, message, title, okText) =>

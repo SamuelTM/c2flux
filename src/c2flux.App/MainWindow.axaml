@@ -40,31 +40,31 @@
         </StackPanel>
         <StackPanel x:Name="GroupViews" Orientation="Horizontal" Spacing="5" Margin="0,7,16,7">
           <Border Background="Transparent" Width="7" Margin="0,0,0,0"><Rectangle Classes="grip" /></Border>
-          <ToggleButton x:Name="TableButton" Classes="ant view" Tag="Table">
+          <ToggleButton x:Name="TableButton" Classes="ant" Tag="Table">
             <StackPanel Orientation="Horizontal" Spacing="4">
               <l:ToolbarIcon Kind="Table" IsActive="{Binding #TableButton.IsChecked}" />
               <TextBlock Text="{l:T Toolbar.Table, StripSymbol=True}" />
             </StackPanel>
           </ToggleButton>
-          <ToggleButton x:Name="PieButton" Classes="ant view" Tag="PieChart">
+          <ToggleButton x:Name="PieButton" Classes="ant" Tag="PieChart">
             <StackPanel Orientation="Horizontal" Spacing="4">
               <l:ToolbarIcon Kind="PieChart" IsActive="{Binding #PieButton.IsChecked}" />
               <TextBlock Text="{l:T Toolbar.PieChart, StripSymbol=True}" />
             </StackPanel>
           </ToggleButton>
-          <ToggleButton x:Name="BarButton" Classes="ant view" Tag="BarChart">
+          <ToggleButton x:Name="BarButton" Classes="ant" Tag="BarChart">
             <StackPanel Orientation="Horizontal" Spacing="4">
               <l:ToolbarIcon Kind="BarChart" IsActive="{Binding #BarButton.IsChecked}" />
               <TextBlock Text="{l:T Toolbar.BarChart, StripSymbol=True}" />
             </StackPanel>
           </ToggleButton>
-          <ToggleButton x:Name="SunburstButton" Classes="ant view" Tag="Sunburst">
+          <ToggleButton x:Name="SunburstButton" Classes="ant" Tag="Sunburst">
             <StackPanel Orientation="Horizontal" Spacing="4">
               <l:ToolbarIcon Kind="Sunburst" IsActive="{Binding #SunburstButton.IsChecked}" />
               <TextBlock Text="{l:T Toolbar.Sunburst, StripSymbol=True}" />
             </StackPanel>
           </ToggleButton>
-          <ToggleButton x:Name="TreemapButton" Classes="ant view" Tag="Treemap">
+          <ToggleButton x:Name="TreemapButton" Classes="ant" Tag="Treemap">
             <StackPanel Orientation="Horizontal" Spacing="4">
               <l:ToolbarIcon Kind="Treemap" IsActive="{Binding #TreemapButton.IsChecked}" />
               <TextBlock Text="{l:T Toolbar.Treemap, StripSymbol=True}" />

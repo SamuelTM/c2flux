@@ -595,14 +595,6 @@ namespace c2flux
             command.ExecuteNonQuery();
         }
 
-        private static void VacuumDatabase()
-        {
-            using SqliteConnection connection = OpenConnection();
-            using SqliteCommand command = connection.CreateCommand();
-            command.CommandText = "VACUUM;";
-            command.ExecuteNonQuery();
-        }
-
         private static string GetDatabaseDirectoryPath()
         {
             string directoryPath = Path.GetDirectoryName(databaseFilePath);
@@ -1084,29 +1076,6 @@ namespace c2flux
                 StringComparison.OrdinalIgnoreCase);
         }
 
-        private static bool IsPathWithinRoot(string path, string rootPath)
-        {
-            string fullPath;
-
-            try
-            {
-                fullPath = Path.GetFullPath(path);
-            }
-            catch
-            {
-                return false;
-            }
-
-            if (string.Equals(fullPath, rootPath, StringComparison.OrdinalIgnoreCase))
-                return true;
-
-            string rootPrefix = Path.EndsInDirectorySeparator(rootPath)
-                ? rootPath
-                : rootPath + Path.DirectorySeparatorChar;
-
-            return fullPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase);
-        }
-
         private static Dictionary<long, EntryData> LoadEntryState(
             SqliteConnection connection,
             long scanKey)
@@ -1243,33 +1212,6 @@ namespace c2flux
                 "Mapped entries: " + mappedEntryCount +
                 Environment.NewLine +
                 "Required entries: " + entries.Count);
-        }
-
-        private static int GetStoredPathDepth(
-            long pathId,
-            Dictionary<long, PathData> paths,
-            Dictionary<long, int> depthByPathId,
-            HashSet<long> visited)
-        {
-            if (depthByPathId.TryGetValue(pathId, out int existingDepth))
-                return existingDepth;
-
-            if (!visited.Add(pathId))
-                throw new InvalidDataException("Scan History path hierarchy contains a cycle.");
-
-            if (!paths.TryGetValue(pathId, out PathData path))
-                throw new InvalidDataException("Scan History path entry is missing.");
-
-            int depth = path.ParentPathId == 0
-                ? 0
-                : 1 + GetStoredPathDepth(
-                    path.ParentPathId,
-                    paths,
-                    depthByPathId,
-                    visited);
-
-            depthByPathId[pathId] = depth;
-            return depth;
         }
 
         private static List<long> LoadScanChain(
@@ -1658,21 +1600,6 @@ namespace c2flux
             public long SizeBytes { get; set; }
             public long LastWriteUtcTicks { get; set; }
             public int Depth { get; set; }
-
-            public static EntryData FromFileSystemEntry(FileSystemEntry entry)
-            {
-                return new EntryData
-                {
-                    FullPath = entry.FullPath,
-                    Name = string.IsNullOrWhiteSpace(entry.Name)
-                        ? GetEntryName(entry.FullPath)
-                        : entry.Name,
-                    IsDirectory = entry.IsDirectory,
-                    SizeBytes = entry.SizeBytes,
-                    LastWriteUtcTicks = GetUtcTicks(entry.LastWriteTimeUtc),
-                    Depth = GetPathDepth(entry.FullPath)
-                };
-            }
 
             public bool HasSameVersion(EntryData other)
             {

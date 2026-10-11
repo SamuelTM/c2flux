@@ -769,23 +769,6 @@ namespace c2flux
             }
         }
 
-        private static bool TryGetLinkState(
-            string path,
-            out bool isSymbolicLink)
-        {
-            try
-            {
-                isSymbolicLink =
-                    new FileInfo(path).LinkTarget != null;
-                return true;
-            }
-            catch
-            {
-                isSymbolicLink = false;
-                return false;
-            }
-        }
-
         private sealed class PhysicalFile
         {
             private readonly HashSet<string> _locations =

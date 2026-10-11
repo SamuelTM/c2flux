@@ -403,22 +403,6 @@ namespace c2flux
             }
         }
 
-        private static bool ReplaceLegacyTranslation(
-            Dictionary<string, string> texts,
-            string key,
-            string legacyValue,
-            string correctedValue)
-        {
-            if (!texts.TryGetValue(key, out string currentValue))
-                return false;
-
-            if (!string.Equals(currentValue, legacyValue, StringComparison.Ordinal))
-                return false;
-
-            texts[key] = correctedValue;
-            return true;
-        }
-
         private static Dictionary<string, string> LoadLanguageFile(
             string languageCode)
         {

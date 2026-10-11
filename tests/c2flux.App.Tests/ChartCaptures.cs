@@ -47,7 +47,7 @@ namespace c2flux.AppTests
                 System.Threading.Thread.Sleep(500);
                 Dispatcher.UIThread.RunJobs();
                 using WriteableBitmap frame = window.CaptureRenderedFrame();
-                frame.Save(OutputPath("main-empty"));
+                frame.Save(OutputPath("main-empty"), PngBitmapEncoderOptions.Default);
             }
             finally
             {
@@ -105,7 +105,7 @@ namespace c2flux.AppTests
 
                 Dispatcher.UIThread.RunJobs();
                 using WriteableBitmap frame = window.CaptureRenderedFrame();
-                frame.Save(OutputPath(name));
+                frame.Save(OutputPath(name), PngBitmapEncoderOptions.Default);
 
                 if (press)
                 {
@@ -181,7 +181,7 @@ namespace c2flux.AppTests
                     window.ShowPage(index);
                     Dispatcher.UIThread.RunJobs();
                     using WriteableBitmap frame = window.CaptureRenderedFrame();
-                    frame.Save(OutputPath(names[index]));
+                    frame.Save(OutputPath(names[index]), PngBitmapEncoderOptions.Default);
                 }
             }
             finally
@@ -219,7 +219,7 @@ namespace c2flux.AppTests
                 Dispatcher.UIThread.RunJobs();
                 using (WriteableBitmap frame = window.CaptureRenderedFrame())
                 {
-                    frame.Save(OutputPath("search"));
+                    frame.Save(OutputPath("search"), PngBitmapEncoderOptions.Default);
                 }
 
                 window.SearchText = "file-00";
@@ -227,7 +227,7 @@ namespace c2flux.AppTests
                 Dispatcher.UIThread.RunJobs();
                 using (WriteableBitmap results = window.CaptureRenderedFrame())
                 {
-                    results.Save(OutputPath("search-results"));
+                    results.Save(OutputPath("search-results"), PngBitmapEncoderOptions.Default);
                 }
 
                 // The minimum size with the frame (550x560), then the
@@ -237,14 +237,14 @@ namespace c2flux.AppTests
                 Dispatcher.UIThread.RunJobs();
                 using (WriteableBitmap small = window.CaptureRenderedFrame())
                 {
-                    small.Save(OutputPath("search-results-min"));
+                    small.Save(OutputPath("search-results-min"), PngBitmapEncoderOptions.Default);
                 }
 
                 Control filters = window.FiltersButton;
                 window.MouseMove(filters.TranslatePoint(new Point(filters.Bounds.Width / 2, filters.Bounds.Height / 2), window) ?? default);
                 Dispatcher.UIThread.RunJobs();
                 using WriteableBitmap hover = window.CaptureRenderedFrame();
-                hover.Save(OutputPath("search-results-min-filters-hover"));
+                hover.Save(OutputPath("search-results-min-filters-hover"), PngBitmapEncoderOptions.Default);
             }
             finally
             {
@@ -279,13 +279,13 @@ namespace c2flux.AppTests
                 Dispatcher.UIThread.RunJobs();
                 using (WriteableBitmap frame = window.CaptureRenderedFrame())
                 {
-                    frame.Save(OutputPath("analysis"));
+                    frame.Save(OutputPath("analysis"), PngBitmapEncoderOptions.Default);
                 }
 
                 view.ShowPageForTest(2);
                 Dispatcher.UIThread.RunJobs();
                 using WriteableBitmap largest = window.CaptureRenderedFrame();
-                largest.Save(OutputPath("analysis-largest-files"));
+                largest.Save(OutputPath("analysis-largest-files"), PngBitmapEncoderOptions.Default);
             }
             finally
             {
@@ -311,7 +311,7 @@ namespace c2flux.AppTests
                 Window dialog = owner.OwnedWindows.Single();
                 using (WriteableBitmap frame = dialog.CaptureRenderedFrame())
                 {
-                    frame.Save(OutputPath("dialog-full-disk-access"));
+                    frame.Save(OutputPath("dialog-full-disk-access"), PngBitmapEncoderOptions.Default);
                 }
 
                 foreach (TextBlock text in dialog.GetVisualDescendants().OfType<TextBlock>())
@@ -382,7 +382,7 @@ namespace c2flux.AppTests
             {
                 Dispatcher.UIThread.RunJobs();
                 using WriteableBitmap frame = window.CaptureRenderedFrame();
-                frame.Save(OutputPath(name));
+                frame.Save(OutputPath(name), PngBitmapEncoderOptions.Default);
             }
             finally
             {
@@ -405,7 +405,7 @@ namespace c2flux.AppTests
             {
                 Dispatcher.UIThread.RunJobs();
                 using WriteableBitmap frame = window.CaptureRenderedFrame();
-                frame.Save(OutputPath("alert-history-entries"));
+                frame.Save(OutputPath("alert-history-entries"), PngBitmapEncoderOptions.Default);
             }
             finally
             {
@@ -547,7 +547,7 @@ namespace c2flux.AppTests
             {
                 Dispatcher.UIThread.RunJobs();
                 using WriteableBitmap frame = window.CaptureRenderedFrame();
-                frame.Save(OutputPath(name));
+                frame.Save(OutputPath(name), PngBitmapEncoderOptions.Default);
             }
             finally
             {
@@ -574,7 +574,7 @@ namespace c2flux.AppTests
             }
 
             string path = OutputPath(name);
-            bitmap.Save(path);
+            bitmap.Save(path, PngBitmapEncoderOptions.Default);
             return path;
         }
     }

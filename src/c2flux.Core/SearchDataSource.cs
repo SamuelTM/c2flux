@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace c2flux
 {
     public enum SearchSource

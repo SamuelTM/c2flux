@@ -834,13 +834,6 @@ namespace c2flux
             [MarshalAs(UnmanagedType.U1)] bool restartScan);
 
         [StructLayout(LayoutKind.Sequential)]
-        private struct FILETIME
-        {
-            public uint dwLowDateTime;
-            public uint dwHighDateTime;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
         private struct UNICODE_STRING
         {
             public ushort Length;

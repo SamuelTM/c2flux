@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
-using Avalonia.VisualTree;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Xunit;
@@ -163,7 +162,7 @@ namespace c2flux.AppTests
                 {
                     Directory.CreateDirectory(output);
                     using Avalonia.Media.Imaging.WriteableBitmap frame = Avalonia.Headless.HeadlessWindowExtensions.CaptureRenderedFrame(window);
-                    frame.Save(Path.Combine(output, "toolbar-drag.png"));
+                    frame.Save(Path.Combine(output, "toolbar-drag.png"), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
                 }
 
                 window.MouseUp(target, Avalonia.Input.MouseButton.Left);
