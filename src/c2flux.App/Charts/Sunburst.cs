@@ -39,8 +39,7 @@ namespace c2flux
                 return;
             }
 
-            int availableDepth = GetAvailableDepth(Entry);
-            int visibleDepth = _depth == 0 ? availableDepth : Math.Min(_depth, availableDepth);
+            int visibleDepth = GetAvailableDepth(Entry, _depth == 0 ? int.MaxValue : _depth);
 
             if (visibleDepth <= 0)
             {
@@ -344,18 +343,30 @@ namespace c2flux
             return true;
         }
 
-        private static int GetAvailableDepth(FileSystemEntry entry)
+        // The depth below entry, up to limit: walks no deeper than drawn.
+        internal static int GetAvailableDepth(FileSystemEntry entry, int limit)
         {
-            if (entry.Children.Count == 0)
+            if (limit <= 0 || entry.Children.Count == 0)
             {
                 return 0;
             }
 
-            return 1 + entry.Children
-                .Where(child => child != null && child.SizeBytes > 0)
-                .Select(GetAvailableDepth)
-                .DefaultIfEmpty(0)
-                .Max();
+            int deepest = 0;
+
+            foreach (FileSystemEntry child in entry.Children)
+            {
+                if (child != null && child.SizeBytes > 0)
+                {
+                    deepest = Math.Max(deepest, GetAvailableDepth(child, limit - 1));
+
+                    if (deepest == limit - 1)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            return 1 + deepest;
         }
     }
 }

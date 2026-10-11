@@ -142,6 +142,42 @@ namespace c2flux.AppTests
             Assert.Equal("abc", Order());
         }
 
+        // Each folder's files are one range of the index: its count and its
+        // largest files match a walk of its subtree.
+        [Fact]
+        public void Entry_index_counts_and_ranks_the_files_of_each_folder()
+        {
+            FileSystemEntry Folder(string path, params FileSystemEntry[] children)
+            {
+                FileSystemEntry folder = new FileSystemEntry { Name = System.IO.Path.GetFileName(path), FullPath = path, IsDirectory = true };
+                folder.Children.AddRange(children);
+                return folder;
+            }
+
+            FileSystemEntry File(string path, long size) => new FileSystemEntry { Name = System.IO.Path.GetFileName(path), FullPath = path, SizeBytes = size };
+
+            FileSystemEntry deep = Folder("/r/a/b", File("/r/a/b/1", 50), File("/r/a/b/2", 5));
+            FileSystemEntry a = Folder("/r/a", File("/r/a/3", 30), deep, Folder("/r/a/empty"));
+            FileSystemEntry c = Folder("/r/c", File("/r/c/4", 40), File("/r/c/5", 1));
+            FileSystemEntry root = Folder("/r", a, File("/r/6", 10), c);
+            root.AllFiles.AddRange(EntryTable.GetLargestFiles(root, 100));
+
+            Assert.Equal(6, EntryIndex.FileCount(root, root));
+            Assert.Equal(3, EntryIndex.FileCount(root, a));
+            Assert.Equal(2, EntryIndex.FileCount(root, deep));
+            Assert.Equal(2, EntryIndex.FileCount(root, c));
+
+            foreach (FileSystemEntry folder in new[] { root, a, deep, c })
+            {
+                Assert.Equal(
+                    EntryTable.GetLargestFiles(folder, 2).Select(file => file.FullPath),
+                    EntryIndex.LargestFiles(root, folder, 2).Select(file => file.FullPath));
+            }
+
+            Assert.Equal(new[] { "/r/c/4", "/r/a/b/1" }, EntryIndex.LargestFiles(root, root, 2).Select(file => file.FullPath));
+            Assert.Null(EntryIndex.LargestFiles(root, File("/elsewhere", 1), 2));
+        }
+
         // Files in AllFiles but not yet in a folder's Children, refreshed
         // when AllFiles grows.
         [Fact]
@@ -155,16 +191,18 @@ namespace c2flux.AppTests
             folder.Children.Add(attached);
             root.AllFiles.AddRange(new[] { attached, pending });
 
-            Assert.Equal(new[] { pending }, PendingFiles.Of(root));
-            Assert.Equal(new[] { attached }, PendingFiles.AttachedFiles(root));
+            Assert.Equal(new[] { pending }, EntryIndex.PendingFiles(root));
+            Assert.Equal(1, EntryIndex.FileCount(root, root));
+            Assert.Equal(1, EntryIndex.FileCount(root, folder));
 
             FileSystemEntry later = new FileSystemEntry { Name = "z", FullPath = "/root/z", SizeBytes = 3 };
             root.AllFiles.Add(later);
-            Assert.Equal(new[] { pending, later }, PendingFiles.Of(root));
+            Assert.Equal(new[] { pending, later }, EntryIndex.PendingFiles(root));
 
             folder.Children.Add(pending);
             root.AllFiles.Remove(later);
-            Assert.Empty(PendingFiles.Of(root));
+            Assert.Empty(EntryIndex.PendingFiles(root));
+            Assert.Equal(2, EntryIndex.FileCount(root, root));
         }
     }
 }

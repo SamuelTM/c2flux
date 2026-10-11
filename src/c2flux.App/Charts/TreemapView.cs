@@ -176,7 +176,7 @@ namespace c2flux
                 }
             }
 
-            foreach (FileSystemEntry file in PendingFiles.Of(_rootEntry ?? directory))
+            foreach (FileSystemEntry file in EntryIndex.PendingFiles(_rootEntry ?? directory))
             {
                 if (!string.IsNullOrWhiteSpace(file.FullPath) &&
                     PathsEqual(Path.GetDirectoryName(file.FullPath), directory.FullPath) &&

@@ -46,19 +46,32 @@ namespace c2flux
         // (and NoPadding when padded is false).
         protected void DrawTextLine(DrawingContext context, string text, Rect bounds, IBrush brush, bool padded = true)
         {
+            FormattedText formatted = LayoutTextLine(text, bounds, brush, padded, out Point origin);
+
+            if (formatted != null)
+            {
+                context.DrawText(formatted, origin);
+            }
+        }
+
+        // DrawTextLine without drawing: null when nothing fits.
+        protected FormattedText LayoutTextLine(string text, Rect bounds, IBrush brush, bool padded, out Point origin)
+        {
             double padding = padded ? TextPadding : 0;
             double width = bounds.Width - padding * 2;
+            origin = default;
 
             if (width <= 0)
             {
-                return;
+                return null;
             }
 
             FormattedText formatted = CreateText(text, brush);
             formatted.MaxTextWidth = width;
             formatted.MaxLineCount = 1;
             formatted.Trimming = DotsTrimming.Instance;
-            context.DrawText(formatted, new Point(bounds.X + padding, bounds.Y + (bounds.Height - formatted.Height) / 2));
+            origin = new Point(bounds.X + padding, bounds.Y + (bounds.Height - formatted.Height) / 2);
+            return formatted;
         }
     }
 }

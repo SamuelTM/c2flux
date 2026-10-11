@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -37,6 +38,10 @@ namespace c2flux
         private HitArea _hoverHitArea;
         private TreemapNode _cachedRootNode;
         private RenderTargetBitmap _renderCache;
+        // Labels go on the screen, not into the cache: the aliased edge mode
+        // there draws jagged glyphs, and a bitmap is resampled (and its text
+        // blurred) wherever it does not land on whole screen pixels.
+        private readonly List<(FormattedText Text, Point Origin)> _labels = new List<(FormattedText Text, Point Origin)>();
         private double _renderCacheScaling;
         private Size _renderCacheSize;
         private bool _renderCacheDirty = true;
@@ -137,6 +142,12 @@ namespace c2flux
             }
 
             context.DrawImage(_renderCache, new Rect(_renderCache.Size), new Rect(_renderCacheSize));
+
+            foreach ((FormattedText text, Point origin) in _labels)
+            {
+                context.DrawText(text, origin);
+            }
+
             DrawHoverOverlay(context);
         }
 
@@ -279,6 +290,7 @@ namespace c2flux
                 new Vector(96, 96));
             _renderCacheSize = new Size(width, height);
             _hitAreas.Clear();
+            _labels.Clear();
             _renderCacheDirty = false;
 
             using DrawingContext context = _renderCache.CreateDrawingContext();
@@ -498,12 +510,22 @@ namespace c2flux
                 double titleWidth = Math.Min(labelBounds.Width, Math.Min(labelBounds.Width, MeasureUnpadded(node.DisplayName)) + horizontalPadding * 2);
                 Rect titleBand = new Rect(labelBounds.X, labelBounds.Y, titleWidth, LineHeight);
                 context.FillRectangle(bandBrush, titleBand);
-                DrawTextLine(context, node.DisplayName, titleBand.Deflate(new Thickness(horizontalPadding, 0)), Brushes.White, padded: false);
+                QueueTextLine(node.DisplayName, titleBand.Deflate(new Thickness(horizontalPadding, 0)));
             }
 
             Rect sizeBand = new Rect(labelBounds.X, sizeTop, requiredSizeWidth, LineHeight);
             context.FillRectangle(bandBrush, sizeBand);
-            DrawTextLine(context, sizeText, sizeBand.Deflate(new Thickness(horizontalPadding, 0)), Brushes.White, padded: false);
+            QueueTextLine(sizeText, sizeBand.Deflate(new Thickness(horizontalPadding, 0)));
+        }
+
+        private void QueueTextLine(string text, Rect bounds)
+        {
+            FormattedText formatted = LayoutTextLine(text, bounds, Brushes.White, false, out Point origin);
+
+            if (formatted != null)
+            {
+                _labels.Add((formatted, origin));
+            }
         }
 
         private bool CanDrawDirectoryHeader(TreemapNode node, Rect bounds)
@@ -527,8 +549,8 @@ namespace c2flux
             DrawHorizontalLine(context, new SolidColorBrush(WithAlpha(ChartColors.Lighten(nodeColor, 1.28D), 170)), header.Left, header.Right - 1, header.Bottom - 1);
 
             double textWidth = Math.Max(0, header.Width - horizontalPadding * 2);
-            DrawTextLine(context, node.DisplayName, new Rect(header.X + horizontalPadding, header.Y, textWidth, LineHeight), Brushes.White, padded: false);
-            DrawTextLine(context, SizeFormatter.Format(GetNodeSize(node)), new Rect(header.X + horizontalPadding, header.Y + LineHeight, textWidth, LineHeight), Brushes.White, padded: false);
+            QueueTextLine(node.DisplayName, new Rect(header.X + horizontalPadding, header.Y, textWidth, LineHeight));
+            QueueTextLine(SizeFormatter.Format(GetNodeSize(node)), new Rect(header.X + horizontalPadding, header.Y + LineHeight, textWidth, LineHeight));
         }
 
         // Header of a family's top folder: name and size on a dark band with
@@ -552,16 +574,13 @@ namespace c2flux
             DrawHorizontalLine(context, new SolidColorBrush(ChartColors.Lighten(familyColor, 1.18D)), header.Left, header.Right - 1, header.Bottom - 1);
 
             double textWidth = Math.Max(0, header.Width - 8);
-            DrawTextLine(context, node.Entry.Name, new Rect(header.X + 4, header.Y, textWidth, Math.Min(LineHeight, header.Height)), Brushes.White, padded: false);
+            QueueTextLine(node.Entry.Name, new Rect(header.X + 4, header.Y, textWidth, Math.Min(LineHeight, header.Height)));
 
             if (header.Height > LineHeight)
             {
-                DrawTextLine(
-                    context,
+                QueueTextLine(
                     SizeFormatter.Format(node.Entry.SizeBytes),
-                    new Rect(header.X + 4, header.Y + LineHeight, textWidth, Math.Min(LineHeight, header.Height - LineHeight)),
-                    Brushes.White,
-                    padded: false);
+                    new Rect(header.X + 4, header.Y + LineHeight, textWidth, Math.Min(LineHeight, header.Height - LineHeight)));
             }
         }
 
@@ -663,13 +682,13 @@ namespace c2flux
             // Files the scan has listed but not yet attached to a folder; the
             // path maps are only needed to place those.
             List<FileSystemEntry> pendingFiles = _entry.IsDirectory
-                ? PendingFiles.Of(_rootEntry ?? _entry).Where(file => !string.IsNullOrWhiteSpace(file.FullPath) && EntryTreeCanvas.IsSameOrDescendantPath(file.FullPath, _entry.FullPath)).ToList()
+                ? EntryIndex.PendingFiles(_rootEntry ?? _entry).Where(file => !string.IsNullOrWhiteSpace(file.FullPath) && EntryTreeCanvas.IsSameOrDescendantPath(file.FullPath, _entry.FullPath)).ToList()
                 : new List<FileSystemEntry>();
 
             if (pendingFiles.Count == 0)
             {
                 // Nodes below are made when drawn: most are never drawn.
-                _cachedRootNode = new TreemapNode(_entry, lazyChildren: true);
+                _cachedRootNode = TreemapNode.For(_entry);
                 return _cachedRootNode;
             }
 
@@ -821,7 +840,7 @@ namespace c2flux
                 return result;
             }
 
-            long totalSize = node.Children.Sum(child => Math.Max(0, GetNodeSize(child)));
+            (long totalSize, int positiveCount) = node.GetPositiveTotals();
 
             if (totalSize <= 0)
             {
@@ -829,30 +848,27 @@ namespace c2flux
             }
 
             double availableArea = bounds.Width * bounds.Height;
-            long aggregateSize = 0;
-            int aggregateCount = 0;
+            long includedSize = 0;
 
-            foreach (TreemapNode child in node.Children.OrderByDescending(GetNodeSize))
+            // Children are sorted by size (CompareNodes), those with a size
+            // first: after the first one without a tile, none gets one.
+            for (int index = 0; index < positiveCount; index++)
             {
-                long childSize = Math.Max(0, GetNodeSize(child));
-
-                if (childSize <= 0)
-                {
-                    continue;
-                }
-
+                TreemapNode child = node.Children[index];
+                long childSize = GetNodeSize(child);
                 double estimatedArea = availableArea * childSize / totalSize;
 
-                if (result.Count < MaximumVisibleChildren && (estimatedArea >= MinimumChildPixelArea || result.Count < 8))
+                if (result.Count >= MaximumVisibleChildren || (estimatedArea < MinimumChildPixelArea && result.Count >= 8))
                 {
-                    result.Add(child);
+                    break;
                 }
-                else
-                {
-                    aggregateSize += childSize;
-                    aggregateCount += child.IsAggregate ? child.AggregateCount : 1;
-                }
+
+                result.Add(child);
+                includedSize += childSize;
             }
+
+            long aggregateSize = totalSize - includedSize;
+            int aggregateCount = positiveCount - result.Count;
 
             if (aggregateSize > 0)
             {
@@ -1014,9 +1030,18 @@ namespace c2flux
 
         internal sealed class TreemapNode
         {
+            // Lazy nodes of a finished tree, kept per entry so another
+            // selection draws the same folders without making them again.
+            private static readonly ConditionalWeakTable<FileSystemEntry, TreemapNode> LazyNodes = new ConditionalWeakTable<FileSystemEntry, TreemapNode>();
+
             private List<TreemapNode> _children;
 
-            public TreemapNode(FileSystemEntry entry, bool lazyChildren = false)
+            public TreemapNode(FileSystemEntry entry)
+                : this(entry, lazyChildren: false)
+            {
+            }
+
+            private TreemapNode(FileSystemEntry entry, bool lazyChildren)
             {
                 Entry = entry;
                 DisplayName = entry?.Name ?? string.Empty;
@@ -1026,6 +1051,9 @@ namespace c2flux
                     _children = new List<TreemapNode>();
                 }
             }
+
+            public static TreemapNode For(FileSystemEntry entry) =>
+                LazyNodes.GetValue(entry, key => new TreemapNode(key, lazyChildren: true));
 
             private TreemapNode(string displayName, long explicitSizeBytes, int aggregateCount, FileSystemEntry aggregateParentEntry)
             {
@@ -1050,6 +1078,33 @@ namespace c2flux
                 return new TreemapNode("Other (" + count + ")", sizeBytes, count, aggregateParentEntry);
             }
 
+            private (long Size, int Count)? _positiveTotals;
+
+            // The summed size of the children with a size, and their number.
+            public (long Size, int Count) GetPositiveTotals()
+            {
+                if (_positiveTotals == null)
+                {
+                    long size = 0;
+                    int count = 0;
+
+                    foreach (TreemapNode child in Children)
+                    {
+                        long childSize = GetNodeSize(child);
+
+                        if (childSize > 0)
+                        {
+                            size += childSize;
+                            count++;
+                        }
+                    }
+
+                    _positiveTotals = (size, count);
+                }
+
+                return _positiveTotals.Value;
+            }
+
             // Sorted as SortChildren sorts the nodes built up front.
             private List<TreemapNode> CreateChildren()
             {
@@ -1066,7 +1121,7 @@ namespace c2flux
                     {
                         if (child != null)
                         {
-                            children.Add(new TreemapNode(child, lazyChildren: true));
+                            children.Add(For(child));
                         }
                     }
                 }

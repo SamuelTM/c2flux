@@ -20,6 +20,7 @@ namespace c2flux
         private readonly DrawnTable<Row> _table = new DrawnTable<Row>();
         private readonly Dictionary<string, TableColumn<Row>> _columns;
         private FileSystemEntry _entry;
+        private FileSystemEntry _rootEntry;
         private bool _showFiles;
 
         public EntryTable()
@@ -62,9 +63,12 @@ namespace c2flux
             Content = _table;
         }
 
-        public void SetEntry(FileSystemEntry entry)
+        // root (the scanned tree entry lies in) finds the largest files from
+        // its EntryIndex instead of a walk.
+        public void SetEntry(FileSystemEntry entry, FileSystemEntry root = null)
         {
             _entry = entry;
+            _rootEntry = root;
             BindRows();
         }
 
@@ -115,7 +119,7 @@ namespace c2flux
             }
 
             List<FileSystemEntry> entries = _showFiles
-                ? GetLargestFiles(_entry, 100)
+                ? (_rootEntry == null ? null : EntryIndex.LargestFiles(_rootEntry, _entry, 100)) ?? GetLargestFiles(_entry, 100)
                 : _entry.Children.Where(child => child.IsDirectory).ToList();
             long totalSize = entries.Sum(child => child.SizeBytes);
 
@@ -140,11 +144,13 @@ namespace c2flux
                         continue;
                     }
 
-                    largest.Enqueue(child, child.SizeBytes);
-
-                    if (largest.Count > count)
+                    if (largest.Count < count)
                     {
-                        largest.Dequeue();
+                        largest.Enqueue(child, child.SizeBytes);
+                    }
+                    else if (largest.TryPeek(out _, out long smallest) && child.SizeBytes > smallest)
+                    {
+                        largest.EnqueueDequeue(child, child.SizeBytes);
                     }
                 }
             }

@@ -1039,7 +1039,7 @@ namespace c2flux
 
         private void BindViews(FileSystemEntry entry)
         {
-            _table.SetEntry(entry);
+            _table.SetEntry(entry, _currentRootEntry);
             _pie.SetEntry(entry);
             _bar.SetEntry(entry);
             _sunburst.SetDisplayOptions(_settings.SunburstDepth, _settings.SunburstMaxItems);
@@ -1092,11 +1092,8 @@ namespace c2flux
             }
 
             string prefix = NormalizeScanPath(entry.FullPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-            HashSet<FileSystemEntry> attached = PendingFiles.AttachedFiles(entry);
-
-            return attached.Count + PendingFiles.Of(_currentRootEntry).Count(file =>
-                file.FullPath != null && !attached.Contains(file) &&
-                file.FullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+            return EntryIndex.FileCount(_currentRootEntry, entry) + EntryIndex.PendingFiles(_currentRootEntry).Count(file =>
+                file.FullPath != null && file.FullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
         }
 
         // ----- toolbar groups and button visibility ------------------------
