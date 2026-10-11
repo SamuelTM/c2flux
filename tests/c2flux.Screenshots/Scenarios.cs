@@ -66,6 +66,7 @@ namespace c2flux.Screenshots
             AddSampleAlerts();
             await RunStandaloneAsync("alert-history-entries", () => _app.CreateForm("AlertHistoryForm", _app.LoadSettings()));
             await RunResizedAsync("alert-history-entries-min", () => _app.CreateForm("AlertHistoryForm", _app.LoadSettings()), Size.Empty);
+            await RunHoverAsync("state-alert-history-close-hover", () => _app.CreateForm("AlertHistoryForm", _app.LoadSettings()), "Close", press: false);
 
             await RunScanHistoryAsync();
             await RunStorageHistoryAsync();
@@ -318,7 +319,18 @@ namespace c2flux.Screenshots
             await RunHoverAsync("state-settings-checkbox-hover", () => _app.CreateForm("SettingsForm", _app.LoadSettings()), "checkBoxSkipReparsePoints", press: false);
             await RunHoverAsync("state-main-toolbar-hover", () => _app.CreateForm("MainForm"), "toolStripButtonTable", press: false);
 
+            await RunHoverAsync("state-main-view-hover", () => _app.CreateForm("MainForm"), "toolStripButtonPieChart", press: false);
+            await RunHoverAsync("state-settings-tab-hover", () => _app.CreateForm("SettingsForm", _app.LoadSettings()), "Export", press: false);
+            await RunHoverAsync("state-database-move-hover", () =>
+            {
+                object settings = _app.LoadSettings();
+                return _app.CreateForm("DatabaseMoveForm", AppHost.Get(settings, "Layout"), (string)AppHost.Get(settings, "ScanHistoryDatabasePath"));
+            }, "Use existing DB", press: false);
+            await RunHoverAsync("state-update-download-hover", () =>
+                _app.CreateForm("UpdateAvailableForm", AppHost.Get(_app.LoadSettings(), "Layout"), CreateSampleUpdateResult()), "Download", press: false);
+
             await RunResizedAsync("main-empty-small", () => _app.CreateForm("MainForm"), new Size(1000, 650));
+            await RunResizedAsync("main-empty-large", () => _app.CreateForm("MainForm"), new Size(1600, 900));
         }
 
         private async Task RunHoverAsync(string name, Func<Form> create, string controlName, bool press)
@@ -335,7 +347,9 @@ namespace c2flux.Screenshots
             {
                 form = ShowAt(create());
                 await SettleAsync();
+                // By name, or by the text of a button that has none.
                 Control target = Descendants(form).FirstOrDefault(control => control.Name == controlName)
+                    ?? Descendants(form).FirstOrDefault(control => control.Text == controlName)
                     ?? throw new InvalidOperationException(controlName + " not found.");
                 Cursor.Position = target.PointToScreen(new Point(target.Width / 2, target.Height / 2));
 
@@ -626,6 +640,18 @@ namespace c2flux.Screenshots
                 AppHost.Invoke(search, "buttonSearch_Click", null, EventArgs.Empty);
                 await Task.Delay(TimeSpan.FromSeconds(4));
                 Save("search-results", search);
+
+                // Phase 5.4: the results at the minimum size, and the filters
+                // button under the pointer.
+                search.Size = search.MinimumSize;
+                await SettleAsync();
+                Save("search-results-min", search);
+                Control filters = (Control)AppHost.Get(search, "buttonToggleFilters");
+                Point restore = Cursor.Position;
+                Cursor.Position = filters.PointToScreen(new Point(filters.Width / 2, filters.Height / 2));
+                await SettleAsync();
+                Save("search-results-min-filters-hover", search);
+                Cursor.Position = restore;
             }
             catch (Exception exception)
             {
