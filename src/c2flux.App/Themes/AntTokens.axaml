@@ -32,6 +32,11 @@
       <SolidColorBrush x:Key="SelectBorderBrush" Color="#A0A0A0" />
       <SolidColorBrush x:Key="GridLineBrush" Color="#C8C8C8" />
       <SolidColorBrush x:Key="TableProgressFillBrush" Color="#5A8CD2" />
+      <!-- Ant Design button shadows (0 2px 0). -->
+      <BoxShadows x:Key="ButtonShadow">0 2 0 0 #05000000</BoxShadows>
+      <BoxShadows x:Key="PrimaryButtonShadow">0 2 0 0 #1A0591FF</BoxShadows>
+      <BoxShadows x:Key="InputFocusShadow">0 0 0 4 #1A0591FF</BoxShadows>
+      <SolidColorBrush x:Key="InputFocusBorderBrush" Color="#1677FF" />
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <SolidColorBrush x:Key="BackgroundPrimaryBrush" Color="#202020" />
@@ -59,6 +64,12 @@
       <!-- ControlPaint.Dark(BackgroundSecondary, 0.2), measured. -->
       <SolidColorBrush x:Key="GridLineBrush" Color="#181818" />
       <SolidColorBrush x:Key="TableProgressFillBrush" Color="#4687DC" />
+      <!-- Measured: white at 4 %, primary at 14 % and 12 %. -->
+      <BoxShadows x:Key="ButtonShadow">0 2 0 0 #0AFFFFFF</BoxShadows>
+      <BoxShadows x:Key="PrimaryButtonShadow">0 2 0 0 #241668DC</BoxShadows>
+      <BoxShadows x:Key="InputFocusShadow">0 0 0 4 #1F1668DC</BoxShadows>
+      <!-- Measured: 2 px of primary at 50 %. -->
+      <SolidColorBrush x:Key="InputFocusBorderBrush" Color="#801668DC" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 

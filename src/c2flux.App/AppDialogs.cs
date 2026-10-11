@@ -27,22 +27,39 @@ namespace c2flux
         }
 
         // True for Yes. No is the highlighted (and Escape) button.
-        public static async Task<bool> ShowWarningYesNoAsync(Window owner, string message, string title = null, string yesText = null, string noText = null)
+        public static Task<bool> ShowWarningYesNoAsync(Window owner, string message, string title = null, string yesText = null, string noText = null)
+        {
+            return ShowChoiceAsync(owner, DialogIconKind.Warning, message, title, yesText ?? LocalizationService.GetText("Common.Yes"), noText ?? LocalizationService.GetText("Common.No"));
+        }
+
+        // The MessageBox.Show calls of WinForms (YesNo with Question,
+        // RetryCancel with Warning): true for the first button.
+        public static Task<bool> ShowQuestionYesNoAsync(Window owner, string message, string title = null)
+        {
+            return ShowChoiceAsync(owner, DialogIconKind.Question, message, title, LocalizationService.GetText("Common.Yes"), LocalizationService.GetText("Common.No"));
+        }
+
+        public static Task<bool> ShowWarningRetryCancelAsync(Window owner, string message, string title = null)
+        {
+            return ShowChoiceAsync(owner, DialogIconKind.Warning, message, title, LocalizationService.GetText("Common.Retry"), LocalizationService.GetText("Common.Cancel"));
+        }
+
+        private static async Task<bool> ShowChoiceAsync(Window owner, DialogIconKind icon, string message, string title, string acceptText, string cancelText)
         {
             Window dialog = CreateDialog(title, 430, 178);
             Canvas canvas = (Canvas)dialog.Content;
-            Button yes = CreateButton(yesText ?? LocalizationService.GetText("Common.Yes"), primary: false);
-            Button no = CreateButton(noText ?? LocalizationService.GetText("Common.No"), primary: true);
+            Button accept = CreateButton(acceptText, primary: false);
+            Button cancel = CreateButton(cancelText, primary: true);
             bool result = false;
 
-            Place(canvas, new DialogIcon { Kind = DialogIconKind.Warning }, 28, 42, 32, 32);
+            Place(canvas, new DialogIcon { Kind = icon }, 28, 42, 32, 32);
             Place(canvas, CreateMessage(message), 82, 28, 324, 60);
-            Place(canvas, yes, 232, 122, 84, 32);
-            Place(canvas, no, 326, 122, 84, 32);
-            yes.IsDefault = true;
-            no.IsCancel = true;
-            yes.Click += (_, _) => { result = true; dialog.Close(); };
-            no.Click += (_, _) => dialog.Close();
+            Place(canvas, accept, 232, 122, 84, 32);
+            Place(canvas, cancel, 326, 122, 84, 32);
+            accept.IsDefault = true;
+            cancel.IsCancel = true;
+            accept.Click += (_, _) => { result = true; dialog.Close(); };
+            cancel.Click += (_, _) => dialog.Close();
             await Show(dialog, owner);
             return result;
         }
@@ -117,7 +134,7 @@ namespace c2flux
             {
                 Content = text,
                 HorizontalContentAlignment = HorizontalAlignment.Center,
-                Classes = { "ant" },
+                Classes = { "ant", "dialog" },
             };
 
             if (primary)

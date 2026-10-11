@@ -11,7 +11,7 @@ namespace c2flux
     // WinForms filter strings ("CSV (*.csv)|*.csv|All (*.*)|*.*").
     public static class FileDialogs
     {
-        public static async Task<string> SaveAsync(TopLevel owner, string title, string filter, string suggestedName)
+        public static async Task<string> SaveAsync(TopLevel owner, string title, string filter, string suggestedName, string startDirectory = null, bool overwritePrompt = true)
         {
             IReadOnlyList<FilePickerFileType> types = ParseFilter(filter);
             IStorageFile file = await owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -20,22 +20,29 @@ namespace c2flux
                 SuggestedFileName = suggestedName,
                 FileTypeChoices = types,
                 DefaultExtension = types.FirstOrDefault()?.Patterns?.FirstOrDefault()?.TrimStart('*', '.'),
-                ShowOverwritePrompt = true,
+                ShowOverwritePrompt = overwritePrompt,
+                SuggestedStartLocation = await GetFolderAsync(owner, startDirectory),
             });
 
             return file?.TryGetLocalPath();
         }
 
-        public static async Task<string> OpenAsync(TopLevel owner, string title, string filter)
+        public static async Task<string> OpenAsync(TopLevel owner, string title, string filter, string startDirectory = null)
         {
             IReadOnlyList<IStorageFile> files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = title,
                 AllowMultiple = false,
                 FileTypeFilter = ParseFilter(filter),
+                SuggestedStartLocation = await GetFolderAsync(owner, startDirectory),
             });
 
             return files.Count == 0 ? null : files[0].TryGetLocalPath();
+        }
+
+        private static Task<IStorageFolder> GetFolderAsync(TopLevel owner, string path)
+        {
+            return string.IsNullOrEmpty(path) ? Task.FromResult<IStorageFolder>(null) : owner.StorageProvider.TryGetFolderFromPathAsync(path);
         }
 
         internal static IReadOnlyList<FilePickerFileType> ParseFilter(string filter)

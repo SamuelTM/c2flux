@@ -70,6 +70,23 @@ namespace c2flux.AppTests
             }));
         }
 
+        // As in the reference: the default database exists, so moving it is
+        // possible.
+        [AvaloniaFact]
+        public void DatabaseMove()
+        {
+            string path = ScanHistoryService.DefaultDatabasePath;
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, Array.Empty<byte>());
+            CaptureWindow("database-move", new DatabaseMoveWindow(path));
+        }
+
+        [AvaloniaFact]
+        public void DebugClass()
+        {
+            CaptureWindow("debug-class", new DebugClassWindow());
+        }
+
         private static void CaptureWindow(string name, Window window)
         {
             window.Show();

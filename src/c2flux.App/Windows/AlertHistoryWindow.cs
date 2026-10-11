@@ -152,7 +152,7 @@ namespace c2flux
                 Width = width,
                 Height = 30,
                 HorizontalContentAlignment = HorizontalAlignment.Center,
-                Classes = { "ant" },
+                Classes = { "ant", "dialog" },
             };
         }
     }

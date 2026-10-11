@@ -51,6 +51,61 @@
     <Setter Property="Foreground" Value="White" />
   </Style>
 
+  <!-- AntdUI.Button in dialogs: the body leaves the 4 px wave margin of
+       the bounds free, no border, a 2 px shadow below. -->
+  <Style Selector="Button.ant.dialog">
+    <Setter Property="BorderThickness" Value="0" />
+    <!-- The inset is a Border padding: a margin on the presenter itself
+         breaks its content alignment (it sizes content by its DesiredSize,
+         margin included). -->
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Padding="4">
+          <ContentPresenter Name="PART_ContentPresenter"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                            Padding="{TemplateBinding Padding}"
+                            RecognizesAccessKey="True"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.ant.dialog /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BoxShadow" Value="{DynamicResource ButtonShadow}" />
+  </Style>
+  <Style Selector="Button.ant.dialog.primary /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BoxShadow" Value="{DynamicResource PrimaryButtonShadow}" />
+  </Style>
+
+  <!-- AntdUI.Input: like the dialog buttons, 4 px wave margin; the focus
+       ring fills it. -->
+  <Style Selector="TextBox.ant">
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="7,0" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="TextBox.ant /template/ Border#PART_BorderElement, TextBox.ant:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Margin" Value="4" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource ButtonBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}" />
+  </Style>
+  <Style Selector="TextBox.ant:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Margin" Value="4" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="Background" Value="{DynamicResource ButtonBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InputFocusBorderBrush}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource InputFocusShadow}" />
+  </Style>
+
   <!-- AntdUI.Select of the drive list: 2 px border, radius 8. -->
   <Style Selector="ComboBox.ant">
     <Setter Property="Height" Value="28" />

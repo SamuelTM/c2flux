@@ -397,8 +397,8 @@ Ordem sugerida: o que é visto primeiro vem antes.
 - [ ] `AdvancedFeaturesForm`: análise, redundância
 - [x] `AlertHistoryForm` → `AlertHistoryWindow`, com o estilo clássico do `DrawnTable` (o `DataGridView` temático) e seleção múltipla; abre pelos contadores da barra de status
 - [x] `AboutForm`, `UpdateAvailableForm` (Sobre pelo menu Ajuda e pelo menu do app no macOS; verificação de atualização ao iniciar)
-- [ ] `DatabaseMoveForm`, `DebugClassForm`
-- [x] `AppDialogs`: aviso com OK, aviso com Sim/Não e prompt de elevação, com os ícones do Windows desenhados
+- [x] `DatabaseMoveForm`, `DebugClassForm` → `DatabaseMoveWindow`, `DebugClassWindow` (abrem pela `SettingsForm`; ligar quando ela for portada)
+- [x] `AppDialogs`: aviso com OK, aviso com Sim/Não, pergunta Sim/Não, aviso Repetir/Cancelar e prompt de elevação, com os ícones do Windows desenhados
 - [ ] `AppFileDialog`: **substituir** pelo `StorageProvider` nativo do Avalonia (diálogos nativos de cada SO), conforme decidido na seção 9
 
 #### 5.4 Validação de fidelidade

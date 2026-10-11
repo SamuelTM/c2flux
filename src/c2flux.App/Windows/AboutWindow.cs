@@ -53,7 +53,7 @@ namespace c2flux
             koFi.PointerPressed += (_, _) => FileManager.Open(AppConstants.KoFiUrl);
             Place(canvas, koFi, 20, 244);
 
-            Button ok = new Button { Content = LocalizationService.GetText("Common.OK"), Width = 90, Height = 32, HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center, Classes = { "ant" }, IsDefault = true, IsCancel = true };
+            Button ok = new Button { Content = LocalizationService.GetText("Common.OK"), Width = 90, Height = 32, HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center, Classes = { "ant", "dialog" }, IsDefault = true, IsCancel = true };
             ok.Click += (_, _) => Close();
             Place(canvas, ok, 365, 254);
             Content = canvas;
@@ -248,7 +248,7 @@ namespace c2flux
                 Width = 90,
                 Height = 32,
                 HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-                Classes = { "ant" },
+                Classes = { "ant", "dialog" },
             };
 
             if (primary)
