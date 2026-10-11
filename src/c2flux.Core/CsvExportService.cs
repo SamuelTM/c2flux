@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Threading;
 
 namespace c2flux
 {
@@ -12,26 +14,60 @@ namespace c2flux
             get { return LocalizationService.GetText("Csv.FileFilter"); }
         }
 
-        public void Export(string filePath, IEnumerable<FileSystemEntry> entries, AppSettings settings)
+        // rowWritten, when given, is called after each row; a canceled token
+        // stops the export (OperationCanceledException).
+        public void Export(string filePath, IEnumerable<FileSystemEntry> entries, AppSettings settings, Action rowWritten = null, CancellationToken cancellationToken = default)
         {
             using StreamWriter writer = new StreamWriter(filePath, false, Encoding.UTF8);
-            WriteExport(writer, entries, settings);
+            WriteExport(writer, entries, settings, rowWritten, cancellationToken);
         }
 
-        public string ExportToString(IEnumerable<FileSystemEntry> entries, AppSettings settings)
+        public string ExportToString(IEnumerable<FileSystemEntry> entries, AppSettings settings, Action rowWritten = null, CancellationToken cancellationToken = default)
         {
             using StringWriter writer = new StringWriter(CultureInfo.InvariantCulture);
-            WriteExport(writer, entries, settings);
+            WriteExport(writer, entries, settings, rowWritten, cancellationToken);
             return writer.ToString();
         }
 
-        private void WriteExport(TextWriter writer, IEnumerable<FileSystemEntry> entries, AppSettings settings)
+        // The rows an export of entries writes (the tree copy has as many):
+        // each entry and what is below it, down to maxDepth levels.
+        public static int CountRows(IEnumerable<FileSystemEntry> entries, int? maxDepth)
+        {
+            int rows = 0;
+            Stack<(FileSystemEntry Entry, int Level)> pending = new Stack<(FileSystemEntry Entry, int Level)>();
+
+            foreach (FileSystemEntry entry in entries)
+            {
+                pending.Push((entry, 0));
+            }
+
+            while (pending.Count > 0)
+            {
+                (FileSystemEntry entry, int level) = pending.Pop();
+
+                if (maxDepth.HasValue && level > maxDepth.Value)
+                {
+                    continue;
+                }
+
+                rows++;
+
+                foreach (FileSystemEntry child in entry.Children)
+                {
+                    pending.Push((child, level + 1));
+                }
+            }
+
+            return rows;
+        }
+
+        private void WriteExport(TextWriter writer, IEnumerable<FileSystemEntry> entries, AppSettings settings, Action rowWritten, CancellationToken cancellationToken)
         {
             WriteHeader(writer, settings);
 
             foreach (FileSystemEntry entry in entries)
             {
-                WriteEntry(writer, entry, settings, 0);
+                WriteEntry(writer, entry, settings, 0, rowWritten, cancellationToken);
             }
         }
 
@@ -59,8 +95,10 @@ namespace c2flux
             writer.WriteLine(string.Join(";", columns));
         }
 
-        private void WriteEntry(TextWriter writer, FileSystemEntry entry, AppSettings settings, int level)
+        private void WriteEntry(TextWriter writer, FileSystemEntry entry, AppSettings settings, int level, Action rowWritten, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (settings.ExportMaxDepth.HasValue && level > settings.ExportMaxDepth.Value)
                 return;
 
@@ -84,10 +122,11 @@ namespace c2flux
             }
 
             writer.WriteLine(string.Join(";", values));
+            rowWritten?.Invoke();
 
             foreach (FileSystemEntry child in entry.Children)
             {
-                WriteEntry(writer, child, settings, level + 1);
+                WriteEntry(writer, child, settings, level + 1, rowWritten, cancellationToken);
             }
         }
 

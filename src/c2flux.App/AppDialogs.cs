@@ -1,5 +1,9 @@
 using System.Globalization;
 using System.Threading.Tasks;
+using System;
+using Avalonia.Threading;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -115,6 +119,95 @@ namespace c2flux
             dialog.Content = new StackPanel { Children = { body, buttons } };
             await Show(dialog, owner);
             return result;
+        }
+
+        // Runs work off the UI thread. When it takes more than a moment, a
+        // dialog shows its progress (work reports 0 to 1) with a cancel
+        // button; cancel (or closing the dialog) cancels work's token.
+        // Completed is false when work was canceled.
+        public static async Task<(bool Completed, T Result)> RunWithProgressAsync<T>(Window owner, string message, Func<Action<double>, CancellationToken, T> work, string title = null)
+        {
+            using CancellationTokenSource cancellation = new CancellationTokenSource();
+            StrongBox<double> progress = new StrongBox<double>();
+            StrongBox<int> queued = new StrongBox<int>();
+            ProgressBar bar = null;
+            TextBlock percent = null;
+
+            void Update()
+            {
+                Volatile.Write(ref queued.Value, 0);
+
+                if (bar != null)
+                {
+                    double value = Volatile.Read(ref progress.Value);
+                    bar.Value = value;
+                    percent.Text = ((int)(value * 100)).ToString(CultureInfo.CurrentCulture) + " %";
+                }
+            }
+
+            // One update waits in the UI queue at most: frequent reports
+            // (one per row) merge into it.
+            void Report(double value)
+            {
+                Volatile.Write(ref progress.Value, value);
+
+                if (Interlocked.Exchange(ref queued.Value, 1) == 0)
+                {
+                    Dispatcher.UIThread.Post(Update, DispatcherPriority.Background);
+                }
+            }
+
+            Task<T> task = Task.Run(() => work(Report, cancellation.Token), cancellation.Token);
+
+            // Quick work (a small folder) shows no dialog at all.
+            if (await Task.WhenAny(task, Task.Delay(300)) != task)
+            {
+                Window dialog = CreateDialog(title, 420, double.NaN);
+                dialog.SizeToContent = SizeToContent.Height;
+                bar = new ProgressBar { Minimum = 0, Maximum = 1, Height = 6, MinHeight = 6 };
+                bar.Bind(ProgressBar.ForegroundProperty, bar.GetResourceObservable("PrimaryBrush"));
+                percent = new TextBlock { HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 6, 0, 0) };
+                Update();
+                Button cancel = CreateButton(LocalizationService.GetText("Common.Cancel"), primary: false);
+                cancel.MinWidth = 84;
+                cancel.Height = 32;
+                cancel.IsCancel = true;
+                cancel.Click += (_, _) => dialog.Close();
+                TextBlock text = CreateMessage(message);
+                text.TextTrimming = TextTrimming.CharacterEllipsis;
+                text.TextWrapping = TextWrapping.NoWrap;
+                dialog.Content = new StackPanel
+                {
+                    Margin = new Thickness(24, 22, 24, 20),
+                    Children =
+                    {
+                        text,
+                        new Border { Height = 14 },
+                        bar,
+                        percent,
+                        new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0), Children = { cancel } },
+                    },
+                };
+
+                dialog.Closing += (_, _) =>
+                {
+                    if (!task.IsCompleted)
+                    {
+                        cancellation.Cancel();
+                    }
+                };
+                _ = task.ContinueWith(_ => Dispatcher.UIThread.Post(dialog.Close), TaskScheduler.Default);
+                await Show(dialog, owner);
+            }
+
+            try
+            {
+                return (true, await task);
+            }
+            catch (OperationCanceledException)
+            {
+                return (false, default);
+            }
         }
 
         public static async Task<(bool Restart, bool DoNotShowAgain)> ShowElevationPromptAsync(Window owner)

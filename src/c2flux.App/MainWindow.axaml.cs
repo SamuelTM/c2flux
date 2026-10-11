@@ -1397,9 +1397,9 @@ namespace c2flux
             }
 
             items.Add(Command(LocalizationService.GetText("Context.Export"), async () => await _export.ExportAsync(entry)));
-            items.Add(Command("Copy: Selected item", async () => await _export.CopyNameAsync(entry)));
-            items.Add(Command(_export.TreeCopyMenuText("Text"), async () => await _export.CopyTreeTextAsync(entry)));
-            items.Add(Command(_export.TreeCopyMenuText(".CSV"), async () => await _export.CopyCsvAsync(entry)));
+            items.Add(Command(LocalizationService.GetText("Context.CopyPath"), async () => await _export.CopyPathAsync(entry)));
+            items.Add(Command(_export.TreeCopyMenuText("Context.CopyTreeText"), async () => await _export.CopyTreeTextAsync(entry)));
+            items.Add(Command(_export.TreeCopyMenuText("Context.CopyTreeCsv"), async () => await _export.CopyCsvAsync(entry)));
             items.Add(new Separator());
             items.Add(Command(LocalizationService.GetText("Context.OpenInExplorer"), () => FileManager.Open(entry.FullPath)));
             items.Add(new Separator());

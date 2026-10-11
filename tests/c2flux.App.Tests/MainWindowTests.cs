@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.VisualTree;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Xunit;
@@ -191,6 +192,70 @@ namespace c2flux.AppTests
             finally
             {
                 Directory.Delete(folder, recursive: true);
+            }
+        }
+
+        // Long work shows a dialog with its progress; closing it (Cancel)
+        // cancels the work. Quick work shows none.
+        [AvaloniaFact]
+        public void Long_work_shows_progress_and_can_be_canceled()
+        {
+            Window owner = new Window();
+            owner.Show();
+
+            try
+            {
+                Task<(bool Completed, int Result)> quick = AppDialogs.RunWithProgressAsync(owner, "quick", (report, token) => 7);
+                while (!quick.IsCompleted)
+                {
+                    Dispatcher.UIThread.RunJobs();
+                }
+
+                Assert.Equal((true, 7), quick.Result);
+                Assert.Empty(owner.OwnedWindows);
+
+                Task<(bool Completed, int Result)> slow = AppDialogs.RunWithProgressAsync<int>(owner, "slow", (report, token) =>
+                {
+                    report(0.5);
+
+                    while (true)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        System.Threading.Thread.Sleep(5);
+                    }
+                });
+                DateTime deadline = DateTime.UtcNow.AddSeconds(5);
+
+                while (owner.OwnedWindows.Count == 0 && DateTime.UtcNow < deadline)
+                {
+                    Dispatcher.UIThread.RunJobs();
+                    System.Threading.Thread.Sleep(10);
+                }
+
+                Window dialog = Assert.Single(owner.OwnedWindows);
+                bool Shows50() => dialog.GetVisualDescendants().OfType<TextBlock>().Any(text => text.Text == "50 %");
+
+                while (!Shows50() && DateTime.UtcNow < deadline)
+                {
+                    Dispatcher.UIThread.RunJobs();
+                    System.Threading.Thread.Sleep(10);
+                }
+
+                Assert.True(Shows50());
+
+                dialog.Close();
+
+                while (!slow.IsCompleted && DateTime.UtcNow < deadline)
+                {
+                    Dispatcher.UIThread.RunJobs();
+                    System.Threading.Thread.Sleep(10);
+                }
+
+                Assert.False(slow.Result.Completed);
+            }
+            finally
+            {
+                owner.Close();
             }
         }
 

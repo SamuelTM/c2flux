@@ -29,6 +29,31 @@ namespace c2flux.AppTests
             Assert.Equal("root [3 MB]\n├─ sub [3 MB]\n└─ a.txt [10 B]", ExportActions.BuildTreeText(Tree(), 1));
         }
 
+        // The progress dialog counts the rows first: as many as the tree
+        // text has lines and the CSV has rows below its header.
+        [Fact]
+        public void Row_count_matches_the_tree_text_and_the_csv()
+        {
+            foreach (int? depth in new int?[] { null, 1, 0 })
+            {
+                int rows = CsvExportService.CountRows(new[] { Tree() }, depth);
+                int written = 0;
+                Assert.Equal(rows, ExportActions.BuildTreeText(Tree(), depth, () => written++).Split('\n').Length);
+                Assert.Equal(rows, written);
+                string csv = new CsvExportService().ExportToString(new[] { Tree() }, new AppSettings { ExportMaxDepth = depth });
+                Assert.Equal(rows + 1, csv.TrimEnd().Split('\n').Length);
+            }
+        }
+
+        [Fact]
+        public void A_canceled_export_stops()
+        {
+            using System.Threading.CancellationTokenSource canceled = new System.Threading.CancellationTokenSource();
+            canceled.Cancel();
+            Assert.Throws<System.OperationCanceledException>(() => ExportActions.BuildTreeText(Tree(), null, null, canceled.Token));
+            Assert.Throws<System.OperationCanceledException>(() => new CsvExportService().ExportToString(new[] { Tree() }, new AppSettings(), null, canceled.Token));
+        }
+
         [Fact]
         public void WinForms_file_filters_become_picker_types()
         {
