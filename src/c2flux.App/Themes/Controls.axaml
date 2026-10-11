@@ -198,6 +198,12 @@
     <Setter Property="Margin" Value="0,0,14,0" />
   </Style>
 
+  <!-- AntdUI.Label centers its text 1 px lower than Avalonia (measured
+       on the settings and database labels). -->
+  <Style Selector="TextBlock.antd">
+    <Setter Property="RenderTransform" Value="translate(0px, 1px)" />
+  </Style>
+
   <!-- AntdUI.Label: grey while disabled. -->
   <Style Selector="TextBlock.ant:disabled">
     <Setter Property="Foreground" Value="{DynamicResource DisabledTextBrush}" />

@@ -203,6 +203,11 @@ namespace c2flux
             private double RowsTop => Classic ? HeaderHeight : HeaderHeight + 2;
             private double ColumnsLeft => Classic ? 0 : 2;
             private const double CellPadding = 8;
+
+            // DataGridView insets its text more than AntdUI (measured): cells
+            // 3 px, headers 5 px.
+            private double TextInset => Classic ? CellPadding + 3 : CellPadding;
+            private double HeaderInset => Classic ? CellPadding + 5 : CellPadding;
             private const double SortIconWidth = 7;
             private const double SortIconRightGap = 10;
             private const double ResizeGrip = 4;
@@ -444,7 +449,7 @@ namespace c2flux
                         title.SetFontWeight(FontWeight.Bold);
                     }
 
-                    DrawAligned(context, title, new Rect(x + CellPadding, Classic ? 0 : 1, Math.Max(0, textRight - x - CellPadding), HeaderHeight), column.Alignment);
+                    DrawAligned(context, title, new Rect(x + HeaderInset, Classic ? 0 : 1, Math.Max(0, textRight - x - HeaderInset), HeaderHeight), column.Alignment);
                 }
             }
 
@@ -528,7 +533,7 @@ namespace c2flux
                         else
                         {
                             FormattedText text = CreateText(column.Text(_rows[index]) ?? string.Empty, isSelected ? Brushes.White : Foreground);
-                            DrawAligned(context, text, cell.Deflate(new Thickness(CellPadding, 0)), column.Alignment);
+                            DrawAligned(context, text, cell.Deflate(new Thickness(TextInset, 0, CellPadding, 0)), column.Alignment);
                         }
                     }
 
@@ -775,7 +780,7 @@ namespace c2flux
                 {
                     string text = column.Text(_rows[rowIndex]) ?? string.Empty;
 
-                    if (CreateText(text, null).WidthIncludingTrailingWhitespace > width - 1 - CellPadding * 2)
+                    if (CreateText(text, null).WidthIncludingTrailingWhitespace > width - 1 - TextInset - CellPadding)
                     {
                         tip = text;
                     }

@@ -174,7 +174,7 @@ namespace c2flux
         {
             return new Border
             {
-                Child = new TextBlock { Text = LocalizationService.GetText(textKey), TextWrapping = TextWrapping.Wrap, VerticalAlignment = alignment },
+                Child = new TextBlock { Text = LocalizationService.GetText(textKey), TextWrapping = TextWrapping.Wrap, VerticalAlignment = alignment, Classes = { "antd" } },
             };
         }
 

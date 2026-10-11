@@ -19,6 +19,7 @@ namespace c2flux
         private static readonly IBrush LightLink = new SolidColorBrush(Color.FromRgb(0, 102, 204));
 
         private readonly TextBlock _update;
+        private readonly TextBlock _updateShadow;
 
         public AboutWindow(AppSettings settings)
         {
@@ -35,21 +36,25 @@ namespace c2flux
             Canvas canvas = new Canvas();
             Place(canvas, CreateCatImage(), 20, 24);
             // Bold in the WinForms code, but the theme resets the font: regular.
-            Place(canvas, new TextBlock { Text = AppConstants.FullApplicationName }, 122, 26);
-            Place(canvas, new TextBlock { Text = AppConstants.CopyrightText }, 122, 58);
-            Place(canvas, new TextBlock { Text = LocalizationService.GetText("About.VersionPrefix") + GitHubUpdateService.GetApplicationVersionText() }, 122, 82);
+            // Labels draw their text 3 px in (measured), hence 125 and 23.
+            Place(canvas, new TextBlock { Text = AppConstants.FullApplicationName }, 125, 26);
+            Place(canvas, new TextBlock { Text = AppConstants.CopyrightText }, 125, 58);
+            Place(canvas, new TextBlock { Text = LocalizationService.GetText("About.VersionPrefix") + GitHubUpdateService.GetApplicationVersionText() }, 125, 82);
             _update = Link(LocalizationService.GetText("About.UpdateChecking"), null);
-            Place(canvas, _update, 122, 106);
-            Place(canvas, Link(AppConstants.GitHubRepositoryUrl, AppConstants.GitHubRepositoryUrl), 122, 130);
-            Place(canvas, Link("Help: " + AppConstants.HelpUrl, AppConstants.HelpUrl), 122, 154);
+            _updateShadow = new TextBlock { IsVisible = false, Foreground = new SolidColorBrush(Color.FromRgb(10, 10, 10)) };
+            Place(canvas, _updateShadow, 128, 108);
+            Place(canvas, _update, 127, 107);
+            Place(canvas, Link(AppConstants.GitHubRepositoryUrl, AppConstants.GitHubRepositoryUrl), 125, 130);
+            Place(canvas, Link("Help: " + AppConstants.HelpUrl, AppConstants.HelpUrl), 125, 154);
             Place(canvas, new TextBlock
             {
                 Text = LocalizationService.Format("About.FreeText", AppConstants.ApplicationName) + Environment.NewLine + LocalizationService.GetText("About.SupportText"),
                 Width = 435,
                 TextWrapping = TextWrapping.Wrap,
-            }, 20, 194);
+            }, 23, 194);
 
-            Image koFi = new Image { Source = LoadKoFi(), Width = 179, Height = 42, Cursor = new Cursor(StandardCursorType.Hand) };
+            // The PictureBox stretches the image to its 179x42 bounds.
+            Image koFi = new Image { Source = LoadKoFi(), Width = 179, Height = 42, Stretch = Stretch.Fill, Cursor = new Cursor(StandardCursorType.Hand) };
             koFi.PointerPressed += (_, _) => FileManager.Open(AppConstants.KoFiUrl);
             Place(canvas, koFi, 20, 244);
 
@@ -64,9 +69,14 @@ namespace c2flux
             }
             else
             {
+                // A disabled LinkLabel: etched, grey over a dark copy 1 px down
+                // and right, the pair 2 px right and 1 down of the enabled
+                // text (measured).
                 _update.Text = LocalizationService.GetText("About.UpdateCheckDisabled");
                 _update.IsEnabled = false;
-                _update.Foreground = Brushes.Gray;
+                _update.Foreground = new SolidColorBrush(Color.FromRgb(143, 143, 143));
+                _updateShadow.Text = _update.Text;
+                _updateShadow.IsVisible = true;
             }
         }
 
@@ -194,6 +204,7 @@ namespace c2flux
             ShowInTaskbar = false;
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
+            // Texts sit 2 to 3 px right of their WinForms bounds (measured).
             Canvas canvas = new Canvas();
             AddAt(canvas, new DialogIcon { Kind = DialogIconKind.Warning, Width = 32, Height = 32 }, 38, 34);
             AddAt(canvas, new TextBlock
@@ -204,11 +215,11 @@ namespace c2flux
                 TextWrapping = TextWrapping.Wrap,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
                 Padding = new Thickness(0, 15, 0, 0),
-            }, 80, 24);
+            }, 82, 26);
 
             if (hasNotes)
             {
-                AddAt(canvas, new TextBlock { Text = result.ReleaseNotes, Width = 420, Height = 116, TextWrapping = TextWrapping.Wrap }, 80, 80);
+                AddAt(canvas, new TextBlock { Text = result.ReleaseNotes, Width = 420, Height = 116, TextWrapping = TextWrapping.Wrap }, 83, 81);
             }
 
             Button download = Button("About.UpdateDownload", primary: true);
