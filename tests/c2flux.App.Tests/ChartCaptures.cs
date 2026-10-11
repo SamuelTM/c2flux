@@ -78,7 +78,12 @@ namespace c2flux.AppTests
         {
             string path = ScanHistoryService.DefaultDatabasePath;
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-            File.WriteAllBytes(path, Array.Empty<byte>());
+
+            // Another test may hold it open (Windows locks it): only create it.
+            if (!File.Exists(path))
+            {
+                File.WriteAllBytes(path, Array.Empty<byte>());
+            }
             CaptureWindow("database-move", new DatabaseMoveWindow(path));
         }
 
