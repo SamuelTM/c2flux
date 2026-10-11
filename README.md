@@ -154,6 +154,39 @@ Fastest scan mode.
 
 <br>
 
+## c² flux 2.0: Windows, macOS and Linux
+
+Starting with version 2.0, c² flux runs on Windows, macOS and Linux, on x64 and ARM64. The packages include everything they need: no .NET runtime has to be installed. Each release lists one file per system:
+
+| System | File |
+|---|---|
+| Windows | `c2flux-v<version>-windows-x64.zip` or `-windows-arm64.zip` |
+| macOS (Apple silicon / Intel) | `c2flux-v<version>-macos-arm64.dmg` / `-macos-x64.dmg` |
+| Linux | `c2flux-v<version>-linux-x86_64.AppImage` / `-linux-aarch64.AppImage` |
+
+### Windows
+
+Unzip the folder anywhere and start `c2flux.exe`. Run it as administrator to use the fast NTFS MFT scan.
+
+### macOS
+
+1. Open the `.dmg` and drag **c2flux** to **Applications**.
+2. c² flux is not notarized by Apple, so the first start is blocked. Open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**. On macOS 14 and older you can also Control-click the app and choose **Open**.
+3. To scan your home folder completely, give c² flux **Full Disk Access** in **System Settings → Privacy & Security → Full Disk Access**. Without it, macOS hides folders such as Mail, Messages and Safari from every app; c² flux shows a notice with a button to these settings.
+
+### Linux
+
+Make the AppImage executable and start it:
+
+```sh
+chmod +x c2flux-v<version>-linux-x86_64.AppImage
+./c2flux-v<version>-linux-x86_64.AppImage
+```
+
+If it reports that FUSE is missing, install `libfuse2` (`libfuse2t64` on Ubuntu 24.04 and newer), or start it with `--appimage-extract-and-run`. c² flux runs without root; folders it may not read are skipped and listed in the alert log. Chinese, Japanese and Korean texts use the system's fonts: install `fonts-noto-cjk` if they show as boxes.
+
+<br>
+
 ## Support
 
 ❤️ If you’d like to support my work with a small contribution, I’d really appreciate it. ❤️

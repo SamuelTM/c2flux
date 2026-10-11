@@ -357,7 +357,7 @@ public sealed class ScanOptions
 - [x] Temas claro, escuro e "seguir o sistema" (`AppLayout`: `WindowsDefault` segue o SO). O `AppSettings` do Core deixou de forçar o escuro; quem força agora é o WinForms, que só tem o escuro pronto
 - [x] Integração do `LocalizationService` com binding: `{l:T Chave}` no XAML, atualizado pelo evento `LocalizationService.LanguageChanged`
 - [x] **RTL:** árabe, hebraico, persa e urdu (`LocalizationService.IsRightToLeft`) viram `FlowDirection.RightToLeft` em todas as janelas. Espelhamento de cada tela: conferir nas capturas da Fase 5.3 em diante
-- [x] Fontes: **Selawik** embutida (SIL OFL, da Microsoft, com as métricas da Segoe UI do WinForms: larguras de texto iguais às do original em todos os SOs). Na 5.1 era a Inter, ~15% mais larga, o que quebrava a barra de ferramentas em duas linhas; a troca baixou a diferença de todos os gráficos. CJK, tailandês e devanágari usam o *fallback* automático para fontes do sistema. No Linux, o pacote da Fase 6 deve depender de `fonts-noto-cjk`
+- [x] Fontes: **Selawik** embutida (SIL OFL, da Microsoft, com as métricas da Segoe UI do WinForms: larguras de texto iguais às do original em todos os SOs). Na 5.1 era a Inter, ~15% mais larga, o que quebrava a barra de ferramentas em duas linhas; a troca baixou a diferença de todos os gráficos. CJK, tailandês e devanágari usam o *fallback* automático para fontes do sistema. No Linux, o AppImage não declara dependências: o README pede `fonts-noto-cjk` para chinês, japonês e coreano
 - [x] Ícone do app (o mesmo `c2flux.png`/`.ico` do WinForms) e decorações nativas da janela. Barra customizada: não por enquanto; reavaliar depois das capturas da Fase 5.3
 - [x] Menu de aplicativo nativo no macOS: Sobre e Ajustes (⌘,) no menu do app, ligados às janelas da Fase 5.3; Ocultar, Serviços e Sair (⌘Q) o Avalonia já adiciona. Atalhos da Fase 5.3: usar `PlatformHotkeyConfiguration.CommandModifiers` (⌘ no macOS, Ctrl nos outros), nunca `Ctrl` fixo
 
@@ -411,7 +411,7 @@ Ordem sugerida: o que é visto primeiro vem antes.
 
 ---
 
-### Fase 6: Empacotamento, distribuição e atualização
+### Fase 6: Empacotamento, distribuição e atualização ✅
 
 - [x] **CI em matriz** (`windows-latest`, `macos-latest`, `ubuntu-latest`): build, testes e conformidade de scanners em cada push (`ci.yml` e `scanner-conformance.yml`; a comparação de fidelidade também roda nos três)
 - [x] **Publicação por RID**, self-contained (sem exigir .NET instalado), com trimming. Avaliar Native AOT (Avalonia suporta). Feito: job `publish` da CI para os seis RIDs, cada um num runner da própria arquitetura, com o autoteste `--self-test` (JSON, idioma, SQLite, volumes) no binário publicado; trimming parcial (53 MB no osx-arm64, contra 116 MB sem trimming), porque o completo desliga o JSON por reflexão das configurações e dos arquivos de varredura. O executável se chama `c2flux`: o macOS se recusa a rodar um arquivo chamado `c2flux.App`. Native AOT: não por enquanto, pelo mesmo motivo (JSON e bindings por reflexão; exigiria gerar o código de serialização de todos os tipos). Os seis RIDs passam na CI
@@ -429,7 +429,7 @@ Os pacotes saem de [`packaging/`](packaging/) pelo workflow reutilizável `packa
 - [x] Integração com o desktop:
   - Linux: arquivo `.desktop`, ícone (256 px), metainfo AppStream, dentro do AppImage
   - macOS: `Info.plist` (nome, ícone `.icns`, versão, `NSHumanReadableCopyright`)
-- [ ] Atualizar README, `docs/Troubleshooting.md` e o site (`docs/index.html`) com instruções por SO
+- [x] Atualizar README, `docs/Troubleshooting.md` e o site (`docs/index.html`) com instruções por SO: seção "c² flux 2.0" no README (arquivos por SO, primeira abertura no macOS sem notarização, Acesso Total ao Disco, AppImage e FUSE), permissões no macOS e no Linux no Troubleshooting e requisitos do site corrigidos (diziam Windows 7 e .NET 8)
 
 **Entregável:** releases automáticas para os três SOs a partir de uma única tag.
 

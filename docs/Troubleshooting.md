@@ -63,6 +63,10 @@ Then compare the scan time.
 > **Screenshot:** Run as Administrator  
 <img width="271" height="367" alt="grafik" src="https://github.com/user-attachments/assets/0a3fdb81-6d7a-4aaf-acb2-b23da63e86bb" />
 
+**macOS (c² flux 2.0):** there is no administrator mode. If folders in your home folder are missing or reported as unreadable, give c² flux **Full Disk Access** in **System Settings → Privacy & Security → Full Disk Access** and scan again.
+
+**Linux (c² flux 2.0):** c² flux runs without root. Folders your user may not read are skipped and listed in the alert log; the sizes above them are then too small.
+
 
 ---
 
