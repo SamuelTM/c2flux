@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=c² flux
+GenericName=Disk Usage Analyzer
+Comment=See what takes up space on your drives
+Exec=c2flux %f
+Icon=c2flux
+Terminal=false
+Categories=Utility;System;Filesystem;

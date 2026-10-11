@@ -114,12 +114,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { rid: win-x64, os: windows-latest }
-          - { rid: win-arm64, os: windows-11-arm }
-          - { rid: osx-arm64, os: macos-latest }
-          - { rid: osx-x64, os: macos-15-intel }
-          - { rid: linux-x64, os: ubuntu-latest }
-          - { rid: linux-arm64, os: ubuntu-24.04-arm }
+          - { rid: win-x64, os: windows-latest, arch: x64 }
+          - { rid: win-arm64, os: windows-11-arm, arch: arm64 }
+          - { rid: osx-arm64, os: macos-latest, arch: arm64 }
+          - { rid: osx-x64, os: macos-15-intel, arch: x64 }
+          - { rid: linux-x64, os: ubuntu-latest, arch: x86_64 }
+          - { rid: linux-arm64, os: ubuntu-24.04-arm, arch: aarch64 }
 
     steps:
       - name: Checkout
@@ -146,11 +146,29 @@ jobs:
           cd "$RUNNER_TEMP/c2flux-${{ matrix.rid }}"
           if [ -f c2flux.exe ]; then ./c2flux.exe --self-test; else ./c2flux --self-test; fi
 
+      # Windows: portable ZIP; macOS: .app in a .dmg; Linux: AppImage only.
+      - name: Package
+        shell: bash
+        run: |
+          version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/c2flux.App/c2flux.App.csproj)
+          publish="$RUNNER_TEMP/c2flux-${{ matrix.rid }}"
+          mkdir -p "$RUNNER_TEMP/dist"
+          case "${{ matrix.rid }}" in
+            win-*)
+              pwsh -NoProfile -Command "Compress-Archive -Path '$publish/*' -DestinationPath '$RUNNER_TEMP/dist/c2flux-$version-windows-${{ matrix.arch }}.zip'" ;;
+            osx-*)
+              packaging/package-macos.sh "$publish" "$version" "${{ matrix.arch }}" "$RUNNER_TEMP/dist" ;;
+            linux-*)
+              packaging/package-linux.sh "$publish" "$version" "${{ matrix.arch }}" "$RUNNER_TEMP/dist"
+              APPIMAGE_EXTRACT_AND_RUN=1 "$RUNNER_TEMP/dist/c2flux-$version-linux-${{ matrix.arch }}.AppImage" --self-test ;;
+          esac
+          ls -la "$RUNNER_TEMP/dist"
+
       - name: Upload
         uses: actions/upload-artifact@v7
         with:
           name: c2flux-${{ matrix.rid }}-${{ github.sha }}
-          path: ${{ runner.temp }}/c2flux-${{ matrix.rid }}
+          path: ${{ runner.temp }}/dist
           retention-days: 7
 
   test-tree:
