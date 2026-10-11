@@ -64,7 +64,8 @@ namespace c2flux
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right,
                 Spacing = 6,
-                Margin = new Thickness(0, 8),
+                // Measured: the buttons sit 5 px below the details box.
+                Margin = new Thickness(0, 5, 0, 11),
                 Children = { _confirm, _delete, _confirmAll, _deleteAll, _close },
             };
             DockPanel details = new DockPanel();

@@ -98,7 +98,7 @@
     <Setter Property="BoxShadow" Value="{DynamicResource PrimaryButtonShadow}" />
   </Style>
   <Style Selector="Button.ant.dialog.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource IconInactiveBrush}" />
+    <Setter Property="Background" Value="{DynamicResource PrimaryHoverBrush}" />
     <Setter Property="Foreground" Value="White" />
   </Style>
 
@@ -140,6 +140,16 @@
 
   <!-- The search button: AntdUI primary with BackgroundSecondary as color. -->
   <Style Selector="Button.ant.dialog.secondary">
+    <Setter Property="Background" Value="{DynamicResource SecondaryButtonBrush}" />
+  </Style>
+
+  <!-- The search and storage history buttons keep their body under the
+       pointer. WinForms also turns their text into the hover color (58 on
+       20), which makes it unreadable; the text stays as it is here. -->
+  <Style Selector="Button.ant.dialog.bordered:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonBackgroundBrush}" />
+  </Style>
+  <Style Selector="Button.ant.dialog.bordered.secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource SecondaryButtonBrush}" />
   </Style>
 

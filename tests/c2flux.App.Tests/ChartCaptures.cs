@@ -64,8 +64,14 @@ namespace c2flux.AppTests
             CaptureState("state-settings-checkbox-hover", new SettingsWindow(new AppSettings { StorageHistoryDetailsEnabled = true }, windowsOptions: true), LocalizationService.GetText("Settings.SkipReparsePoints"), press: false);
             CaptureState("state-main-toolbar-hover", new MainWindow(new AppSettings()) { Width = 1264, Height = 761 }, "TableButton", press: false);
 
-            // 1000x650 and the minimum size, both with the Windows frame.
+            CaptureState("state-main-view-hover", new MainWindow(new AppSettings()) { Width = 1264, Height = 761 }, "PieButton", press: false);
+            CaptureState("state-settings-tab-hover", new SettingsWindow(new AppSettings { StorageHistoryDetailsEnabled = true }, windowsOptions: true), LocalizationService.GetText("Settings.Export"), press: false);
+            CaptureState("state-database-move-hover", new DatabaseMoveWindow(ScanHistoryService.DefaultDatabasePath), LocalizationService.GetText("DatabaseBrowse.UseExisting"), press: false);
+            CaptureState("state-update-download-hover", new UpdateAvailableWindow(SampleUpdate()), LocalizationService.GetText("About.UpdateDownload"), press: false);
+
+            // 1000x650, 1600x900 and the minimum size, with the Windows frame.
             CaptureWindow("main-empty-small", new MainWindow(new AppSettings()) { Width = 984, Height = 611 });
+            CaptureWindow("main-empty-large", new MainWindow(new AppSettings()) { Width = 1584, Height = 861 });
             AppAlertLog.DeleteAll();
             AppAlertLog.AddInformation("Scan", "Scan of T:\\ completed.");
             AppAlertLog.AddWarning("Scan", "3 folders could not be read.", "T:\\tree\\unreadable\\locked-dir\nAccess is denied.");
@@ -74,6 +80,7 @@ namespace c2flux.AppTests
             alerts.Width = alerts.MinWidth;
             alerts.Height = alerts.MinHeight;
             CaptureWindow("alert-history-entries-min", alerts);
+            CaptureState("state-alert-history-close-hover", new AlertHistoryWindow(), LocalizationService.GetText("Common.Close"), press: false);
             AppAlertLog.DeleteAll();
         }
 
@@ -120,14 +127,19 @@ namespace c2flux.AppTests
         [AvaloniaFact]
         public void UpdateAvailable()
         {
-            CaptureWindow("update-available", new UpdateAvailableWindow(new GitHubUpdateResult
+            CaptureWindow("update-available", new UpdateAvailableWindow(SampleUpdate()));
+        }
+
+        private static GitHubUpdateResult SampleUpdate()
+        {
+            return new GitHubUpdateResult
             {
                 CanConnectToGitHub = true,
                 UpdateAvailable = true,
                 LatestVersion = "9.9.9",
                 DownloadUrl = "https://example.invalid/c2flux.zip",
                 ReleaseNotes = "## Changelog v9.9.9\n\n- Sample release notes used for UI screenshots.\n- Second line.\n- Third line.",
-            }));
+            };
         }
 
         // As in the reference: the default database exists, so moving it is
@@ -212,8 +224,26 @@ namespace c2flux.AppTests
                 window.SearchText = "file-00";
                 await window.SearchAsync();
                 Dispatcher.UIThread.RunJobs();
-                using WriteableBitmap results = window.CaptureRenderedFrame();
-                results.Save(OutputPath("search-results"));
+                using (WriteableBitmap results = window.CaptureRenderedFrame())
+                {
+                    results.Save(OutputPath("search-results"));
+                }
+
+                // The minimum size with the frame (550x560), then the
+                // filters button under the pointer.
+                window.Width = window.MinWidth;
+                window.Height = window.MinHeight;
+                Dispatcher.UIThread.RunJobs();
+                using (WriteableBitmap small = window.CaptureRenderedFrame())
+                {
+                    small.Save(OutputPath("search-results-min"));
+                }
+
+                Control filters = window.FiltersButton;
+                window.MouseMove(filters.TranslatePoint(new Point(filters.Bounds.Width / 2, filters.Bounds.Height / 2), window) ?? default);
+                Dispatcher.UIThread.RunJobs();
+                using WriteableBitmap hover = window.CaptureRenderedFrame();
+                hover.Save(OutputPath("search-results-min-filters-hover"));
             }
             finally
             {

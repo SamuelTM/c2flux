@@ -401,7 +401,7 @@ Ordem sugerida: o que é visto primeiro vem antes.
 - [x] `AppDialogs`: aviso com OK, aviso com Sim/Não, pergunta Sim/Não, aviso Repetir/Cancelar e prompt de elevação, com os ícones do Windows desenhados
 - [x] `AppFileDialog`: **substituído** pelo `StorageProvider` nativo do Avalonia (`FileDialogs`: diálogos nativos de cada SO), conforme decidido na seção 9
 
-#### 5.4 Validação de fidelidade
+#### 5.4 Validação de fidelidade ✅
 
 - [x] Capturas de tela da nova UI no Windows comparadas lado a lado com as referências da Fase 0: a CI captura nos três SOs e `tests/fidelity/compare.py` publica a diferença de cada tela no resumo do job (os três SOs dão o mesmo resultado, com até 1 ponto de variação)
 - [x] Checklist por tela: layout, cores, fontes, ícones, estados, comportamento de redimensionamento — [`docs/fidelity/checklist.md`](docs/fidelity/checklist.md). Referências novas do WinForms para o mouse em cima, botão pressionado, janela principal menor e histórico de alertas no mínimo; corrigidos o tamanho dos ícones da barra (que fazia a barra quebrar), a altura das linhas da barra, os tamanhos das janelas (a moldura estava somada), a rolagem ao abrir e as reticências

@@ -107,6 +107,8 @@ namespace c2flux
 
         internal IReadOnlyList<SearchResult> Results => _results;
 
+        internal Control FiltersButton => _toggleFilters;
+
         internal string SearchText
         {
             get => _searchText.Text;
