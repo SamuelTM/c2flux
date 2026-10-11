@@ -39,7 +39,10 @@ namespace c2flux
 
         static ToolbarIcon()
         {
-            AffectsRender<ToolbarIcon>(KindProperty, IsActiveProperty, IsEnabledProperty);
+            // IsEffectivelyEnabled: the button around it is disabled and
+            // enabled again (Analysis after a scan) without the icon's own
+            // IsEnabled changing.
+            AffectsRender<ToolbarIcon>(KindProperty, IsActiveProperty, IsEnabledProperty, IsEffectivelyEnabledProperty);
         }
 
         // AntdUI draws the 16 px icons at 12 px next to 12 px text (measured).

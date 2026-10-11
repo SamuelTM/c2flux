@@ -8,6 +8,40 @@ namespace c2flux.AppTests
 {
     public class FoundationTests
     {
+        // A toolbar button enabled again (Analysis after a scan) draws its
+        // icon in color right away, not only once the mouse passes over it.
+        [AvaloniaFact]
+        public void A_toolbar_icon_redraws_when_its_button_is_enabled_again()
+        {
+            byte[] IconPixels(bool startEnabled)
+            {
+                ToolbarIcon icon = new ToolbarIcon { Kind = ToolbarIconKind.Analysis };
+                Button button = new Button { Content = icon, IsEnabled = startEnabled };
+                Window window = new Window { Width = 120, Height = 60, Content = button };
+                window.Show();
+                Dispatcher.UIThread.RunJobs();
+                Avalonia.Headless.HeadlessWindowExtensions.CaptureRenderedFrame(window).Dispose();
+                button.IsEnabled = true;
+                Dispatcher.UIThread.RunJobs();
+
+                using Avalonia.Media.Imaging.WriteableBitmap frame = Avalonia.Headless.HeadlessWindowExtensions.CaptureRenderedFrame(window);
+                using Avalonia.Platform.ILockedFramebuffer buffer = frame.Lock();
+                Avalonia.Point origin = Avalonia.VisualExtensions.TranslatePoint(icon, new Avalonia.Point(0, 0), window).Value;
+                int left = (int)origin.X, top = (int)origin.Y, width = (int)icon.Bounds.Width, height = (int)icon.Bounds.Height;
+                byte[] pixels = new byte[width * height * 4];
+
+                for (int row = 0; row < height; row++)
+                {
+                    System.Runtime.InteropServices.Marshal.Copy(buffer.Address + (top + row) * buffer.RowBytes + left * 4, pixels, row * width * 4, width * 4);
+                }
+
+                window.Close();
+                return pixels;
+            }
+
+            Assert.Equal(IconPixels(startEnabled: true), IconPixels(startEnabled: false));
+        }
+
         // An exception in an async event handler (export, save...) is
         // logged and shown, not a crash.
         [AvaloniaFact]
