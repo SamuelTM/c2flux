@@ -519,6 +519,10 @@ namespace c2flux
 
         internal string StatusLine => StatusText.Text;
 
+        internal ExportActions Export => _export;
+
+        internal FileSystemEntry CurrentRootEntry => _currentRootEntry;
+
         private bool _fullDiskAccessChecked;
 
         // macOS hides folders like ~/Library/Mail from apps without Full Disk

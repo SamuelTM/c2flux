@@ -105,6 +105,8 @@ namespace c2flux
             Closing += (_, _) => OnClosingWindow();
         }
 
+        internal IReadOnlyList<SearchResult> Results => _results;
+
         internal string SearchText
         {
             get => _searchText.Text;

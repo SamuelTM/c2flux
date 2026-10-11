@@ -40,6 +40,48 @@ namespace c2flux.AppTests
             }
         }
 
+        // Scan, then navigate into a folder, search the scan and export it:
+        // the main flows of the phase 5.4 checklist.
+        [AvaloniaFact]
+        public async Task Navigating_searching_and_exporting_a_scan()
+        {
+            string folder = Path.Combine(Path.GetTempPath(), "c2flux-flow-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(folder, "sub"));
+            File.WriteAllBytes(Path.Combine(folder, "a.bin"), new byte[3000]);
+            File.WriteAllBytes(Path.Combine(folder, "sub", "b.bin"), new byte[5000]);
+            MainWindow window = new MainWindow(new AppSettings { SaveScanHistory = false, StorageHistoryDetailsEnabled = false });
+            window.Show();
+
+            try
+            {
+                LocalizationService.Load("en");
+                await window.ScanPathAsync(folder);
+                Dispatcher.UIThread.RunJobs();
+                FileSystemEntry root = window.CurrentRootEntry;
+                FileSystemEntry sub = root.Children.Single(child => child.Name == "sub");
+
+                Assert.True(window.EntryTree.SelectEntry(sub));
+                Dispatcher.UIThread.RunJobs();
+                Assert.Contains("sub", window.StatusLine);
+                Assert.Contains("Files: 1", window.StatusLine);
+
+                SearchWindow search = new SearchWindow(new AppSettings(), () => root, _ => Task.FromResult<FileSystemEntry>(null)) { SearchText = "b.bin" };
+                search.Show();
+                await search.SearchAsync();
+                Assert.Equal(new[] { "b.bin" }, search.Results.Select(result => result.Name));
+                search.Close();
+
+                await window.Export.CopyCsvAsync(root);
+                string csv = await Avalonia.Input.Platform.ClipboardExtensions.TryGetTextAsync(window.Clipboard);
+                Assert.Contains("sub", csv);
+            }
+            finally
+            {
+                window.Close();
+                Directory.Delete(folder, recursive: true);
+            }
+        }
+
         [Fact]
         public void Show_files_copies_keep_folders_and_add_files_only_when_asked()
         {

@@ -403,9 +403,9 @@ Ordem sugerida: o que é visto primeiro vem antes.
 
 #### 5.4 Validação de fidelidade
 
-- [ ] Capturas de tela da nova UI no Windows comparadas lado a lado com as referências da Fase 0
-- [ ] Checklist por tela: layout, cores, fontes, ícones, estados, comportamento de redimensionamento
-- [ ] Testes de UI headless (`Avalonia.Headless`) para fluxos principais: varrer, navegar, buscar, exportar
+- [x] Capturas de tela da nova UI no Windows comparadas lado a lado com as referências da Fase 0: a CI captura nos três SOs e `tests/fidelity/compare.py` publica a diferença de cada tela no resumo do job (os três SOs dão o mesmo resultado, com até 1 ponto de variação)
+- [ ] Checklist por tela: layout, cores, fontes, ícones, estados, comportamento de redimensionamento — [`docs/fidelity/checklist.md`](docs/fidelity/checklist.md); falta conferir redimensionamento, hover e pressionado
+- [x] Testes de UI headless (`Avalonia.Headless`) para fluxos principais: varrer, navegar, buscar, exportar (`MainWindowTests`)
 
 **Entregável:** nova UI com paridade funcional, rodando nos três SOs.
 

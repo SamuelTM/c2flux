@@ -63,6 +63,10 @@ O lado Avalonia sai dos testes do app (`ChartCaptures`), com os mesmos nomes de 
 
 Diferença média por pixel (0–255, maior canal) entre o port e a referência, na Fase 5.2: símbolos 1,0; barras 1,5; pizza 2,5; crescimento 3,1; armazenamento 3,5; sunburst 3,9; árvore 4,0; treemap 7,0. Quase toda a diferença é a fonte (Inter em tons de cinza contra Segoe UI com ClearType).
 
+## Checklist
+
+O resultado da comparação tela a tela, com os resíduos conhecidos, está em [`checklist.md`](checklist.md).
+
 ## Limitações conhecidas
 
 - **Só tema escuro:** na v1.4.1 o tema claro não é alcançável (o `AppSettings.Load()` força `WindowsDarkMode`). Não existe referência para o claro.
