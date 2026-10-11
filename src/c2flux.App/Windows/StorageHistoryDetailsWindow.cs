@@ -23,8 +23,9 @@ namespace c2flux
             Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://c2flux.App/Assets/c2flux.png")));
             Width = 980;
             Height = 440;
-            MinWidth = 760;
-            MinHeight = 320;
+            // MinimumSize includes the frame: 760x320 outside.
+            MinWidth = 744;
+            MinHeight = 281;
             CanMinimize = false;
             ShowInTaskbar = false;
             WindowStartupLocation = WindowStartupLocation.CenterOwner;

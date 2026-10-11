@@ -4,7 +4,7 @@
         x:Class="c2flux.MainWindow"
         Title="c² flux - Tree Scanner"
         Icon="avares://c2flux.App/Assets/c2flux.png"
-        Width="1180" Height="760" MinWidth="780" MinHeight="490"
+        Width="1164" Height="721" MinWidth="764" MinHeight="451"
         WindowStartupLocation="CenterScreen">
 
   <!-- Port of the WinForms MainForm: menu, toolbar, the tree over the
@@ -19,10 +19,11 @@
     </Border>
 
     <!-- Toolbar: the four groups of the WinForms tool strips. -->
-    <!-- 56 px band with the 28 px buttons centered, as in WinForms. -->
-    <Border DockPanel.Dock="Top" Background="{DynamicResource BackgroundSecondaryBrush}" Padding="8,14,8,14">
+    <!-- Each tool strip row is 42 px with the 28 px buttons centered (56 px
+         band for one row), as in WinForms. -->
+    <Border DockPanel.Dock="Top" Background="{DynamicResource BackgroundSecondaryBrush}" Padding="8,7,8,7">
       <WrapPanel x:Name="Toolbar" Orientation="Horizontal">
-        <StackPanel x:Name="GroupMain" Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
+        <StackPanel x:Name="GroupMain" Orientation="Horizontal" Spacing="5" Margin="0,7,16,7">
           <Border Background="Transparent" Width="7" Margin="0,0,0,0"><Rectangle Classes="grip" /></Border>
           <TextBlock x:Name="DriveLabel" Text="{l:T Toolbar.Drive}" VerticalAlignment="Center" />
           <ComboBox x:Name="DriveSelect" Classes="ant" Width="270" />
@@ -36,7 +37,7 @@
             <l:ToolbarIcon Kind="OpenFolder" />
           </Button>
         </StackPanel>
-        <StackPanel x:Name="GroupViews" Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
+        <StackPanel x:Name="GroupViews" Orientation="Horizontal" Spacing="5" Margin="0,7,16,7">
           <Border Background="Transparent" Width="7" Margin="0,0,0,0"><Rectangle Classes="grip" /></Border>
           <ToggleButton x:Name="TableButton" Classes="ant view" Tag="Table">
             <StackPanel Orientation="Horizontal" Spacing="4">
@@ -69,7 +70,7 @@
             </StackPanel>
           </ToggleButton>
         </StackPanel>
-        <StackPanel x:Name="GroupExport" Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
+        <StackPanel x:Name="GroupExport" Orientation="Horizontal" Spacing="5" Margin="0,7,16,7">
           <Border Background="Transparent" Width="7" Margin="0,0,0,0"><Rectangle Classes="grip" /></Border>
           <Button x:Name="ExportButton" Classes="ant" IsEnabled="False">
             <StackPanel Orientation="Horizontal" Spacing="4">
@@ -78,7 +79,7 @@
             </StackPanel>
           </Button>
         </StackPanel>
-        <StackPanel x:Name="GroupFeatures" Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
+        <StackPanel x:Name="GroupFeatures" Orientation="Horizontal" Spacing="5" Margin="0,7,16,7">
           <Border Background="Transparent" Width="7" Margin="0,0,0,0"><Rectangle Classes="grip" /></Border>
           <ToggleButton x:Name="AnalysisButton" Classes="ant">
             <StackPanel Orientation="Horizontal" Spacing="4">

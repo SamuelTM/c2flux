@@ -548,8 +548,9 @@ namespace c2flux
                 }
             }
 
-            // One line, cut with an ellipsis, vertically centered.
-            private static void DrawAligned(DrawingContext context, FormattedText text, Rect bounds, HorizontalAlignment alignment)
+            // One line, cut with an ellipsis ("..." in a DataGridView),
+            // vertically centered.
+            private void DrawAligned(DrawingContext context, FormattedText text, Rect bounds, HorizontalAlignment alignment)
             {
                 if (bounds.Width <= 0)
                 {
@@ -558,7 +559,7 @@ namespace c2flux
 
                 text.MaxTextWidth = bounds.Width;
                 text.MaxLineCount = 1;
-                text.Trimming = TextTrimming.CharacterEllipsis;
+                text.Trimming = Classic ? DotsTrimming.Instance : TextTrimming.CharacterEllipsis;
                 text.TextAlignment = alignment switch
                 {
                     HorizontalAlignment.Right => TextAlignment.Right,
@@ -881,6 +882,12 @@ namespace c2flux
 
             private void EnsureVisible(int index)
             {
+                // Before the first layout there is no viewport to scroll in.
+                if (ViewportRowsHeight <= 0)
+                {
+                    return;
+                }
+
                 double top = index * RowHeight;
                 double offset = _owner.VerticalOffset;
 

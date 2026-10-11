@@ -26,10 +26,11 @@ namespace c2flux
         {
             Title = LocalizationService.GetText("AlertHistory.Title");
             Icon = new WindowIcon(Avalonia.Platform.AssetLoader.Open(new Uri("avares://c2flux.App/Assets/c2flux.png")));
-            Width = 820;
-            Height = 500;
-            MinWidth = 640;
-            MinHeight = 380;
+            // WinForms sizes (820x500, at least 640x380) include the frame.
+            Width = 804;
+            Height = 461;
+            MinWidth = 624;
+            MinHeight = 341;
             ShowInTaskbar = false;
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
 

@@ -2,6 +2,7 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 
 namespace c2flux
 {
@@ -41,10 +42,45 @@ namespace c2flux
             AffectsRender<ToolbarIcon>(KindProperty, IsActiveProperty, IsEnabledProperty);
         }
 
+        // AntdUI draws the 16 px icons at 12 px next to 12 px text (measured).
+        private const double Scale = 0.75;
+
         public ToolbarIcon()
         {
-            Width = 16;
-            Height = 16;
+            Width = 16 * Scale;
+            Height = 16 * Scale;
+        }
+
+        private Avalonia.Controls.Primitives.ToggleButton _button;
+
+        protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+        {
+            base.OnAttachedToVisualTree(e);
+            _button = this.FindAncestorOfType<Avalonia.Controls.Primitives.ToggleButton>();
+
+            if (_button != null)
+            {
+                _button.PropertyChanged += OnButtonPropertyChanged;
+            }
+        }
+
+        protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+        {
+            base.OnDetachedFromVisualTree(e);
+
+            if (_button != null)
+            {
+                _button.PropertyChanged -= OnButtonPropertyChanged;
+                _button = null;
+            }
+        }
+
+        private void OnButtonPropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
+        {
+            if (e.Property == IsPointerOverProperty)
+            {
+                InvalidateVisual();
+            }
         }
 
         public ToolbarIconKind Kind
@@ -63,9 +99,13 @@ namespace c2flux
         {
             // GDI+ (anti-aliased, no pixel offset) puts coordinates on pixel
             // centers.
+            using DrawingContext.PushedState scaled = context.PushTransform(Matrix.CreateScale(Scale, Scale));
             using DrawingContext.PushedState centers = context.PushTransform(Matrix.CreateTranslation(0.5, 0.5));
-            IBrush line = IsActive
+            // A checked toggle under the pointer draws its icon light blue.
+            IBrush line = IsActive && _button?.IsPointerOver != true
                 ? Brushes.White
+                : IsActive
+                    ? this.FindResource(ActualThemeVariant, "IconInactiveBrush") as IBrush ?? Brushes.SteelBlue
                 : !IsEffectivelyEnabled
                     ? this.FindResource(ActualThemeVariant, "DisabledTextBrush") as IBrush ?? Brushes.Gray
                     : this.FindResource(ActualThemeVariant, "IconInactiveBrush") as IBrush ?? Brushes.SteelBlue;

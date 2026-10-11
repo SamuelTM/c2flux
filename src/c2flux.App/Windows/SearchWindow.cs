@@ -65,7 +65,7 @@ namespace c2flux
         private readonly TextBox _fileTypes = new TextBox { Classes = { "ant" } };
         private readonly DrawnTable<SearchResult> _table = new DrawnTable<SearchResult> { Style = TableStyle.Classic, Responsive = true };
         private readonly ProgressBar _progress = new ProgressBar { IsIndeterminate = true, Height = 4, MinHeight = 4, IsVisible = false };
-        private readonly TextBlock _status = new TextBlock { TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 3) };
+        private readonly TextBlock _status = new TextBlock { TextTrimming = DotsTrimming.Instance, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 3) };
         private readonly Button _search = FooterButton("Search.Start", primary: true);
         private readonly Button _cancel = FooterButton("Search.Cancel", primary: false);
 

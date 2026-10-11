@@ -57,7 +57,7 @@ namespace c2flux
             FormattedText formatted = CreateText(text, brush);
             formatted.MaxTextWidth = width;
             formatted.MaxLineCount = 1;
-            formatted.Trimming = TextTrimming.CharacterEllipsis;
+            formatted.Trimming = DotsTrimming.Instance;
             context.DrawText(formatted, new Point(bounds.X + padding, bounds.Y + (bounds.Height - formatted.Height) / 2));
         }
     }

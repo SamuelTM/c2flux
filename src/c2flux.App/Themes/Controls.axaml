@@ -38,6 +38,13 @@
     <Setter Property="Foreground" Value="White" />
   </Style>
 
+  <!-- Checked and hovered: a lighter primary, the text in the light blue. -->
+  <Style Selector="ToggleButton.ant:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PrimaryHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource IconInactiveBrush}" />
+  </Style>
+
   <!-- AntdUI.Button Type = Primary (dialog default buttons). -->
   <Style Selector="Button.ant.primary">
     <Setter Property="Height" Value="32" />
@@ -79,8 +86,20 @@
   <Style Selector="Button.ant.dialog /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BoxShadow" Value="{DynamicResource ButtonShadow}" />
   </Style>
+  <Style Selector="Button.ant.dialog:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource DialogButtonHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource FieldBorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.ant.dialog:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource DialogButtonPressedBrush}" />
+  </Style>
   <Style Selector="Button.ant.dialog.primary /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="BoxShadow" Value="{DynamicResource PrimaryButtonShadow}" />
+  </Style>
+  <Style Selector="Button.ant.dialog.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource IconInactiveBrush}" />
+    <Setter Property="Foreground" Value="White" />
   </Style>
 
   <!-- AntdUI.Input: like the dialog buttons, 4 px wave margin; the focus

@@ -2,7 +2,7 @@
 
 Cada tela da interface Avalonia comparada com a referência WinForms de mesmo nome (`reference/` e `charts/`). Os números vêm de [`tests/fidelity/compare.py`](../../tests/fidelity/compare.py), que a CI roda nos três SOs e publica no resumo do job "Core and app tests" (artefato `app-captures-<so>`). A diferença é a média, por pixel, da maior diferença entre os canais (0 a 255). Windows, macOS e Linux dão o mesmo resultado com variação de até 1 ponto, porque as capturas saem da plataforma headless do Avalonia com Skia e a fonte embutida.
 
-Legenda: ✓ confere; ~ confere com resíduo conhecido; ? ainda não verificado; — não se aplica (janela de tamanho fixo, ou sem o item). "Estados" cobre o que as capturas mostram (desabilitado, selecionado, marcado); hover e pressionado não foram comparados.
+Legenda: ✓ confere; ~ confere com resíduo conhecido; ? ainda não verificado; — não se aplica (janela de tamanho fixo, ou sem o item). "Estados" cobre o que as capturas mostram: desabilitado, selecionado, marcado e, nas linhas `state-*`, o mouse em cima e o botão pressionado (o cursor real no WinForms, o mouse simulado do headless no port). As outras telas ainda não têm referência desses estados, e "Redimensionar" com "?" ainda não foi conferido.
 
 | Tela | Diferença | Layout | Cores | Fontes | Ícones | Estados | Redimensionar |
 |---|---:|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -15,13 +15,18 @@ Legenda: ✓ confere; ~ confere com resíduo conhecido; ? ainda não verificado;
 | Tabela (`chart-table`) | 2,4 | ✓ | ✓ | ~ | — | ✓ | ? |
 | Histórico de armazenamento, gráfico (`chart-storage-history`) | 2,9 | ✓ | ✓ | ~ | — | — | ? |
 | Visão de crescimento (`chart-growth-overview`) | 2,4 | ✓ | ✓ | ~ | — | ~ | ? |
-| Janela principal vazia (`main-empty`) | 5,8 | ✓ | ✓ | ~ | ~ | ✓ | ? |
+| Janela principal vazia (`main-empty`) | 5,0 | ✓ | ✓ | ~ | ✓ | ✓ | ✓ |
 | Configurações, Geral (`settings`) | 6,6 | ✓ | ✓ | ~ | — | ✓ | — |
 | Configurações, UI / Histórico / Exportar / Log | 2,2 a 4,0 | ✓ | ✓ | ~ | — | ✓ | — |
 | Busca vazia (`search`) | 2,0 | ✓ | ✓ | ~ | ✓ | ✓ | ? |
 | Busca com resultados (`search-results`) | 9,4 | ✓ | ✓ | ~ | — | ✓ | ? |
-| Histórico de alertas (`alert-history-entries`) | 6,3 | ✓ | ✓ | ~ | ✓ | ✓ | ? |
+| Histórico de alertas (`alert-history-entries`) | 6,3 | ✓ | ✓ | ~ | ✓ | ✓ | ✓ |
 | Sobre (`about`) | 7,1 | ✓ | ✓ | ~ | ✓ | ✓ | — |
+| Janela principal em 1000×650 (`main-empty-small`), barra em duas linhas | 7,7 | ✓ | ✓ | ~ | ✓ | — | ✓ |
+| Histórico de alertas no tamanho mínimo (`alert-history-entries-min`) | 9,2 | ✓ | ✓ | ~ | ✓ | — | ✓ |
+| Botão OK do Sobre com o mouse em cima e pressionado (`state-about-ok-*`) | 7,1 | ✓ | ✓ | ~ | — | ✓ | — |
+| Botão de visão marcado com o mouse em cima (`state-main-toolbar-hover`) | 4,9 | ✓ | ✓ | ~ | ✓ | ✓ | — |
+| Checkbox com o mouse em cima (`state-settings-checkbox-hover`; não muda em nenhum dos dois) | 6,6 | ✓ | ✓ | ~ | — | ✓ | — |
 | Atualização disponível (`update-available`) | 5,1 | ✓ | ✓ | ~ | ✓ | — | — |
 | Mover banco (`database-move`) | 6,5 | ✓ | ✓ | ~ | — | ✓ | — |
 | Depuração (`debug-class`) | 3,3 | ✓ | ✓ | ~ | ✓ | — | ? |
@@ -41,3 +46,8 @@ Legenda: ✓ confere; ~ confere com resíduo conhecido; ? ainda não verificado;
 - `Label` do WinForms desenha o texto 3 px para dentro, `AntdUI.Label` 1 px mais abaixo; células do `DataGridView` 3 px e cabeçalhos 5 px mais para dentro que no `AntdUI.Table`.
 - `LinkLabel` desabilitado: texto cinza 143 em relevo, sobre uma cópia quase preta deslocada 1 px.
 - O botão do Ko-fi estica a imagem para 179×42 (`PictureBox` com `StretchImage`).
+- A barra de ferramentas desenha os ícones de 16 px em 12 px, como o AntdUI; com eles em 16 px a barra quebrava em duas linhas já em 1280×800. Cada linha da barra tem 42 px.
+- Botões de diálogo: fundo 49 com o mouse em cima e 55 pressionado; botão de visão marcado com o mouse em cima: fundo #3C89E8 e texto e ícone #5CA9FF.
+- Tamanhos de janela: os do WinForms incluem a moldura (16×39 px). A janela principal, o histórico de alertas e os mínimos dos detalhes do histórico e da depuração estavam com a moldura somada à área interna.
+- Texto cortado em tabelas clássicas, rótulos e status termina em "..." (`TextRenderer` com `EndEllipsis`), não em "…".
+- A tabela não rola mais para mostrar a linha selecionada antes do primeiro layout (o histórico de alertas abria com a primeira linha escondida).

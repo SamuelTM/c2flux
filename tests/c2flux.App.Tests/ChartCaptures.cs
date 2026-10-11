@@ -1,3 +1,6 @@
+using System.Linq;
+using Avalonia.Input;
+using Avalonia.VisualTree;
 using System.Threading.Tasks;
 using System;
 using System.Collections.Generic;
@@ -44,6 +47,62 @@ namespace c2flux.AppTests
                 Dispatcher.UIThread.RunJobs();
                 using WriteableBitmap frame = window.CaptureRenderedFrame();
                 frame.Save(OutputPath("main-empty"));
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
+        // The phase 5.4 state references (Screenshots RunStatesAsync): the
+        // pointer over a control, pressed, and smaller windows.
+        [AvaloniaFact]
+        public void States()
+        {
+            CaptureState("state-about-ok-hover", new AboutWindow(new AppSettings { AutoCheckForUpdates = false }), "OK", press: false);
+            CaptureState("state-about-ok-pressed", new AboutWindow(new AppSettings { AutoCheckForUpdates = false }), "OK", press: true);
+            CaptureState("state-settings-checkbox-hover", new SettingsWindow(new AppSettings { StorageHistoryDetailsEnabled = true }, windowsOptions: true), LocalizationService.GetText("Settings.SkipReparsePoints"), press: false);
+            CaptureState("state-main-toolbar-hover", new MainWindow(new AppSettings()) { Width = 1264, Height = 761 }, "TableButton", press: false);
+
+            // 1000x650 and the minimum size, both with the Windows frame.
+            CaptureWindow("main-empty-small", new MainWindow(new AppSettings()) { Width = 984, Height = 611 });
+            AppAlertLog.DeleteAll();
+            AppAlertLog.AddInformation("Scan", "Scan of T:\\ completed.");
+            AppAlertLog.AddWarning("Scan", "3 folders could not be read.", "T:\\tree\\unreadable\\locked-dir\nAccess is denied.");
+            AppAlertLog.AddError("Export", "The CSV file could not be written.", "The file is in use by another process.");
+            AlertHistoryWindow alerts = new AlertHistoryWindow();
+            alerts.Width = alerts.MinWidth;
+            alerts.Height = alerts.MinHeight;
+            CaptureWindow("alert-history-entries-min", alerts);
+            AppAlertLog.DeleteAll();
+        }
+
+        // target: a control name, or the text of a button or checkbox.
+        private static void CaptureState(string name, Window window, string target, bool press)
+        {
+            window.Show();
+
+            try
+            {
+                Dispatcher.UIThread.RunJobs();
+                Control control = window.GetVisualDescendants().OfType<Control>().First(item =>
+                    item.Name == target || (item as ContentControl)?.Content as string == target);
+                Point center = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window) ?? default;
+                window.MouseMove(center);
+
+                if (press)
+                {
+                    window.MouseDown(center, MouseButton.Left);
+                }
+
+                Dispatcher.UIThread.RunJobs();
+                using WriteableBitmap frame = window.CaptureRenderedFrame();
+                frame.Save(OutputPath(name));
+
+                if (press)
+                {
+                    window.MouseUp(new Point(0, 0), MouseButton.Left);
+                }
             }
             finally
             {
@@ -227,7 +286,7 @@ namespace c2flux.AppTests
             AppAlertLog.AddInformation("Scan", "Scan of T:\\ completed.");
             AppAlertLog.AddWarning("Scan", "3 folders could not be read.", "T:\\tree\\unreadable\\locked-dir\nAccess is denied.");
             AppAlertLog.AddError("Export", "The CSV file could not be written.", "The file is in use by another process.");
-            AlertHistoryWindow window = new AlertHistoryWindow { Width = 804, Height = 461 };
+            AlertHistoryWindow window = new AlertHistoryWindow();
             window.Show();
 
             try

@@ -39,6 +39,9 @@
       <SolidColorBrush x:Key="InputFocusBorderBrush" Color="#1677FF" />
       <SolidColorBrush x:Key="FieldBorderBrush" Color="#D9D9D9" />
       <SolidColorBrush x:Key="SecondaryButtonBrush" Color="#F0F0F0" />
+      <SolidColorBrush x:Key="DialogButtonHoverBrush" Color="#F5F5F5" />
+      <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#4096FF" />
+      <SolidColorBrush x:Key="DialogButtonPressedBrush" Color="#E6E6E6" />
       <SolidColorBrush x:Key="CheckDisabledFillBrush" Color="#0A000000" />
       <SolidColorBrush x:Key="CheckDisabledBrush" Color="#40000000" />
       <SolidColorBrush x:Key="CheckMarkBrush" Color="#FFFFFF" />
@@ -80,6 +83,11 @@
       <!-- A primary AntdUI button given BackgroundSecondary (the search
            button), measured. -->
       <SolidColorBrush x:Key="SecondaryButtonBrush" Color="#313131" />
+      <!-- Dialog buttons under the pointer and pressed, measured. -->
+      <SolidColorBrush x:Key="DialogButtonHoverBrush" Color="#313131" />
+      <!-- A checked toolbar toggle under the pointer, measured. -->
+      <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#3C89E8" />
+      <SolidColorBrush x:Key="DialogButtonPressedBrush" Color="#373737" />
       <!-- Measured checkbox: disabled fill white at 4 %, disabled check and
            text 105, the check mark black. -->
       <SolidColorBrush x:Key="CheckDisabledFillBrush" Color="#0AFFFFFF" />
