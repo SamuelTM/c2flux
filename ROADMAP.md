@@ -386,7 +386,7 @@ Ordem sugerida: o que é visto primeiro vem antes.
   - [x] Varredura: sessões por unidade, progresso, árvore ao vivo, pausar e cancelar, histórico de armazenamento (com detalhes) e de varreduras, aviso de pastas puladas. Teste headless varre uma pasta de ponta a ponta
   - [x] Achado: `DriveInfo.GetDrives` em paralelo derruba o processo no macOS (`getmntinfo` não é seguro entre threads); `Volumes.List` serializa as chamadas
   - [x] Menu de contexto da árvore (o próprio do app; o do Explorer ficou fora, Fase 4), exportação CSV e cópias, salvar e carregar varredura (diálogos nativos), argumento de inicialização, botões da barra ocultáveis (menu de contexto) e grupos reordenáveis pela alça
-  - [ ] Sobre e verificação de atualização (são janelas: itens `AboutForm` e `UpdateAvailableForm` abaixo)
+  - [x] Sobre e verificação de atualização
   - [x] Ícones de arquivo, pasta e unidade: shell do Windows (`SHGetFileInfo`), `NSWorkspace` no macOS, desenhados no Linux (sem tema de ícones freedesktop por enquanto)
   - [x] Elevação no Windows (iniciar elevado, prompt de elevação) e aviso de Acesso Total ao Disco no macOS (uma vez por execução, ao varrer algo que inclui a pasta pessoal, com botão para os Ajustes)
   - [ ] Visões embutidas: Análise (`AdvancedFeaturesForm`) e Histórico de armazenamento (`StorageHistoryForm`); hoje os botões ficam desabilitados
@@ -395,8 +395,9 @@ Ordem sugerida: o que é visto primeiro vem antes.
 - [ ] `ScanHistoryForm`
 - [ ] `StorageHistoryForm` + `StorageHistoryDetailsForm`
 - [ ] `AdvancedFeaturesForm`: análise, redundância
-- [ ] `AlertHistoryForm`
-- [ ] `AboutForm`, `UpdateAvailableForm`, `DatabaseMoveForm`, `DebugClassForm`
+- [x] `AlertHistoryForm` → `AlertHistoryWindow`, com o estilo clássico do `DrawnTable` (o `DataGridView` temático) e seleção múltipla; abre pelos contadores da barra de status
+- [x] `AboutForm`, `UpdateAvailableForm` (Sobre pelo menu Ajuda e pelo menu do app no macOS; verificação de atualização ao iniciar)
+- [ ] `DatabaseMoveForm`, `DebugClassForm`
 - [x] `AppDialogs`: aviso com OK, aviso com Sim/Não e prompt de elevação, com os ícones do Windows desenhados
 - [ ] `AppFileDialog`: **substituir** pelo `StorageProvider` nativo do Avalonia (diálogos nativos de cada SO), conforme decidido na seção 9
 
