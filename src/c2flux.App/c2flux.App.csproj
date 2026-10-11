@@ -29,6 +29,20 @@
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 	</PropertyGroup>
 
+	<!--
+		Release builds (phase 6): self-contained per RID, trimmed. Partial trim
+		mode trims only the framework's trimmable assemblies, so the app's
+		reflection (JSON settings and scan files, the localization binding)
+		keeps working; trimming would otherwise switch reflection-based JSON
+		off. The self-test argument of Program checks a published build.
+	-->
+	<PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+		<SelfContained>true</SelfContained>
+		<PublishTrimmed>true</PublishTrimmed>
+		<TrimMode>partial</TrimMode>
+		<JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="Avalonia" Version="12.1.3" />
 		<PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
