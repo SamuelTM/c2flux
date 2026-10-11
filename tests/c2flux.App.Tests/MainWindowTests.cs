@@ -154,8 +154,8 @@ namespace c2flux.AppTests
 
                 window.MouseMove(target, Avalonia.Input.RawInputModifiers.LeftMouseButton);
                 Dispatcher.UIThread.RunJobs();
-                Assert.Equal(2, overlay.Children.Count);
-                Control marker = overlay.Children.OfType<Avalonia.Controls.Shapes.Rectangle>().Single();
+                Assert.Equal(3, overlay.Children.Count);
+                Control marker = overlay.Children[^1];
                 Assert.True(marker.IsVisible);
                 Assert.InRange(Canvas.GetLeft(marker) + 1.5, views.Bounds.Left - 9, views.Bounds.Left - 7);
 

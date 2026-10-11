@@ -1146,11 +1146,9 @@ namespace c2flux
 
             void EndDrag()
             {
-                ((ghost?.Child as Image)?.Source as IDisposable)?.Dispose();
                 ToolbarOverlay.Children.Clear();
                 ghost = null;
                 marker = null;
-                group.Opacity = 1;
             }
 
             grip.PointerPressed += (_, e) =>
@@ -1185,7 +1183,14 @@ namespace c2flux
                         BorderThickness = new Thickness(1),
                         CornerRadius = new CornerRadius(6),
                         Opacity = 0.85,
-                        Child = new Image { Source = Snapshot(group), Width = group.Bounds.Width, Height = group.Bounds.Height },
+                        // A live copy, not a bitmap: drawn at any screen scale
+                        // (a 2x bitmap showed its top-left quarter, enlarged).
+                        Child = new Avalonia.Controls.Shapes.Rectangle
+                        {
+                            Width = group.Bounds.Width,
+                            Height = group.Bounds.Height,
+                            Fill = new VisualBrush(group) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top },
+                        },
                     };
                     marker = new Avalonia.Controls.Shapes.Rectangle
                     {
@@ -1194,10 +1199,21 @@ namespace c2flux
                         RadiusY = 1.5,
                         Fill = (IBrush)this.FindResource(ActualThemeVariant, "PrimaryBrush"),
                     };
-                    // The marker over the ghost: the ghost often covers the gap.
+                    // The group dimmed by a veil (its own Opacity would dim the
+                    // ghost too), and the marker over the ghost, which often
+                    // covers the gap.
+                    Avalonia.Controls.Shapes.Rectangle veil = new Avalonia.Controls.Shapes.Rectangle
+                    {
+                        Width = group.Bounds.Width,
+                        Height = group.Bounds.Height,
+                        Fill = (IBrush)this.FindResource(ActualThemeVariant, "BackgroundSecondaryBrush"),
+                        Opacity = 0.65,
+                    };
+                    Canvas.SetLeft(veil, group.Bounds.Left);
+                    Canvas.SetTop(veil, group.Bounds.Top);
+                    ToolbarOverlay.Children.Add(veil);
                     ToolbarOverlay.Children.Add(ghost);
                     ToolbarOverlay.Children.Add(marker);
-                    group.Opacity = 0.35;
                 }
 
                 Canvas.SetLeft(ghost, point.X - grabOffset.X - 1);
@@ -1219,17 +1235,6 @@ namespace c2flux
                 e.Pointer.Capture(null);
             };
             grip.PointerCaptureLost += (_, _) => EndDrag();
-        }
-
-        // The control as it is drawn, at the screen's pixel density.
-        private static Avalonia.Media.Imaging.RenderTargetBitmap Snapshot(Control control)
-        {
-            double scaling = TopLevel.GetTopLevel(control)?.RenderScaling ?? 1;
-            Avalonia.Media.Imaging.RenderTargetBitmap bitmap = new Avalonia.Media.Imaging.RenderTargetBitmap(
-                new PixelSize(Math.Max(1, (int)Math.Ceiling(control.Bounds.Width * scaling)), Math.Max(1, (int)Math.Ceiling(control.Bounds.Height * scaling))),
-                new Vector(96 * scaling, 96 * scaling));
-            bitmap.Render(control);
-            return bitmap;
         }
 
         // Port of RebuildToolbarContextMenu: a check per button, "show all".
