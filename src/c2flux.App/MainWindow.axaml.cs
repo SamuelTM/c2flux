@@ -85,6 +85,18 @@ namespace c2flux
 
             _storageHistory = new StorageHistoryView(settings) { IsVisible = false };
             ViewHost.Children.Add(_storageHistory);
+            AnalysisButton.Click += (_, _) =>
+            {
+                if (AnalysisButton.IsChecked == true)
+                {
+                    ShowAnalysis(CurrentSession);
+                    AnalysisButton.IsChecked = CurrentSession?.AnalysisView?.IsVisible == true;
+                }
+                else
+                {
+                    SetViewMode(_viewMode, save: false);
+                }
+            };
             StorageHistoryButton.Click += (_, _) =>
             {
                 if (StorageHistoryButton.IsChecked == true)
@@ -190,6 +202,7 @@ namespace c2flux
                     Item("Toolbar.Sunburst", () => SetViewMode(ViewMode.Sunburst, save: true)),
                     Item("Toolbar.Treemap", () => SetViewMode(ViewMode.Treemap, save: true)),
                     new NativeMenuItemSeparator(),
+                    Item("Menu.Analysis", () => ShowAnalysis(CurrentSession)),
                     Item("Menu.SpaceHistory", ShowStorageHistory)),
                 Submenu(
                     "Menu.Tools",
@@ -571,6 +584,12 @@ namespace c2flux
                 {
                     existing.Cancellation.Cancel();
                 }
+
+                if (existing.AnalysisView != null)
+                {
+                    existing.AnalysisView.Cancel();
+                    ViewHost.Children.Remove(existing.AnalysisView);
+                }
             }
 
             ScanSession session = new ScanSession(normalizedRootPath) { ViewMode = viewMode };
@@ -940,7 +959,7 @@ namespace c2flux
                 UpdateStatusForDrive(rootPath);
             }
 
-            SetViewMode(session.ViewMode, save: false);
+            RestoreSessionView(session);
         }
 
         private void UpdateSelectedScanStatus(ScanSession session, ScanProgress scanProgress)
@@ -1037,7 +1056,7 @@ namespace c2flux
                     UpdateStatusForDrive(session.RootPath);
                 }
 
-                SetViewMode(session.ViewMode, save: false);
+                RestoreSessionView(session);
             }
 
             _selectedEntry = entry;
@@ -1331,6 +1350,7 @@ namespace c2flux
             _settings.SelectedViewMode = mode;
             _storageHistory.IsVisible = false;
             StorageHistoryButton.IsChecked = false;
+            HideAnalysisViews();
 
             foreach (var (viewMode, (button, view)) in _views)
             {
@@ -1338,11 +1358,12 @@ namespace c2flux
                 view.IsVisible = viewMode == mode;
             }
 
-            ScanSession session = _sessions.Values.FirstOrDefault(item => item.RootEntry != null && ReferenceEquals(item.RootEntry, _currentRootEntry));
+            ScanSession session = CurrentSession;
 
             if (session != null)
             {
                 session.ViewMode = mode;
+                session.AnalysisVisible = false;
             }
 
             if (save)
@@ -1353,9 +1374,69 @@ namespace c2flux
 
         // The storage history in place of the chart views (WinForms
         // ShowStorageHistoryView); a view button or a new scan brings them back.
+        private ScanSession CurrentSession => _sessions.Values.FirstOrDefault(item => item.RootEntry != null && ReferenceEquals(item.RootEntry, _currentRootEntry));
+
+        // A session shows its analysis again when it had it open.
+        private void RestoreSessionView(ScanSession session)
+        {
+            if (session.AnalysisVisible && !session.IsRunning && session.RootEntry != null)
+            {
+                ShowAnalysis(session);
+            }
+            else
+            {
+                SetViewMode(session.ViewMode, save: false);
+            }
+        }
+
+        // The analysis of the current scan, created the first time
+        // (WinForms ShowAnalysisView).
+        private void ShowAnalysis(ScanSession session)
+        {
+            if (session?.RootEntry == null || session.IsRunning)
+            {
+                return;
+            }
+
+            if (session.AnalysisView == null)
+            {
+                session.AnalysisView = new AnalysisView(session.RootEntry);
+                ViewHost.Children.Add(session.AnalysisView);
+            }
+
+            foreach (var (_, (button, view)) in _views)
+            {
+                button.IsChecked = false;
+                view.IsVisible = false;
+            }
+
+            _storageHistory.IsVisible = false;
+            StorageHistoryButton.IsChecked = false;
+            HideAnalysisViews();
+            session.AnalysisView.IsVisible = true;
+            session.AnalysisVisible = true;
+            AnalysisButton.IsChecked = true;
+        }
+
+        private void HideAnalysisViews()
+        {
+            foreach (ScanSession session in _sessions.Values.Where(session => session.AnalysisView != null))
+            {
+                session.AnalysisView.IsVisible = false;
+            }
+
+            AnalysisButton.IsChecked = false;
+        }
+
         private void ShowStorageHistory()
         {
             _storageHistory.RefreshHistory();
+            HideAnalysisViews();
+
+            if (CurrentSession != null)
+            {
+                CurrentSession.AnalysisVisible = false;
+            }
 
             foreach (var (_, (button, view)) in _views)
             {
@@ -1697,6 +1778,8 @@ namespace c2flux
             public bool WasCanceled { get; set; }
             public int SkippedDirectories { get; set; }
             public ViewMode ViewMode { get; set; } = ViewMode.Table;
+            public bool AnalysisVisible { get; set; }
+            public AnalysisView AnalysisView { get; set; }
             public HashSet<string> SkippedDirectoryDetailSet { get; } = new HashSet<string>();
             public List<string> SkippedDirectoryDetails { get; } = new List<string>();
         }

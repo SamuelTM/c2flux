@@ -80,7 +80,7 @@
         </StackPanel>
         <StackPanel x:Name="GroupFeatures" Orientation="Horizontal" Spacing="6" Margin="0,0,16,0">
           <Border Background="Transparent" Width="7" Margin="0,0,0,0"><Rectangle Classes="grip" /></Border>
-          <ToggleButton x:Name="AnalysisButton" Classes="ant" IsEnabled="False">
+          <ToggleButton x:Name="AnalysisButton" Classes="ant">
             <StackPanel Orientation="Horizontal" Spacing="4">
               <l:ToolbarIcon Kind="Analysis" IsActive="{Binding #AnalysisButton.IsChecked}" />
               <TextBlock Text="{l:T Menu.Analysis}" />

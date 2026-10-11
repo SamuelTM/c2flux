@@ -381,7 +381,7 @@ Portar de GDI+ para `DrawingContext` do Avalonia (ou SkiaSharp direto, se for pr
 Ordem sugerida: o que é visto primeiro vem antes.
 
 - [x] Tabelas: `DrawnTable<T>` próprio (decisão: sem `DataGrid`, descontinuado, nem `TreeDataGrid`/`TableView`, pagos), desenhado como o `AntdUI.Table` — cabeçalho fixo, ordenação em três cliques, colunas redimensionáveis, hover, seleção, teclado, tooltip de texto cortado, só as linhas visíveis desenhadas. `EntryTable` (`Chart_TableGridChart`) e `TreemapView` (o `Chart_Treemap` inteiro: caminho, tabela, divisor e treemap). Diferença média contra a referência: 1,4 e 4,4 níveis por pixel. O `Chart_ResponsiveTableGrid` (base dos resultados da busca) vira um `DrawnTable` junto com o `SearchForm`
-- [ ] `MainForm`: layout principal, barra de ferramentas, seletor de unidade, árvore, painel de gráficos, barra de status (`LayoutMainFormController`, `StatusMainFormController`, `TreeEntryController`, `ExportEntryController`, `PartitionGridController`, `DriveComboBoxController`)
+- [x] `MainForm`: layout principal, barra de ferramentas, seletor de unidade, árvore, painel de gráficos, barra de status (`LayoutMainFormController`, `StatusMainFormController`, `TreeEntryController`, `ExportEntryController`, `PartitionGridController`, `DriveComboBoxController`)
   - [x] Janela, menu (nativo no macOS, dentro da janela no Windows/Linux), barra de ferramentas com os ícones desenhados, árvore, painel de partições, visualizações e barra de status (contadores de alerta, resumo com tamanho de cluster, progresso)
   - [x] Varredura: sessões por unidade, progresso, árvore ao vivo, pausar e cancelar, histórico de armazenamento (com detalhes) e de varreduras, aviso de pastas puladas. Teste headless varre uma pasta de ponta a ponta
   - [x] Achado: `DriveInfo.GetDrives` em paralelo derruba o processo no macOS (`getmntinfo` não é seguro entre threads); `Volumes.List` serializa as chamadas
@@ -389,17 +389,17 @@ Ordem sugerida: o que é visto primeiro vem antes.
   - [x] Sobre e verificação de atualização
   - [x] Ícones de arquivo, pasta e unidade: shell do Windows (`SHGetFileInfo`), `NSWorkspace` no macOS, desenhados no Linux (sem tema de ícones freedesktop por enquanto)
   - [x] Elevação no Windows (iniciar elevado, prompt de elevação) e aviso de Acesso Total ao Disco no macOS (uma vez por execução, ao varrer algo que inclui a pasta pessoal, com botão para os Ajustes)
-  - [ ] Visões embutidas: Análise (`AdvancedFeaturesForm`; hoje o botão fica desabilitado) e Histórico de armazenamento ✓
+  - [x] Visões embutidas: Análise (uma por sessão de varredura, como no WinForms) e Histórico de armazenamento
 - [x] `SearchForm` → `SearchWindow` (fonte: varredura atual, varredura salva ou unidade; filtros de tamanho, data e tipo; resultados ao vivo na tabela clássica com colunas proporcionais; menu de contexto; botão e menu Busca; `--search <unidade>` ao iniciar). No macOS e no Linux a coluna Unidade mostra o ponto de montagem do volume (antes ficava vazia)
 - [x] `SettingsForm` → `SettingsWindow` (abas Geral, UI, Histórico, Exportar e Log; menu Configurações e ⌘, no macOS; as opções só do Windows somem nos outros SOs e as linhas sobem). Corrigido: os campos do histórico de varredura obsoleto ficavam por cima dos detalhes na aba Histórico e saíram; o painel de partições e a altura das barras agora seguem a configuração
 - [x] `ScanHistoryForm`: **não portada**. É a comparação de varreduras legada; o upstream escondeu o botão e o item de menu junto com "Salvar histórico de varredura (obsoleto)", então não há como abri-la
 - [x] `StorageHistoryForm` + `StorageHistoryDetailsForm` → `StorageHistoryView` (embutida na janela principal, botão "Scan History" e menu Exibir) e `StorageHistoryDetailsWindow`; período personalizado pelo calendário. Corrigido: o slider de intensidade sumia espremido no cabeçalho estreito; agora some só quando não cabe, junto do rótulo
-- [ ] `AdvancedFeaturesForm`: análise, redundância
+- [x] `AdvancedFeaturesForm` → `AnalysisView` (abas Extensões, Tipos de arquivo, Maiores arquivos e Redundâncias; tabelas Ant com barras de uso; redundâncias calculadas ao abrir a aba, com progresso e grupos expansíveis; unidade da coluna de tamanho alternada pelo cabeçalho). As categorias por extensão foram para o Core (`FileTypeCategories`), usadas pelos dois apps
 - [x] `AlertHistoryForm` → `AlertHistoryWindow`, com o estilo clássico do `DrawnTable` (o `DataGridView` temático) e seleção múltipla; abre pelos contadores da barra de status
 - [x] `AboutForm`, `UpdateAvailableForm` (Sobre pelo menu Ajuda e pelo menu do app no macOS; verificação de atualização ao iniciar)
-- [x] `DatabaseMoveForm`, `DebugClassForm` → `DatabaseMoveWindow`, `DebugClassWindow` (abrem pela `SettingsForm`; ligar quando ela for portada)
+- [x] `DatabaseMoveForm`, `DebugClassForm` → `DatabaseMoveWindow`, `DebugClassWindow` (a de depuração abre com Ctrl+Shift+Alt+D nas configurações; a de mover o banco servia aos campos do histórico de varredura obsoleto, que saíram da aba Histórico, e fica sem ponto de entrada, como no WinForms depois da correção)
 - [x] `AppDialogs`: aviso com OK, aviso com Sim/Não, pergunta Sim/Não, aviso Repetir/Cancelar e prompt de elevação, com os ícones do Windows desenhados
-- [ ] `AppFileDialog`: **substituir** pelo `StorageProvider` nativo do Avalonia (diálogos nativos de cada SO), conforme decidido na seção 9
+- [x] `AppFileDialog`: **substituído** pelo `StorageProvider` nativo do Avalonia (`FileDialogs`: diálogos nativos de cada SO), conforme decidido na seção 9
 
 #### 5.4 Validação de fidelidade
 

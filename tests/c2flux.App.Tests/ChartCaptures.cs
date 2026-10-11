@@ -170,6 +170,34 @@ namespace c2flux.AppTests
             Capture("storage-history-view", view, 892, 632);
         }
 
+        // The right pane of main-analysis.png (892x632), with the chart
+        // fixture: the extensions and largest files tabs.
+        [AvaloniaFact]
+        public void Analysis()
+        {
+            AnalysisView view = new AnalysisView(LoadFixture());
+            Window window = new Window { Width = 892, Height = 632, Content = view };
+            window.Show();
+
+            try
+            {
+                Dispatcher.UIThread.RunJobs();
+                using (WriteableBitmap frame = window.CaptureRenderedFrame())
+                {
+                    frame.Save(OutputPath("analysis"));
+                }
+
+                view.ShowPageForTest(2);
+                Dispatcher.UIThread.RunJobs();
+                using WriteableBitmap largest = window.CaptureRenderedFrame();
+                largest.Save(OutputPath("analysis-largest-files"));
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
         private static void CaptureWindow(string name, Window window)
         {
             window.Show();
