@@ -84,6 +84,13 @@ namespace c2flux
                     {
                         await main.ScanPathAsync(startupPath);
                     }
+
+                    string searchPath = GetStartupSearchPath(args);
+
+                    if (searchPath != null)
+                    {
+                        main.OpenSearch(searchPath);
+                    }
                 };
             }
 
@@ -110,12 +117,22 @@ namespace c2flux
         // "C:" completed to "C:\", only when it exists.
         internal static string GetStartupScanPath(string[] args)
         {
-            if (args.Length == 0 || string.Equals(args[0], "--search", StringComparison.OrdinalIgnoreCase))
-            {
-                return null;
-            }
+            return args.Length == 0 || string.Equals(args[0], "--search", StringComparison.OrdinalIgnoreCase)
+                ? null
+                : NormalizeStartupPath(args[0]);
+        }
 
-            string path = args[0].Trim().Trim('"');
+        // "--search <drive>" (Explorer "c² flux: Search"): the drive to search.
+        internal static string GetStartupSearchPath(string[] args)
+        {
+            return args.Length >= 2 && string.Equals(args[0], "--search", StringComparison.OrdinalIgnoreCase)
+                ? NormalizeStartupPath(args[1])
+                : null;
+        }
+
+        private static string NormalizeStartupPath(string path)
+        {
+            path = path.Trim().Trim('"');
 
             if (path.Length == 2 && path[1] == ':')
             {

@@ -16,6 +16,12 @@ namespace c2flux
             return ShowOkAsync(owner, DialogIconKind.Warning, message, title, okText);
         }
 
+        // MessageBox.Show with MessageBoxIcon.Information.
+        public static Task ShowInfoOkAsync(Window owner, string message, string title = null)
+        {
+            return ShowOkAsync(owner, DialogIconKind.Information, message, title, null);
+        }
+
         // MessageBox.Show with MessageBoxIcon.Error.
         public static Task ShowErrorOkAsync(Window owner, string message, string title = null)
         {
@@ -182,6 +188,7 @@ namespace c2flux
         Warning,
         Question,
         Error,
+        Information,
     }
 
     // The Windows message box icons (IDI_WARNING, IDI_QUESTION, IDI_ERROR) at 32 px,
@@ -212,6 +219,11 @@ namespace c2flux
                 };
                 context.DrawGeometry(fill, new Pen(new SolidColorBrush(Color.FromRgb(160, 110, 0)), 1, lineJoin: PenLineJoin.Round), triangle);
                 DrawGlyph(context, "!", Brushes.Black, 20, 2);
+            }
+            else if (Kind == DialogIconKind.Information)
+            {
+                context.DrawEllipse(new SolidColorBrush(Color.FromRgb(0, 103, 192)), new Pen(new SolidColorBrush(Color.FromRgb(0, 70, 140)), 1), new Rect(1, 1, 30, 30));
+                DrawGlyph(context, "i", Brushes.White, 20, 0);
             }
             else if (Kind == DialogIconKind.Error)
             {

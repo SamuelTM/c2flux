@@ -113,6 +113,17 @@
     <Setter Property="BoxShadow" Value="{DynamicResource InputFocusShadow}" />
   </Style>
 
+  <!-- AntdUI.Button with a border (the Filters button of the search). -->
+  <Style Selector="Button.ant.dialog.bordered">
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderBrush" Value="{DynamicResource FieldBorderBrush}" />
+  </Style>
+
+  <!-- The search button: AntdUI primary with BackgroundSecondary as color. -->
+  <Style Selector="Button.ant.dialog.secondary">
+    <Setter Property="Background" Value="{DynamicResource SecondaryButtonBrush}" />
+  </Style>
+
   <!-- Round AntdUI buttons (the + and - of the language list, the ? of
        help): a 1 px border, fully rounded. -->
   <Style Selector="Button.ant.dialog.round">

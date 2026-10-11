@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 
 namespace c2flux
@@ -28,6 +29,9 @@ namespace c2flux
             pendingEntries.Push(rootEntry);
 
             bool useAllFiles = rootEntry.AllFiles.Count > 0;
+            Func<string, string> drive = OperatingSystem.IsWindows()
+                ? WindowsDrive
+                : CreateMountPointResolver(Volumes.List().Select(volume => volume.RootPath));
 
             int processed = 0;
 
@@ -49,7 +53,7 @@ namespace c2flux
 
                 if (Matches(entry, criteria))
                 {
-                    resultCallback(CreateResult(entry));
+                    resultCallback(CreateResult(entry, drive));
                 }
 
                 if (entry.IsDirectory)
@@ -316,16 +320,45 @@ namespace c2flux
             return patternIndex == pattern.Length;
         }
 
-        private static SearchResult CreateResult(FileSystemEntry entry)
+        // "C:" for "C:\\dir\\file".
+        private static string WindowsDrive(string path)
         {
-            string root = Path.GetPathRoot(entry.FullPath) ?? string.Empty;
+            return (Path.GetPathRoot(path) ?? string.Empty).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+
+        // macOS and Linux have no drive letters: the mount point of the
+        // volume holding the path ("/", "/Volumes/USB"), the longest match.
+        internal static Func<string, string> CreateMountPointResolver(IEnumerable<string> mountPoints)
+        {
+            List<string> roots = mountPoints
+                .Where(root => !string.IsNullOrEmpty(root))
+                .Select(root => root.Length > 1 ? root.TrimEnd('/') : root)
+                .OrderByDescending(root => root.Length)
+                .ToList();
+
+            return path =>
+            {
+                foreach (string root in roots)
+                {
+                    if (root == "/" || path == root || path.StartsWith(root + "/", StringComparison.Ordinal))
+                    {
+                        return root;
+                    }
+                }
+
+                return WindowsDrive(path);
+            };
+        }
+
+        private static SearchResult CreateResult(FileSystemEntry entry, Func<string, string> drive)
+        {
             DateTime modifiedLocal = entry.LastWriteTimeUtc.Kind == DateTimeKind.Utc
                 ? entry.LastWriteTimeUtc.ToLocalTime()
                 : entry.LastWriteTimeUtc;
 
             return new SearchResult
             {
-                Drive = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                Drive = drive(entry.FullPath),
                 FullPath = entry.FullPath,
                 Name = entry.Name,
                 SizeBytes = entry.SizeBytes,

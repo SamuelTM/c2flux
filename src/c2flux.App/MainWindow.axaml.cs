@@ -23,6 +23,7 @@ namespace c2flux
     {
         private readonly AppSettings _settings;
         private GridLength _partitionPanelHeight = new GridLength(180);
+        private SearchWindow _searchWindow;
         private readonly ScannerPipeline _scannerPipeline;
         private readonly IStorageHistorySnapshotSource _storageHistorySnapshotSource;
         private readonly Dictionary<string, ScanSession> _sessions = new Dictionary<string, ScanSession>(StringComparer.OrdinalIgnoreCase);
@@ -103,6 +104,7 @@ namespace c2flux
             ScanButton.Click += OnScanClick;
             PauseButton.Click += OnPauseClick;
             OpenFolderButton.Click += OnOpenFolderClick;
+            SearchButton.Click += (_, _) => OpenSearch(null);
             _liveTreeTimer.Tick += (_, _) => FlushLiveTree();
 
             _export = new ExportActions(settings, this, SetStatusText);
@@ -174,7 +176,7 @@ namespace c2flux
                     Item("Toolbar.Treemap", () => SetViewMode(ViewMode.Treemap, save: true))),
                 Submenu(
                     "Menu.Tools",
-                    Item("Search.Title", () => { }, enabled: false)),
+                    Item("Search.Title", () => OpenSearch(null))),
                 Submenu(
                     "Menu.Help",
                     Item("Menu.OnlineHelp", () => FileManager.Open(AppConstants.HelpUrl)),
@@ -186,6 +188,37 @@ namespace c2flux
         }
 
         internal Task ShowAboutAsync() => new AboutWindow(_settings).ShowDialog(this);
+
+        // The search window, one at a time; initialDrivePath preselects a
+        // drive (Explorer "c² flux: Search").
+        internal void OpenSearch(string initialDrivePath)
+        {
+            if (_searchWindow != null)
+            {
+                _searchWindow.WindowState = _searchWindow.WindowState == WindowState.Minimized ? WindowState.Normal : _searchWindow.WindowState;
+                _searchWindow.Activate();
+                return;
+            }
+
+            _searchWindow = new SearchWindow(_settings, () => _currentRootEntry, ScanForSearchAsync, initialDrivePath);
+            _searchWindow.Closed += (_, _) => _searchWindow = null;
+            _searchWindow.Show(this);
+        }
+
+        // Scans a drive for the search; its result, unless the scan was
+        // canceled.
+        private async Task<FileSystemEntry> ScanForSearchAsync(string rootPath)
+        {
+            if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
+            {
+                return null;
+            }
+
+            await ScanPathAsync(rootPath);
+            return _sessions.TryGetValue(NormalizeScanPath(rootPath), out ScanSession session) && !session.IsRunning && !session.WasCanceled
+                ? session.RootEntry
+                : null;
+        }
 
         // Settings: on OK, saves them and applies what changed (files in the
         // tree, the partition panel, chart options, language).

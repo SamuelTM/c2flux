@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -105,6 +106,50 @@ namespace c2flux.AppTests
                     using WriteableBitmap frame = window.CaptureRenderedFrame();
                     frame.Save(OutputPath(names[index]));
                 }
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
+        // search.png empty; search-results.png after searching "file-00" in
+        // the reference tree: T:\tree\wide\file-000000.dat and on, with the
+        // sizes generate_test_tree.py gives them (seed 20260101).
+        [AvaloniaFact]
+        public async Task Search()
+        {
+            int[] sizes = { 5920, 3485, 1781, 7356, 7258, 2420, 4863, 6758, 2811, 6759, 2990, 3638 };
+            FileSystemEntry root = new FileSystemEntry { Name = "T:\\", FullPath = "T:\\", IsDirectory = true };
+
+            for (int index = 0; index < 1000; index++)
+            {
+                root.AllFiles.Add(new FileSystemEntry
+                {
+                    Name = $"file-{index:000000}.dat",
+                    FullPath = $"T:\\tree\\wide\\file-{index:000000}.dat",
+                    SizeBytes = sizes[index % sizes.Length],
+                    LastWriteTimeUtc = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMinutes(12 + index),
+                });
+            }
+
+            AppSettings settings = new AppSettings();
+            SearchWindow window = new SearchWindow(settings, () => root, _ => Task.FromResult<FileSystemEntry>(null));
+            window.Show();
+
+            try
+            {
+                Dispatcher.UIThread.RunJobs();
+                using (WriteableBitmap frame = window.CaptureRenderedFrame())
+                {
+                    frame.Save(OutputPath("search"));
+                }
+
+                window.SearchText = "file-00";
+                await window.SearchAsync();
+                Dispatcher.UIThread.RunJobs();
+                using WriteableBitmap results = window.CaptureRenderedFrame();
+                results.Save(OutputPath("search-results"));
             }
             finally
             {

@@ -390,7 +390,7 @@ Ordem sugerida: o que é visto primeiro vem antes.
   - [x] Ícones de arquivo, pasta e unidade: shell do Windows (`SHGetFileInfo`), `NSWorkspace` no macOS, desenhados no Linux (sem tema de ícones freedesktop por enquanto)
   - [x] Elevação no Windows (iniciar elevado, prompt de elevação) e aviso de Acesso Total ao Disco no macOS (uma vez por execução, ao varrer algo que inclui a pasta pessoal, com botão para os Ajustes)
   - [ ] Visões embutidas: Análise (`AdvancedFeaturesForm`) e Histórico de armazenamento (`StorageHistoryForm`); hoje os botões ficam desabilitados
-- [ ] `SearchForm`: busca rápida
+- [x] `SearchForm` → `SearchWindow` (fonte: varredura atual, varredura salva ou unidade; filtros de tamanho, data e tipo; resultados ao vivo na tabela clássica com colunas proporcionais; menu de contexto; botão e menu Busca; `--search <unidade>` ao iniciar). No macOS e no Linux a coluna Unidade mostra o ponto de montagem do volume (antes ficava vazia)
 - [x] `SettingsForm` → `SettingsWindow` (abas Geral, UI, Histórico, Exportar e Log; menu Configurações e ⌘, no macOS; as opções só do Windows somem nos outros SOs e as linhas sobem). Corrigido: os campos do histórico de varredura obsoleto ficavam por cima dos detalhes na aba Histórico e saíram; o painel de partições e a altura das barras agora seguem a configuração
 - [ ] `ScanHistoryForm`
 - [ ] `StorageHistoryForm` + `StorageHistoryDetailsForm`

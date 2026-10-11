@@ -23,6 +23,8 @@ namespace c2flux.AppTests
 
             Assert.Equal(folder, App.GetStartupScanPath(new[] { folder }));
             Assert.Null(App.GetStartupScanPath(new[] { "--search", folder }));
+            Assert.Equal(folder, App.GetStartupSearchPath(new[] { "--search", folder }));
+            Assert.Null(App.GetStartupSearchPath(new[] { folder }));
             Assert.Null(App.GetStartupScanPath(new[] { Path.Combine(folder, "c2flux-no-such-folder") }));
             Assert.Null(App.GetStartupScanPath(new string[0]));
         }

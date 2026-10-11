@@ -46,6 +46,9 @@ namespace c2flux
 
         public bool Sortable { get; set; } = true;
 
+        // The first click sorts descending (sizes, dates).
+        public bool DescendingFirst { get; set; }
+
         // Draws the cell instead of its text (cell bounds, row, selected).
         public Action<DrawingContext, Rect, TRow, bool> Paint { get; set; }
     }
@@ -88,6 +91,14 @@ namespace c2flux
 
         public TableStyle Style { get; set; } = TableStyle.Ant;
 
+        // Chart_ResponsiveTableGrid: Percent shares of the width less 19 px
+        // (the scroll bar and border WinForms keeps free), the last column
+        // taking the rest; columns do not fill the table.
+        public bool Responsive { get; set; }
+
+        // A click on a header (column, descending).
+        public event Action<TableColumn<TRow>, bool> SortChanged;
+
         // Ctrl and Shift extend the selection.
         public bool MultiSelect { get; set; }
 
@@ -105,6 +116,9 @@ namespace c2flux
 
         public TRow SelectedItem => _canvas.SelectedRow;
 
+        // The rows in display order.
+        public IReadOnlyList<TRow> SortedItems => _canvas.Rows;
+
         public void SetItems(IEnumerable<TRow> rows)
         {
             _canvas.SetRows(rows?.ToList() ?? new List<TRow>());
@@ -115,6 +129,13 @@ namespace c2flux
         {
             _canvas.SelectRow(row, raiseEvent: false, scrollIntoView: true);
         }
+
+        public void SetSort(TableColumn<TRow> column, bool descending)
+        {
+            _canvas.SetSort(column, descending);
+        }
+
+        internal void RaiseSortChanged(TableColumn<TRow> column, bool descending) => SortChanged?.Invoke(column, descending);
 
         // After changing Columns (titles, visibility, widths).
         public void RefreshColumns()
@@ -200,6 +221,8 @@ namespace c2flux
 
             public List<TRow> SourceRows => _sourceRows;
 
+            public IReadOnlyList<TRow> Rows => _rows;
+
             public TRow SelectedRow => _selectedIndex >= 0 && _selectedIndex < _rows.Count ? _rows[_selectedIndex] : default;
 
             public IReadOnlyList<TRow> SelectedRows => _rows.Where(_selected.Contains).ToList();
@@ -248,6 +271,23 @@ namespace c2flux
                 _layout.Clear();
                 List<TableColumn<TRow>> visible = _owner.Columns.Where(column => column.Visible).ToList();
                 double x = ColumnsLeft;
+
+                if (_owner.Responsive)
+                {
+                    double available = Math.Max(visible.Count * 2, _owner.Bounds.Width - 19);
+                    double total = visible.Sum(column => column.Percent);
+
+                    for (int index = 0; index < visible.Count; index++)
+                    {
+                        double width = index == visible.Count - 1
+                            ? available - (x - ColumnsLeft)
+                            : Math.Floor(available * visible[index].Percent / Math.Max(total, 0.0001));
+                        _layout.Add((visible[index], x, Math.Max(2, width)));
+                        x += Math.Max(2, width);
+                    }
+
+                    return;
+                }
 
                 foreach (TableColumn<TRow> column in visible)
                 {
@@ -523,13 +563,23 @@ namespace c2flux
 
             // ----- sorting ------------------------------------------------
 
+            public void SetSort(TableColumn<TRow> column, bool descending)
+            {
+                _sortColumn = column;
+                _sortDirection = column == null ? SortDirection.None : descending ? SortDirection.Descending : SortDirection.Ascending;
+                TRow selected = SelectedRow;
+                ApplySort();
+                _selectedIndex = selected == null ? -1 : _rows.IndexOf(selected);
+                InvalidateVisual();
+            }
+
             // AntdUI cycles ascending, descending, original order.
             private void ToggleSort(TableColumn<TRow> column)
             {
                 if (_sortColumn != column)
                 {
                     _sortColumn = column;
-                    _sortDirection = SortDirection.Ascending;
+                    _sortDirection = column.DescendingFirst ? SortDirection.Descending : SortDirection.Ascending;
                 }
                 else
                 {
@@ -542,6 +592,7 @@ namespace c2flux
                 ApplySort();
                 _selectedIndex = selected == null ? -1 : _rows.IndexOf(selected);
                 InvalidateVisual();
+                _owner.RaiseSortChanged(column, _sortDirection == SortDirection.Descending);
             }
 
             private void ApplySort()
