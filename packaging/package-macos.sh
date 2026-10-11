@@ -33,6 +33,6 @@ staging="$work/dmg"
 mkdir -p "$staging"
 mv "$app" "$staging/"
 ln -s /Applications "$staging/Applications"
-hdiutil create -volname "c2flux" -srcfolder "$staging" -ov -format UDZO "$out/c2flux-$version-macos-$arch.dmg" >/dev/null
+hdiutil create -volname "c2flux" -srcfolder "$staging" -ov -format UDZO "$out/c2flux-v$version-macos-$arch.dmg" >/dev/null
 rm -rf "$work"
-echo "$out/c2flux-$version-macos-$arch.dmg"
+echo "$out/c2flux-v$version-macos-$arch.dmg"

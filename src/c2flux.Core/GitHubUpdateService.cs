@@ -33,6 +33,51 @@ namespace c2flux
 
     public static class GitHubUpdateService
     {
+        // The end of this build's package name ("-macos-arm64.dmg"), set by
+        // the Avalonia app: the download then points at that file instead of
+        // the release page. Null (WinForms) keeps the release page.
+        public static string PackageSuffix { get; set; }
+
+        // The suffix of the packages built by packaging/ for this OS and
+        // processor: windows x64/arm64 .zip, macos x64/arm64 .dmg, linux
+        // x86_64/aarch64 .AppImage.
+        internal static string GetPackageSuffix(AppPaths.Platform platform, System.Runtime.InteropServices.Architecture architecture)
+        {
+            bool arm = architecture == System.Runtime.InteropServices.Architecture.Arm64;
+
+            return platform switch
+            {
+                AppPaths.Platform.Windows => arm ? "-windows-arm64.zip" : "-windows-x64.zip",
+                AppPaths.Platform.MacOS => arm ? "-macos-arm64.dmg" : "-macos-x64.dmg",
+                _ => arm ? "-linux-aarch64.AppImage" : "-linux-x86_64.AppImage",
+            };
+        }
+
+        // The asset of a release whose name ends with suffix, or null.
+        internal static string FindAssetUrl(JsonElement release, string suffix)
+        {
+            if (string.IsNullOrEmpty(suffix) ||
+                !release.TryGetProperty("assets", out JsonElement assets) ||
+                assets.ValueKind != JsonValueKind.Array)
+            {
+                return null;
+            }
+
+            foreach (JsonElement asset in assets.EnumerateArray())
+            {
+                if (asset.TryGetProperty("name", out JsonElement name) &&
+                    name.ValueKind == JsonValueKind.String &&
+                    name.GetString().EndsWith(suffix, StringComparison.OrdinalIgnoreCase) &&
+                    asset.TryGetProperty("browser_download_url", out JsonElement url) &&
+                    url.ValueKind == JsonValueKind.String)
+                {
+                    return url.GetString();
+                }
+            }
+
+            return null;
+        }
+
         private static readonly TimeSpan RequestTimeout =
             TimeSpan.FromSeconds(10);
 
@@ -145,7 +190,13 @@ namespace c2flux
                     latestVersion = candidateVersion;
                     latestVersionText = candidateVersionText;
 
-                    if (releaseElement.TryGetProperty(
+                    string assetUrl = FindAssetUrl(releaseElement, PackageSuffix);
+
+                    if (assetUrl != null)
+                    {
+                        downloadUrl = assetUrl;
+                    }
+                    else if (releaseElement.TryGetProperty(
                             "html_url",
                             out JsonElement htmlUrlElement) &&
                         htmlUrlElement.ValueKind == JsonValueKind.String &&

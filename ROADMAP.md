@@ -414,18 +414,20 @@ Ordem sugerida: o que é visto primeiro vem antes.
 ### Fase 6: Empacotamento, distribuição e atualização
 
 - [x] **CI em matriz** (`windows-latest`, `macos-latest`, `ubuntu-latest`): build, testes e conformidade de scanners em cada push (`ci.yml` e `scanner-conformance.yml`; a comparação de fidelidade também roda nos três)
-- [ ] **Publicação por RID**, self-contained (sem exigir .NET instalado), com trimming. Avaliar Native AOT (Avalonia suporta). Feito: job `publish` da CI para os seis RIDs, cada um num runner da própria arquitetura, com o autoteste `--self-test` (JSON, idioma, SQLite, volumes) no binário publicado; trimming parcial (53 MB no osx-arm64, contra 116 MB sem trimming), porque o completo desliga o JSON por reflexão das configurações e dos arquivos de varredura. O executável se chama `c2flux`: o macOS se recusa a rodar um arquivo chamado `c2flux.App`. Native AOT: não por enquanto, pelo mesmo motivo (JSON e bindings por reflexão; exigiria gerar o código de serialização de todos os tipos). Falta: confirmar os seis RIDs na CI
+- [x] **Publicação por RID**, self-contained (sem exigir .NET instalado), com trimming. Avaliar Native AOT (Avalonia suporta). Feito: job `publish` da CI para os seis RIDs, cada um num runner da própria arquitetura, com o autoteste `--self-test` (JSON, idioma, SQLite, volumes) no binário publicado; trimming parcial (53 MB no osx-arm64, contra 116 MB sem trimming), porque o completo desliga o JSON por reflexão das configurações e dos arquivos de varredura. O executável se chama `c2flux`: o macOS se recusa a rodar um arquivo chamado `c2flux.App`. Native AOT: não por enquanto, pelo mesmo motivo (JSON e bindings por reflexão; exigiria gerar o código de serialização de todos os tipos). Os seis RIDs passam na CI
 
 | SO | RIDs | Formatos |
 |---|---|---|
-| Windows | `win-x64`, `win-arm64` | ZIP portátil (como hoje) + instalador opcional (MSIX ou Inno Setup) |
-| macOS | `osx-arm64`, `osx-x64` → app universal via `lipo` | `.app` em `.dmg` com assinatura *ad-hoc*, sem notarização (seção 9) + instruções de primeira abertura no README |
-| Linux | `linux-x64`, `linux-arm64` | AppImage (principal), `.deb`, `.rpm`, opcional Flatpak / Flathub |
+| Windows | `win-x64`, `win-arm64` | ZIP portátil (como hoje); instalador fica para depois |
+| macOS | `osx-arm64`, `osx-x64`, um `.dmg` por arquitetura (sem app universal: juntar com `lipo` duas publicações self-contained e aparadas, com dezenas de bibliotecas nativas, é frágil) | `.app` em `.dmg` com assinatura *ad-hoc*, sem notarização (seção 9) + instruções de primeira abertura no README |
+| Linux | `linux-x64`, `linux-arm64` | **Só AppImage** (decisão: sem `.deb`, `.rpm` ou Flatpak) |
 
-- [ ] Adaptar `release.yml` para gerar todos os artefatos e anexá-los à release
-- [ ] **`GitHubUpdateService`:** escolher o asset certo por SO/arquitetura e manter a lógica atual de notificação
-- [ ] Integração com o desktop:
-  - Linux: arquivo `.desktop`, ícones em vários tamanhos, metainfo AppStream
+Os pacotes saem de [`packaging/`](packaging/) pelo workflow reutilizável `package.yml`: a CI gera os seis em todo push (artefatos `c2flux-package-<rid>`), com o autoteste no binário publicado e, no Linux, também no AppImage.
+
+- [x] Adaptar `release.yml` para gerar todos os artefatos e anexá-los à release: os jobs `packages` e `attach` anexam os seis pacotes à release que o job do WinForms cria (o ZIP do WinForms continua até a Fase 7). Ainda não rodou numa tag de verdade
+- [x] **`GitHubUpdateService`:** escolher o asset certo por SO/arquitetura e manter a lógica atual de notificação (o "Baixar" aponta para o pacote deste SO e processador; sem ele, para a página da release, como antes. Só o app Avalonia escolhe o pacote: o WinForms continua na página)
+- [x] Integração com o desktop:
+  - Linux: arquivo `.desktop`, ícone (256 px), metainfo AppStream, dentro do AppImage
   - macOS: `Info.plist` (nome, ícone `.icns`, versão, `NSHumanReadableCopyright`)
 - [ ] Atualizar README, `docs/Troubleshooting.md` e o site (`docs/index.html`) com instruções por SO
 

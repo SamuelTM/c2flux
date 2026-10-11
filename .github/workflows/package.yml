@@ -1,0 +1,95 @@
+name: Packages
+
+# The Avalonia app (phase 6) for every RID: published self-contained and
+# trimmed, self-tested on a runner of that architecture, then packaged:
+# Windows ZIP, macOS .app in a .dmg, Linux AppImage. Called by ci.yml on
+# every push and by release.yml for tags.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to package (default: the calling commit)"
+        type: string
+        default: ""
+      version:
+        description: "Version for the packages (default: the csproj's)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish ${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rid: win-x64, os: windows-latest, arch: x64 }
+          - { rid: win-arm64, os: windows-11-arm, arch: arm64 }
+          - { rid: osx-arm64, os: macos-latest, arch: arm64 }
+          - { rid: osx-x64, os: macos-15-intel, arch: x64 }
+          - { rid: linux-x64, os: ubuntu-latest, arch: x86_64 }
+          - { rid: linux-arm64, os: ubuntu-24.04-arm, arch: aarch64 }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      # The executable is renamed to c2flux: macOS refuses to run a file
+      # named c2flux.App (it reads as an app bundle). The host finds
+      # c2flux.App.dll by the name built into it.
+      - name: Publish
+        shell: bash
+        run: |
+          version="${{ inputs.version }}"
+          if [ -z "$version" ]; then version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/c2flux.App/c2flux.App.csproj); fi
+          base="${version%%-*}"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          dotnet publish src/c2flux.App/c2flux.App.csproj --configuration Release --runtime ${{ matrix.rid }} --output "$RUNNER_TEMP/c2flux-${{ matrix.rid }}" \
+            -p:Version="$version" -p:AssemblyVersion="$base.0" -p:FileVersion="$base.0" -p:InformationalVersion="$version"
+          cd "$RUNNER_TEMP/c2flux-${{ matrix.rid }}"
+          if [ -f c2flux.App.exe ]; then mv c2flux.App.exe c2flux.exe; else mv c2flux.App c2flux; fi
+
+      - name: Self-test
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP/c2flux-${{ matrix.rid }}"
+          if [ -f c2flux.exe ]; then ./c2flux.exe --self-test; else ./c2flux --self-test; fi
+
+      # Windows: portable ZIP; macOS: .app in a .dmg; Linux: AppImage only.
+      - name: Package
+        shell: bash
+        run: |
+          version="$VERSION"
+          publish="$RUNNER_TEMP/c2flux-${{ matrix.rid }}"
+          mkdir -p "$RUNNER_TEMP/dist"
+          case "${{ matrix.rid }}" in
+            win-*)
+              pwsh -NoProfile -Command "Compress-Archive -Path '$publish/*' -DestinationPath '$RUNNER_TEMP/dist/c2flux-v$version-windows-${{ matrix.arch }}.zip'" ;;
+            osx-*)
+              packaging/package-macos.sh "$publish" "$version" "${{ matrix.arch }}" "$RUNNER_TEMP/dist" ;;
+            linux-*)
+              packaging/package-linux.sh "$publish" "$version" "${{ matrix.arch }}" "$RUNNER_TEMP/dist"
+              APPIMAGE_EXTRACT_AND_RUN=1 "$RUNNER_TEMP/dist/c2flux-v$version-linux-${{ matrix.arch }}.AppImage" --self-test ;;
+          esac
+          ls -la "$RUNNER_TEMP/dist"
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: c2flux-package-${{ matrix.rid }}
+          path: ${{ runner.temp }}/dist
+          retention-days: 7
+

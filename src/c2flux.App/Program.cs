@@ -84,6 +84,11 @@ namespace c2flux
         // The native pieces Core and the UI ask for (tests use them too).
         public static void RegisterPlatformServices()
         {
+            // Updates download this build's package (packaging/).
+            GitHubUpdateService.PackageSuffix = GitHubUpdateService.GetPackageSuffix(
+                OperatingSystem.IsWindows() ? AppPaths.Platform.Windows : OperatingSystem.IsMacOS() ? AppPaths.Platform.MacOS : AppPaths.Platform.Linux,
+                System.Runtime.InteropServices.RuntimeInformation.OSArchitecture);
+
             if (OperatingSystem.IsWindows())
             {
                 Volumes.ClusterSizeReader = WindowsClusterSize.Read;
