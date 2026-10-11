@@ -11,9 +11,20 @@ namespace c2flux
     public sealed class BarChart : ChartControl
     {
         private const int MaxItems = 18;
-        private const double BarHeight = 14;
         private const double IconSize = 16;
         private const double IconToTextGap = 6;
+        private double _barHeight = 14;
+
+        // Settings, UI tab: 5 to 30 px.
+        public double BarHeight
+        {
+            get => _barHeight;
+            set
+            {
+                _barHeight = Math.Clamp(value, 5, 30);
+                InvalidateVisual();
+            }
+        }
 
         protected override void RenderChart(DrawingContext context)
         {

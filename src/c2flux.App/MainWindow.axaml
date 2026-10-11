@@ -120,8 +120,8 @@
         <Border Classes="pane">
           <l:EntryTree x:Name="Tree" />
         </Border>
-        <GridSplitter Grid.Row="1" ResizeDirection="Rows" Background="{DynamicResource BorderBrush}" />
-        <Border Grid.Row="2" Classes="pane">
+        <GridSplitter x:Name="PartitionSplitter" Grid.Row="1" ResizeDirection="Rows" Background="{DynamicResource BorderBrush}" />
+        <Border x:Name="PartitionPane" Grid.Row="2" Classes="pane">
           <ScrollViewer x:Name="PartitionHost" />
         </Border>
       </Grid>

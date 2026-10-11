@@ -20,6 +20,7 @@
         <ColorPaletteResources x:Key="Dark" Accent="#0078D4" RegionColor="#202020" BaseHigh="#FFFFFF" />
       </FluentTheme.Palettes>
     </FluentTheme>
+    <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
     <StyleInclude Source="avares://c2flux.App/Themes/Controls.axaml" />
     <Style Selector="Window">
       <Setter Property="FlowDirection" Value="{Binding FlowDirection, Source={x:Static l:Loc.Instance}}" />
@@ -29,13 +30,12 @@
     </Style>
   </Application.Styles>
 
-  <!-- macOS application menu; Avalonia adds Hide, Services and Quit (⌘Q).
-       Settings opens its window once SettingsForm is ported. -->
+  <!-- macOS application menu; Avalonia adds Hide, Services and Quit (⌘Q). -->
   <NativeMenu.Menu>
     <NativeMenu>
       <NativeMenuItem Header="{l:T Menu.About}" Click="OnAboutClick" />
       <NativeMenuItemSeparator />
-      <NativeMenuItem Header="{l:T Menu.Settings}" Gesture="Cmd+OemComma" IsEnabled="False" />
+      <NativeMenuItem Header="{l:T Menu.Settings}" Gesture="Cmd+OemComma" Click="OnSettingsClick" />
     </NativeMenu>
   </NativeMenu.Menu>
 </Application>

@@ -1,7 +1,6 @@
 using Microsoft.Win32;
 using System;
 using System.Linq;
-using System.Windows.Forms;
 
 namespace c2flux
 {
@@ -110,7 +109,7 @@ namespace c2flux
             string menuText,
             string commandOption)
         {
-            string executablePath = Application.ExecutablePath;
+            string executablePath = Environment.ProcessPath;
             string commandText = "\"" + executablePath + "\"";
 
             if (!string.IsNullOrWhiteSpace(commandOption))

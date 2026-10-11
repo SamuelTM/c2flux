@@ -22,6 +22,7 @@ namespace c2flux
     public partial class MainWindow : Window
     {
         private readonly AppSettings _settings;
+        private GridLength _partitionPanelHeight = new GridLength(180);
         private readonly ScannerPipeline _scannerPipeline;
         private readonly IStorageHistorySnapshotSource _storageHistorySnapshotSource;
         private readonly Dictionary<string, ScanSession> _sessions = new Dictionary<string, ScanSession>(StringComparer.OrdinalIgnoreCase);
@@ -81,6 +82,7 @@ namespace c2flux
             }
 
             _table.SetShowFiles(settings.ShowFilesInTree);
+            _bar.BarHeight = settings.BarChartBarHeight;
             _sunburst.SetDisplayOptions(settings.SunburstDepth, settings.SunburstMaxItems);
             _treemap.EntryActivated += entry => Tree.SelectEntry(entry);
             Tree.SelectedEntryChanged += OnSelectedEntryChanged;
@@ -116,6 +118,7 @@ namespace c2flux
             AppAlertLog.Changed += OnAlertLogChanged;
 
             ApplyWindowSettings();
+            ApplyPartitionPanelVisibility();
             SetViewMode(settings.SelectedViewMode, save: false);
             SetScanningState(false);
             _ = LoadDrivesAsync();
@@ -159,7 +162,7 @@ namespace c2flux
                     _menuExport = Item("Menu.ExportCsv", async () => await _export.ExportAsync(_currentRootEntry)),
                     new NativeMenuItemSeparator(),
                     // shortcut: disabled until SettingsForm is ported (5.3).
-                    Item("Menu.Settings", () => { }, enabled: false),
+                    Item("Menu.Settings", async () => await ShowSettingsAsync()),
                     new NativeMenuItemSeparator(),
                     Item("Menu.Exit", Close)),
                 Submenu(
@@ -183,6 +186,116 @@ namespace c2flux
         }
 
         internal Task ShowAboutAsync() => new AboutWindow(_settings).ShowDialog(this);
+
+        // Settings: on OK, saves them and applies what changed (files in the
+        // tree, the partition panel, chart options, language).
+        internal async Task ShowSettingsAsync()
+        {
+            bool previousShowFiles = _settings.ShowFilesInTree;
+            string previousLanguage = _settings.LanguageCode;
+            SettingsWindow window = new SettingsWindow(_settings);
+            await window.ShowDialog(this);
+
+            if (!window.Saved)
+            {
+                return;
+            }
+
+            if (previousShowFiles != _settings.ShowFilesInTree)
+            {
+                bool showFiles = _settings.ShowFilesInTree;
+
+                foreach (ScanSession session in _sessions.Values.Where(session => session.RootEntry != null))
+                {
+                    FileSystemEntry previous = session.RootEntry;
+                    session.RootEntry = await Task.Run(() => CopyWithShowFiles(previous, showFiles));
+                    Tree.UpdateRootEntry(session.RootEntry);
+
+                    if (ReferenceEquals(_currentRootEntry, previous))
+                    {
+                        _currentRootEntry = session.RootEntry;
+                    }
+                }
+
+                _table.SetShowFiles(showFiles);
+            }
+
+            _settings.Save();
+
+            if (!string.Equals(previousLanguage, _settings.LanguageCode, StringComparison.OrdinalIgnoreCase))
+            {
+                LocalizationService.Load(_settings.LanguageCode);
+            }
+
+            await LoadDrivesAsync();
+            _bar.BarHeight = _settings.BarChartBarHeight;
+            ApplyPartitionPanelVisibility();
+            _partitions.InvalidateVisual();
+
+            if (_currentRootEntry != null)
+            {
+                RenderScanResult(_currentRootEntry);
+            }
+        }
+
+        // A copy of a scanned tree with only its folders, plus (showFiles)
+        // every file under its parent folder: how WinForms applies "Show
+        // files in tree" to results already scanned.
+        internal static FileSystemEntry CopyWithShowFiles(FileSystemEntry root, bool showFiles)
+        {
+            Dictionary<string, FileSystemEntry> directories = new Dictionary<string, FileSystemEntry>(
+                OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+            string Key(string path) => Path.TrimEndingDirectorySeparator(EntryPaths.ToNativeSeparators(path));
+
+            FileSystemEntry Copy(FileSystemEntry source)
+            {
+                FileSystemEntry copy = new FileSystemEntry
+                {
+                    Name = source.Name,
+                    FullPath = source.FullPath,
+                    SizeBytes = source.SizeBytes,
+                    IsDirectory = source.IsDirectory,
+                    LastWriteTimeUtc = source.LastWriteTimeUtc,
+                };
+
+                lock (source.AllFiles)
+                {
+                    copy.AllFiles = new List<FileSystemEntry>(source.AllFiles);
+                }
+
+                directories[Key(source.FullPath)] = copy;
+                List<FileSystemEntry> children;
+
+                lock (source.Children)
+                {
+                    children = source.Children.FindAll(child => child != null && child.IsDirectory);
+                }
+
+                foreach (FileSystemEntry child in children)
+                {
+                    copy.Children.Add(Copy(child));
+                }
+
+                return copy;
+            }
+
+            FileSystemEntry copiedRoot = Copy(root);
+
+            if (showFiles)
+            {
+                foreach (FileSystemEntry file in copiedRoot.AllFiles)
+                {
+                    string parent = file == null || file.IsDirectory ? null : Path.GetDirectoryName(file.FullPath);
+
+                    if (!string.IsNullOrWhiteSpace(parent) && directories.TryGetValue(Key(parent), out FileSystemEntry parentEntry))
+                    {
+                        parentEntry.Children.Add(file);
+                    }
+                }
+            }
+
+            return copiedRoot;
+        }
 
         // ----- drives -----------------------------------------------------
 
@@ -1377,6 +1490,22 @@ namespace c2flux
             }
         }
 
+        // Settings, UI tab: the partition panel below the tree.
+        private void ApplyPartitionPanelVisibility()
+        {
+            bool show = _settings.ShowPartitionPanel;
+
+            if (!show && LeftPane.RowDefinitions[2].Height.Value > 0)
+            {
+                _partitionPanelHeight = LeftPane.RowDefinitions[2].Height;
+            }
+
+            LeftPane.RowDefinitions[1].Height = new GridLength(show ? 6 : 0);
+            LeftPane.RowDefinitions[2].Height = show ? _partitionPanelHeight : new GridLength(0);
+            PartitionSplitter.IsVisible = show;
+            PartitionPane.IsVisible = show;
+        }
+
         protected override void OnClosing(WindowClosingEventArgs e)
         {
             base.OnClosing(e);
@@ -1401,7 +1530,11 @@ namespace c2flux
             _settings.HasSplitterLayout = true;
             _settings.PartitionPanelLayoutVersion = 2;
             _settings.SplitContainerMainDistance = (int)Body.ColumnDefinitions[0].ActualWidth;
-            _settings.SplitContainerLeftDistance = (int)LeftPane.RowDefinitions[2].ActualHeight;
+            // A hidden partition panel keeps its last height.
+            if (_settings.ShowPartitionPanel)
+            {
+                _settings.SplitContainerLeftDistance = (int)LeftPane.RowDefinitions[2].ActualHeight;
+            }
             _settings.SelectedViewMode = _viewMode;
             _settings.Save();
         }

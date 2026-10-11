@@ -37,6 +37,10 @@
       <BoxShadows x:Key="PrimaryButtonShadow">0 2 0 0 #1A0591FF</BoxShadows>
       <BoxShadows x:Key="InputFocusShadow">0 0 0 4 #1A0591FF</BoxShadows>
       <SolidColorBrush x:Key="InputFocusBorderBrush" Color="#1677FF" />
+      <SolidColorBrush x:Key="FieldBorderBrush" Color="#D9D9D9" />
+      <SolidColorBrush x:Key="CheckDisabledFillBrush" Color="#0A000000" />
+      <SolidColorBrush x:Key="CheckDisabledBrush" Color="#40000000" />
+      <SolidColorBrush x:Key="CheckMarkBrush" Color="#FFFFFF" />
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <SolidColorBrush x:Key="BackgroundPrimaryBrush" Color="#202020" />
@@ -70,6 +74,13 @@
       <BoxShadows x:Key="InputFocusShadow">0 0 0 4 #1F1668DC</BoxShadows>
       <!-- Measured: 2 px of primary at 50 %. -->
       <SolidColorBrush x:Key="InputFocusBorderBrush" Color="#801668DC" />
+      <!-- The 1 px border of AntdUI fields falls between two pixels. -->
+      <SolidColorBrush x:Key="FieldBorderBrush" Color="#80444444" />
+      <!-- Measured checkbox: disabled fill white at 4 %, disabled check and
+           text 105, the check mark black. -->
+      <SolidColorBrush x:Key="CheckDisabledFillBrush" Color="#0AFFFFFF" />
+      <SolidColorBrush x:Key="CheckDisabledBrush" Color="#696969" />
+      <SolidColorBrush x:Key="CheckMarkBrush" Color="#000000" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 

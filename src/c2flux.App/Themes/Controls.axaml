@@ -87,16 +87,23 @@
        ring fills it. -->
   <Style Selector="TextBox.ant">
     <Setter Property="MinHeight" Value="0" />
-    <Setter Property="Padding" Value="7,0" />
+    <!-- 7 px inside the border, which is 4 px in. -->
+    <Setter Property="Padding" Value="11,0" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
   </Style>
   <Style Selector="TextBox.ant /template/ Border#PART_BorderElement, TextBox.ant:pointerover /template/ Border#PART_BorderElement">
     <Setter Property="Margin" Value="4" />
     <Setter Property="CornerRadius" Value="6" />
-    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderThickness" Value="2" />
     <Setter Property="Background" Value="{DynamicResource ButtonBackgroundBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource FieldBorderBrush}" />
+  </Style>
+  <Style Selector="TextBox.ant:disabled /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBackgroundBrush}" />
+  </Style>
+  <Style Selector="TextBox.ant:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource DisabledTextBrush}" />
   </Style>
   <Style Selector="TextBox.ant:focus /template/ Border#PART_BorderElement">
     <Setter Property="Margin" Value="4" />
@@ -104,6 +111,85 @@
     <Setter Property="Background" Value="{DynamicResource ButtonBackgroundBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource InputFocusBorderBrush}" />
     <Setter Property="BoxShadow" Value="{DynamicResource InputFocusShadow}" />
+  </Style>
+
+  <!-- Round AntdUI buttons (the + and - of the language list, the ? of
+       help): a 1 px border, fully rounded. -->
+  <Style Selector="Button.ant.dialog.round">
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="12" />
+  </Style>
+  <Style Selector="Button.ant.dialog.primary.round">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <!-- AntdUI.Checkbox: a 14 px box 5 px in; checked, a 12 px primary
+       square with the mark. -->
+  <Style Selector="CheckBox.ant">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Background="Transparent">
+          <Border Name="Box" Width="14" Height="14" Margin="5,0,0,0"
+                  HorizontalAlignment="Left" VerticalAlignment="Center"
+                  CornerRadius="3" BorderThickness="2" BorderBrush="{DynamicResource ButtonBorderBrush}" />
+          <Border Name="Fill" Width="12" Height="12" Margin="6,0,0,0"
+                  HorizontalAlignment="Left" VerticalAlignment="Center"
+                  CornerRadius="2" Background="{DynamicResource PrimaryBrush}" IsVisible="False">
+            <Path Name="Check" Data="M 2.5,6 L 5,8.5 L 9.5,3" StrokeThickness="2"
+                  Stroke="{DynamicResource CheckMarkBrush}" />
+          </Border>
+          <ContentPresenter Name="PART_ContentPresenter" Margin="24,0,0,0" VerticalAlignment="Center"
+                            Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" />
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="CheckBox.ant:checked /template/ Border#Fill">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <Style Selector="CheckBox.ant:checked /template/ Border#Box">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="CheckBox.ant:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource CheckDisabledBrush}" />
+  </Style>
+  <Style Selector="CheckBox.ant:disabled /template/ Border#Box">
+    <Setter Property="IsVisible" Value="True" />
+    <Setter Property="Background" Value="{DynamicResource CheckDisabledFillBrush}" />
+  </Style>
+  <Style Selector="CheckBox.ant:disabled /template/ Border#Fill">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="CheckBox.ant:disabled /template/ Path#Check">
+    <Setter Property="Stroke" Value="{DynamicResource CheckDisabledBrush}" />
+  </Style>
+
+  <!-- AntdUI.Select in forms: radius 6, the field border, 4 px wave
+       margin like the inputs. -->
+  <Style Selector="ComboBox.ant.field">
+    <Setter Property="Padding" Value="11,0,0,0" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="BorderBrush" Value="{DynamicResource FieldBorderBrush}" />
+  </Style>
+  <Style Selector="ComboBox.ant.field /template/ Border#Background, ComboBox.ant.field:pointerover /template/ Border#Background">
+    <Setter Property="Margin" Value="4" />
+    <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource FieldBorderBrush}" />
+  </Style>
+  <Style Selector="ComboBox.ant.field:focus-within /template/ Border#Background">
+    <Setter Property="BorderBrush" Value="{DynamicResource InputFocusBorderBrush}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource InputFocusShadow}" />
+  </Style>
+  <Style Selector="ComboBox.ant.field /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Margin" Value="0,0,14,0" />
+  </Style>
+
+  <!-- AntdUI.Label: grey while disabled. -->
+  <Style Selector="TextBlock.ant:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource DisabledTextBrush}" />
   </Style>
 
   <!-- AntdUI.Select of the drive list: 2 px border, radius 8. -->

@@ -32,6 +32,7 @@
 	<ItemGroup>
 		<PackageReference Include="Avalonia" Version="12.1.3" />
 		<PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
+		<PackageReference Include="Avalonia.Controls.ColorPicker" Version="12.1.3" />
 		<PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
 	</ItemGroup>
@@ -57,6 +58,7 @@
 		<AvaloniaResource Include="..\c2flux.WinForms\Ressources\c2flux.png" Link="Assets\c2flux.png" />
 		<AvaloniaResource Include="..\c2flux.WinForms\Ressources\molotov.jpg" Link="Assets\molotov.jpg" />
 		<AvaloniaResource Include="..\c2flux.WinForms\Ressources\ko-fi.png" Link="Assets\ko-fi.png" />
+		<AvaloniaResource Include="..\c2flux.WinForms\Ressources\scan-history-details.png" Link="Assets\scan-history-details.png" />
 		<None Include="..\c2flux.WinForms\Ressources\Languages\lang_*.json"
 		      Exclude="..\c2flux.WinForms\Ressources\Languages\lang_de.json;..\c2flux.WinForms\Ressources\Languages\lang_en.json"
 		      Link="Languages\%(Filename)%(Extension)"

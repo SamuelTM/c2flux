@@ -40,6 +40,23 @@ namespace c2flux.AppTests
             }
         }
 
+        [Fact]
+        public void Show_files_copies_keep_folders_and_add_files_only_when_asked()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "fixture");
+            FileSystemEntry file = new FileSystemEntry { Name = "a.bin", FullPath = Path.Combine(root, "sub", "a.bin"), SizeBytes = 3 };
+            FileSystemEntry sub = new FileSystemEntry { Name = "sub", FullPath = Path.Combine(root, "sub"), IsDirectory = true, SizeBytes = 3, Children = { file } };
+            FileSystemEntry top = new FileSystemEntry { Name = "fixture", FullPath = root + Path.DirectorySeparatorChar, IsDirectory = true, SizeBytes = 3, Children = { sub } };
+            top.AllFiles.Add(file);
+
+            FileSystemEntry withoutFiles = MainWindow.CopyWithShowFiles(top, showFiles: false);
+            FileSystemEntry withFiles = MainWindow.CopyWithShowFiles(withoutFiles, showFiles: true);
+
+            Assert.Empty(withoutFiles.Children.Single().Children);
+            Assert.Same(file, withFiles.Children.Single().Children.Single());
+            Assert.Equal(3, withFiles.SizeBytes);
+        }
+
         [AvaloniaFact]
         public void Toolbar_hides_empty_groups_and_restores_the_saved_order()
         {

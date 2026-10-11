@@ -391,7 +391,7 @@ Ordem sugerida: o que é visto primeiro vem antes.
   - [x] Elevação no Windows (iniciar elevado, prompt de elevação) e aviso de Acesso Total ao Disco no macOS (uma vez por execução, ao varrer algo que inclui a pasta pessoal, com botão para os Ajustes)
   - [ ] Visões embutidas: Análise (`AdvancedFeaturesForm`) e Histórico de armazenamento (`StorageHistoryForm`); hoje os botões ficam desabilitados
 - [ ] `SearchForm`: busca rápida
-- [ ] `SettingsForm`
+- [x] `SettingsForm` → `SettingsWindow` (abas Geral, UI, Histórico, Exportar e Log; menu Configurações e ⌘, no macOS; as opções só do Windows somem nos outros SOs e as linhas sobem). Corrigido: os campos do histórico de varredura obsoleto ficavam por cima dos detalhes na aba Histórico e saíram; o painel de partições e a altura das barras agora seguem a configuração
 - [ ] `ScanHistoryForm`
 - [ ] `StorageHistoryForm` + `StorageHistoryDetailsForm`
 - [ ] `AdvancedFeaturesForm`: análise, redundância

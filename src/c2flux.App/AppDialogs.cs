@@ -13,11 +13,22 @@ namespace c2flux
     {
         public static Task ShowWarningOkAsync(Window owner, string message, string title = null, string okText = null)
         {
+            return ShowOkAsync(owner, DialogIconKind.Warning, message, title, okText);
+        }
+
+        // MessageBox.Show with MessageBoxIcon.Error.
+        public static Task ShowErrorOkAsync(Window owner, string message, string title = null)
+        {
+            return ShowOkAsync(owner, DialogIconKind.Error, message, title ?? LocalizationService.GetText("Common.Error"), null);
+        }
+
+        private static Task ShowOkAsync(Window owner, DialogIconKind icon, string message, string title, string okText)
+        {
             Window dialog = CreateDialog(title, 430, 178);
             Canvas canvas = (Canvas)dialog.Content;
             Button ok = CreateButton(okText ?? LocalizationService.GetText("Common.OK"), primary: true);
 
-            Place(canvas, new DialogIcon { Kind = DialogIconKind.Warning }, 28, 42, 32, 32);
+            Place(canvas, new DialogIcon { Kind = icon }, 28, 42, 32, 32);
             Place(canvas, CreateMessage(message), 82, 28, 324, 60);
             Place(canvas, ok, 326, 122, 84, 32);
             ok.IsDefault = true;
@@ -170,9 +181,10 @@ namespace c2flux
     {
         Warning,
         Question,
+        Error,
     }
 
-    // The Windows message box icons (IDI_WARNING, IDI_QUESTION) at 32 px,
+    // The Windows message box icons (IDI_WARNING, IDI_QUESTION, IDI_ERROR) at 32 px,
     // drawn so they look the same on every OS.
     public sealed class DialogIcon : Control
     {
@@ -200,6 +212,13 @@ namespace c2flux
                 };
                 context.DrawGeometry(fill, new Pen(new SolidColorBrush(Color.FromRgb(160, 110, 0)), 1, lineJoin: PenLineJoin.Round), triangle);
                 DrawGlyph(context, "!", Brushes.Black, 20, 2);
+            }
+            else if (Kind == DialogIconKind.Error)
+            {
+                context.DrawEllipse(new SolidColorBrush(Color.FromRgb(196, 43, 28)), new Pen(new SolidColorBrush(Color.FromRgb(135, 24, 15)), 1), new Rect(1, 1, 30, 30));
+                Pen cross = new Pen(Brushes.White, 3, lineCap: PenLineCap.Round);
+                context.DrawLine(cross, new Point(11, 11), new Point(21, 21));
+                context.DrawLine(cross, new Point(21, 11), new Point(11, 21));
             }
             else
             {

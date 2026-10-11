@@ -98,6 +98,14 @@ namespace c2flux
             }
         }
 
+        private async void OnSettingsClick(object sender, EventArgs e)
+        {
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: MainWindow main })
+            {
+                await main.ShowSettingsAsync();
+            }
+        }
+
         // The folder to scan at startup: the first argument (not "--search"),
         // "C:" completed to "C:\", only when it exists.
         internal static string GetStartupScanPath(string[] args)

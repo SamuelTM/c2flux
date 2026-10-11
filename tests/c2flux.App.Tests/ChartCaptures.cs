@@ -87,6 +87,31 @@ namespace c2flux.AppTests
             CaptureWindow("debug-class", new DebugClassWindow());
         }
 
+        // The five pages of settings.png, settings-layout.png and the others.
+        [AvaloniaFact]
+        public void Settings()
+        {
+            string[] names = { "settings", "settings-layout", "settings-statistics", "settings-export", "settings-logging" };
+            // As in the reference: detailed history on, so the tree shows files.
+            SettingsWindow window = new SettingsWindow(new AppSettings { StorageHistoryDetailsEnabled = true }, windowsOptions: true);
+            window.Show();
+
+            try
+            {
+                for (int index = 0; index < names.Length; index++)
+                {
+                    window.ShowPage(index);
+                    Dispatcher.UIThread.RunJobs();
+                    using WriteableBitmap frame = window.CaptureRenderedFrame();
+                    frame.Save(OutputPath(names[index]));
+                }
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
         private static void CaptureWindow(string name, Window window)
         {
             window.Show();
