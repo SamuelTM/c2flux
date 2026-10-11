@@ -50,6 +50,42 @@ namespace c2flux.AppTests
             }
         }
 
+        // Client areas of about.png and update-available.png (from 8, 31).
+        [AvaloniaFact]
+        public void About()
+        {
+            CaptureWindow("about", new AboutWindow(new AppSettings { AutoCheckForUpdates = false }));
+        }
+
+        [AvaloniaFact]
+        public void UpdateAvailable()
+        {
+            CaptureWindow("update-available", new UpdateAvailableWindow(new GitHubUpdateResult
+            {
+                CanConnectToGitHub = true,
+                UpdateAvailable = true,
+                LatestVersion = "9.9.9",
+                DownloadUrl = "https://example.invalid/c2flux.zip",
+                ReleaseNotes = "## Changelog v9.9.9\n\n- Sample release notes used for UI screenshots.\n- Second line.\n- Third line.",
+            }));
+        }
+
+        private static void CaptureWindow(string name, Window window)
+        {
+            window.Show();
+
+            try
+            {
+                Dispatcher.UIThread.RunJobs();
+                using WriteableBitmap frame = window.CaptureRenderedFrame();
+                frame.Save(OutputPath(name));
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
         // Client area of alert-history-entries.png (from x = 8, y = 31).
         [AvaloniaFact]
         public void AlertHistory()

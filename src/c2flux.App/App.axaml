@@ -30,10 +30,10 @@
   </Application.Styles>
 
   <!-- macOS application menu; Avalonia adds Hide, Services and Quit (⌘Q).
-       About and Settings open their windows once they exist (phase 5.4). -->
+       Settings opens its window once SettingsForm is ported. -->
   <NativeMenu.Menu>
     <NativeMenu>
-      <NativeMenuItem Header="{l:T Menu.About}" IsEnabled="False" />
+      <NativeMenuItem Header="{l:T Menu.About}" Click="OnAboutClick" />
       <NativeMenuItemSeparator />
       <NativeMenuItem Header="{l:T Menu.Settings}" Gesture="Cmd+OemComma" IsEnabled="False" />
     </NativeMenu>

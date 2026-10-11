@@ -68,6 +68,16 @@ namespace c2flux
                         }
                     }
 
+                    if (settings.AutoCheckForUpdates)
+                    {
+                        GitHubUpdateResult update = await GitHubUpdateService.CheckForUpdateAsync();
+
+                        if (update.CanConnectToGitHub && update.UpdateAvailable)
+                        {
+                            await new UpdateAvailableWindow(update).ShowDialog(main);
+                        }
+                    }
+
                     string startupPath = GetStartupScanPath(args);
 
                     if (startupPath != null)
@@ -78,6 +88,14 @@ namespace c2flux
             }
 
             base.OnFrameworkInitializationCompleted();
+        }
+
+        private async void OnAboutClick(object sender, EventArgs e)
+        {
+            if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: MainWindow main })
+            {
+                await main.ShowAboutAsync();
+            }
         }
 
         // The folder to scan at startup: the first argument (not "--search"),

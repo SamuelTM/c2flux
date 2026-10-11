@@ -55,6 +55,8 @@
 	<!-- Shared with the WinForms app until phase 7 removes it. -->
 	<ItemGroup>
 		<AvaloniaResource Include="..\c2flux.WinForms\Ressources\c2flux.png" Link="Assets\c2flux.png" />
+		<AvaloniaResource Include="..\c2flux.WinForms\Ressources\molotov.jpg" Link="Assets\molotov.jpg" />
+		<AvaloniaResource Include="..\c2flux.WinForms\Ressources\ko-fi.png" Link="Assets\ko-fi.png" />
 		<None Include="..\c2flux.WinForms\Ressources\Languages\lang_*.json"
 		      Exclude="..\c2flux.WinForms\Ressources\Languages\lang_de.json;..\c2flux.WinForms\Ressources\Languages\lang_en.json"
 		      Link="Languages\%(Filename)%(Extension)"

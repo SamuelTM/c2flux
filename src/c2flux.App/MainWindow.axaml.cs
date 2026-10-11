@@ -174,11 +174,15 @@ namespace c2flux
                     Item("Search.Title", () => { }, enabled: false)),
                 Submenu(
                     "Menu.Help",
-                    Item("Menu.OnlineHelp", () => FileManager.Open(AppConstants.HelpUrl))),
+                    Item("Menu.OnlineHelp", () => FileManager.Open(AppConstants.HelpUrl)),
+                    new NativeMenuItemSeparator(),
+                    Item("Menu.About", async () => await ShowAboutAsync())),
             };
 
             NativeMenu.SetMenu(this, main);
         }
+
+        internal Task ShowAboutAsync() => new AboutWindow(_settings).ShowDialog(this);
 
         // ----- drives -----------------------------------------------------
 
