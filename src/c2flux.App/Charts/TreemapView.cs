@@ -121,6 +121,13 @@ namespace c2flux
             RefreshCurrentContext();
         }
 
+        // The same entries with changed contents (an item deleted).
+        public void Refresh()
+        {
+            RefreshCurrentContext();
+            _treemap.Refresh();
+        }
+
         // WinForms keeps the treemap at 28 % of the height on every resize.
         protected override void OnSizeChanged(SizeChangedEventArgs e)
         {

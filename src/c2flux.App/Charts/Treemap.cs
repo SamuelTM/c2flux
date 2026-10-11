@@ -80,6 +80,14 @@ namespace c2flux
             InvalidateVisual();
         }
 
+        // The same entries with changed contents (an item deleted).
+        public void Refresh()
+        {
+            InvalidateTreeCache();
+            ResetHover();
+            InvalidateVisual();
+        }
+
         public void SetEntry(FileSystemEntry entry)
         {
             if (!ReferenceEquals(_entry, entry))
@@ -968,6 +976,15 @@ namespace c2flux
                 if (!lazyChildren)
                 {
                     _children = new List<TreemapNode>();
+                }
+            }
+
+            // Drops the kept nodes of entries whose contents changed.
+            public static void Forget(IEnumerable<FileSystemEntry> entries)
+            {
+                foreach (FileSystemEntry entry in entries)
+                {
+                    LazyNodes.Remove(entry);
                 }
             }
 

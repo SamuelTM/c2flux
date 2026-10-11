@@ -127,6 +127,73 @@ namespace c2flux.AppTests
             Assert.True(window.FindControl<Avalonia.Controls.StackPanel>("GroupViews").IsVisible);
         }
     
+        // An item moved to the trash leaves the scanned tree: the tree, the
+        // sizes, the status count and the treemap show its folder without it.
+        [AvaloniaFact]
+        public async Task A_trashed_item_leaves_the_tree_and_the_views()
+        {
+            string folder = Path.Combine(Path.GetTempPath(), "c2flux-trash-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(folder, "sub"));
+            File.WriteAllBytes(Path.Combine(folder, "a.bin"), new byte[3000]);
+            File.WriteAllBytes(Path.Combine(folder, "sub", "b.bin"), new byte[5000]);
+            MainWindow window = new MainWindow(new AppSettings { SaveScanHistory = false, StorageHistoryDetailsEnabled = false });
+            window.Show();
+
+            try
+            {
+                LocalizationService.Load("en");
+                await window.ScanPathAsync(folder);
+                Dispatcher.UIThread.RunJobs();
+                FileSystemEntry root = window.EntryTree.GetRootEntry(new FileSystemEntry { FullPath = Path.Combine(folder, "a.bin") });
+                FileSystemEntry sub = root.Children.Single(child => child.Name == "sub");
+                window.EntryTree.SelectEntry(sub);
+                Treemap.TreemapNode before = Treemap.TreemapNode.For(root, root);
+                Assert.Equal(2, before.Children.Count);
+
+                Directory.Delete(Path.Combine(folder, "sub"), recursive: true);
+                window.RemoveFromScan(sub, root);
+                Dispatcher.UIThread.RunJobs();
+
+                Assert.Equal(new[] { "a.bin" }, root.Children.Select(child => child.Name));
+                Assert.Equal(3000, root.SizeBytes);
+                Assert.Equal(1, EntryIndex.FileCount(root, root));
+                Assert.Contains("Files: 1", window.StatusLine);
+                Assert.Equal(new[] { "a.bin" }, Treemap.TreemapNode.For(root, root).Children.Select(child => child.DisplayName));
+            }
+            finally
+            {
+                window.Close();
+                Directory.Delete(folder, recursive: true);
+            }
+        }
+
+        // The real trash of each system, on CI only: locally it would fill
+        // the developer's trash.
+        [AvaloniaFact]
+        public void The_system_trash_takes_a_file()
+        {
+            if (Environment.GetEnvironmentVariable("CI") != "true")
+            {
+                return;
+            }
+
+            // Under the home folder: gio finds no trash on a tmpfs /tmp.
+            string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "c2flux-trash-test-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(folder);
+            string file = Path.Combine(folder, "trash me.txt");
+            File.WriteAllText(file, "c2flux");
+
+            try
+            {
+                FileManager.MoveToTrash(file);
+                Assert.False(File.Exists(file));
+            }
+            finally
+            {
+                Directory.Delete(folder, recursive: true);
+            }
+        }
+
         // Dragging a group by its grip: a ghost follows the pointer and a
         // bar marks the gap; the drop puts the group there.
         [AvaloniaFact]

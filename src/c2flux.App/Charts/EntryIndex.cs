@@ -79,6 +79,9 @@ namespace c2flux
             return result;
         }
 
+        // After the tree changed without AllFiles growing (an item deleted).
+        public static void Invalidate(FileSystemEntry root) => Cache.Remove(root);
+
         private static Snapshot Get(FileSystemEntry root)
         {
             List<FileSystemEntry> source = root.AllFiles;

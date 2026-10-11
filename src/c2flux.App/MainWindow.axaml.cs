@@ -1360,7 +1360,7 @@ namespace c2flux
         // and was not ported). Files get no menu, as in WinForms.
         private void OnTreeEntryPressed(FileSystemEntry entry, Avalonia.Input.PointerPressedEventArgs e)
         {
-            if (!e.GetCurrentPoint(this).Properties.IsRightButtonPressed || entry == null || !entry.IsDirectory || string.IsNullOrWhiteSpace(entry.FullPath))
+            if (!e.GetCurrentPoint(this).Properties.IsRightButtonPressed || entry == null || string.IsNullOrWhiteSpace(entry.FullPath))
             {
                 return;
             }
@@ -1375,6 +1375,21 @@ namespace c2flux
                 return item;
             }
 
+            // Not the scanned folder itself, nor during its scan.
+            MenuItem trash = Command(LocalizationService.GetText("Context.MoveToTrash"), async () => await MoveToTrashAsync(entry, root));
+            trash.IsEnabled = root != null && !ReferenceEquals(root, entry) &&
+                !(_sessions.TryGetValue(NormalizeScanPath(root.FullPath), out ScanSession running) && running.IsRunning);
+
+            // Files: show and trash only.
+            if (!entry.IsDirectory)
+            {
+                items.Add(Command(LocalizationService.GetText("Context.OpenInExplorer"), () => FileManager.Reveal(entry.FullPath)));
+                items.Add(new Separator());
+                items.Add(trash);
+                new ContextMenu { ItemsSource = items }.Open(Tree);
+                return;
+            }
+
             if (root != null)
             {
                 string rootName = NormalizeScanPath(root.FullPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
@@ -1387,8 +1402,66 @@ namespace c2flux
             items.Add(Command(_export.TreeCopyMenuText(".CSV"), async () => await _export.CopyCsvAsync(entry)));
             items.Add(new Separator());
             items.Add(Command(LocalizationService.GetText("Context.OpenInExplorer"), () => FileManager.Open(entry.FullPath)));
+            items.Add(new Separator());
+            items.Add(trash);
 
             new ContextMenu { ItemsSource = items }.Open(Tree);
+        }
+
+        // After a confirmation the item goes to the system's trash (off the
+        // UI thread: a big folder takes a while) and out of the scanned tree,
+        // which the tree and the views then show without it.
+        internal async Task MoveToTrashAsync(FileSystemEntry entry, FileSystemEntry root)
+        {
+            string name = string.IsNullOrWhiteSpace(entry.Name) ? entry.FullPath : entry.Name;
+
+            if (!await AppDialogs.ShowQuestionYesNoAsync(this, LocalizationService.Format("Trash.Confirm", name)))
+            {
+                return;
+            }
+
+            try
+            {
+                await Task.Run(() => FileManager.MoveToTrash(entry.FullPath));
+            }
+            catch (Exception exception)
+            {
+                AppAlertLog.AddError("Trash", "The item could not be moved to the trash.", "Path: " + entry.FullPath + Environment.NewLine + exception);
+                await AppDialogs.ShowErrorOkAsync(this, LocalizationService.Format("Trash.Failed", name) + Environment.NewLine + Environment.NewLine + exception.Message);
+                return;
+            }
+
+            AppAlertLog.AddInformation("Trash", "Moved to the trash: " + entry.FullPath);
+            RemoveFromScan(entry, root);
+        }
+
+        // Only the folders above the item change: their sizes, the index of
+        // the tree and their kept treemap nodes.
+        internal void RemoveFromScan(FileSystemEntry entry, FileSystemEntry root)
+        {
+            List<FileSystemEntry> ancestors = ScanTree.Remove(root, entry);
+
+            if (ancestors.Count == 0)
+            {
+                return;
+            }
+
+            ScanSession session = _sessions.Values.FirstOrDefault(item => ReferenceEquals(item.RootEntry, root));
+
+            if (session != null)
+            {
+                ApplyVolumeSizeToRootEntry(session.RootPath, root);
+            }
+
+            EntryIndex.Invalidate(root);
+            Treemap.TreemapNode.Forget(ancestors.Append(entry));
+            Tree.UpdateRootEntry(root);
+
+            // The folder it was in, refreshed even when already selected.
+            FileSystemEntry parent = ancestors[^1];
+            Tree.SelectEntry(parent);
+            OnSelectedEntryChanged(parent);
+            _treemap.Refresh();
         }
 
         // Hides a scanned root from the tree; scanning it again shows it.

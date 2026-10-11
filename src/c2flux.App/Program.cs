@@ -93,10 +93,16 @@ namespace c2flux
             {
                 Volumes.ClusterSizeReader = WindowsClusterSize.Read;
                 FileIcons.Reader = WindowsFileIcons.Read;
+                FileManager.TrashMover = WindowsTrash.Move;
             }
             else if (OperatingSystem.IsMacOS())
             {
                 FileIcons.Reader = MacFileIcons.Read;
+                FileManager.TrashMover = MacTrash.Move;
+            }
+            else
+            {
+                FileManager.TrashMover = LinuxTrash.Move;
             }
         }
 

@@ -36,6 +36,21 @@ namespace c2flux
             }
         }
 
+        // Moves a file or folder to the system's trash; set per OS by the
+        // app (Program.RegisterPlatformServices). Throws an IOException with
+        // the system's reason when it could not.
+        public static Action<string> TrashMover { get; set; }
+
+        public static void MoveToTrash(string path)
+        {
+            if (TrashMover == null)
+            {
+                throw new PlatformNotSupportedException("This system has no trash the app can use.");
+            }
+
+            TrashMover(path);
+        }
+
         // Candidates in order; the first that starts wins. Pure, so the rules
         // of every OS can be tested on any OS.
         internal static IEnumerable<(string FileName, string[] Arguments)> RevealCommands(AppPaths.Platform platform, string path)
