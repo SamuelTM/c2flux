@@ -2,7 +2,10 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
+using Avalonia.VisualTree;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Xunit;
@@ -124,5 +127,54 @@ namespace c2flux.AppTests
             Assert.False(window.FindControl<Avalonia.Controls.StackPanel>("GroupExport").IsVisible);
             Assert.True(window.FindControl<Avalonia.Controls.StackPanel>("GroupViews").IsVisible);
         }
-    }
+    
+        // Dragging a group by its grip: a ghost follows the pointer and a
+        // bar marks the gap; the drop puts the group there.
+        [AvaloniaFact]
+        public void Dragging_a_toolbar_group_shows_a_ghost_and_the_drop_gap()
+        {
+            MainWindow window = new MainWindow(new AppSettings()) { Width = 1264, Height = 761 };
+            window.Show();
+
+            try
+            {
+                Dispatcher.UIThread.RunJobs();
+                WrapPanel toolbar = window.FindControl<WrapPanel>("Toolbar");
+                Canvas overlay = window.FindControl<Canvas>("ToolbarOverlay");
+                StackPanel views = window.FindControl<StackPanel>("GroupViews");
+                StackPanel features = window.FindControl<StackPanel>("GroupFeatures");
+                Control grip = features.Children[0];
+                Avalonia.Point start = grip.TranslatePoint(new Avalonia.Point(3, grip.Bounds.Height / 2), window).Value;
+                Avalonia.Point target = views.TranslatePoint(new Avalonia.Point(10, views.Bounds.Height / 2), window).Value;
+
+                window.MouseDown(start, Avalonia.Input.MouseButton.Left);
+                window.MouseMove(new Avalonia.Point(start.X + 2, start.Y));
+                Dispatcher.UIThread.RunJobs();
+                Assert.Empty(overlay.Children);
+
+                window.MouseMove(target, Avalonia.Input.RawInputModifiers.LeftMouseButton);
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal(2, overlay.Children.Count);
+                Control marker = overlay.Children.OfType<Avalonia.Controls.Shapes.Rectangle>().Single();
+                Assert.True(marker.IsVisible);
+                Assert.InRange(Canvas.GetLeft(marker) + 1.5, views.Bounds.Left - 9, views.Bounds.Left - 7);
+
+                if (Environment.GetEnvironmentVariable("C2FLUX_CHART_OUT") is string output)
+                {
+                    Directory.CreateDirectory(output);
+                    using Avalonia.Media.Imaging.WriteableBitmap frame = Avalonia.Headless.HeadlessWindowExtensions.CaptureRenderedFrame(window);
+                    frame.Save(Path.Combine(output, "toolbar-drag.png"));
+                }
+
+                window.MouseUp(target, Avalonia.Input.MouseButton.Left);
+                Dispatcher.UIThread.RunJobs();
+                Assert.Empty(overlay.Children);
+                Assert.Equal(toolbar.Children.IndexOf(views) - 1, toolbar.Children.IndexOf(features));
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+}
 }

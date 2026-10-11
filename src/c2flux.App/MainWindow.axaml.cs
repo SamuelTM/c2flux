@@ -1129,15 +1129,107 @@ namespace c2flux
 
             foreach (StackPanel group in ToolbarGroups)
             {
-                Control grip = group.Children[0];
-                grip.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.SizeAll);
-                grip.PointerPressed += (_, e) => e.Pointer.Capture(grip);
-                grip.PointerReleased += (_, e) =>
-                {
-                    e.Pointer.Capture(null);
-                    MoveToolbarGroup(group, e.GetPosition(Toolbar));
-                };
+                AttachToolbarGroupDrag(group);
             }
+        }
+
+        // Drag by the grip: a ghost of the group follows the pointer and a
+        // bar marks the gap it lands in (none where it would not move).
+        private void AttachToolbarGroupDrag(StackPanel group)
+        {
+            Control grip = group.Children[0];
+            grip.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.SizeAll);
+            Point pressedAt = default;
+            Point grabOffset = default;
+            Border ghost = null;
+            Avalonia.Controls.Shapes.Rectangle marker = null;
+
+            void EndDrag()
+            {
+                ((ghost?.Child as Image)?.Source as IDisposable)?.Dispose();
+                ToolbarOverlay.Children.Clear();
+                ghost = null;
+                marker = null;
+                group.Opacity = 1;
+            }
+
+            grip.PointerPressed += (_, e) =>
+            {
+                if (e.GetCurrentPoint(grip).Properties.IsLeftButtonPressed)
+                {
+                    e.Pointer.Capture(grip);
+                    pressedAt = e.GetPosition(Toolbar);
+                    grabOffset = e.GetPosition(group);
+                }
+            };
+            grip.PointerMoved += (_, e) =>
+            {
+                if (e.Pointer.Captured != grip)
+                {
+                    return;
+                }
+
+                Point point = e.GetPosition(Toolbar);
+
+                if (ghost == null)
+                {
+                    if (Math.Abs(point.X - pressedAt.X) < 4 && Math.Abs(point.Y - pressedAt.Y) < 4)
+                    {
+                        return;
+                    }
+
+                    ghost = new Border
+                    {
+                        Background = (IBrush)this.FindResource(ActualThemeVariant, "BackgroundSecondaryBrush"),
+                        BorderBrush = (IBrush)this.FindResource(ActualThemeVariant, "PrimaryBrush"),
+                        BorderThickness = new Thickness(1),
+                        CornerRadius = new CornerRadius(6),
+                        Opacity = 0.85,
+                        Child = new Image { Source = Snapshot(group), Width = group.Bounds.Width, Height = group.Bounds.Height },
+                    };
+                    marker = new Avalonia.Controls.Shapes.Rectangle
+                    {
+                        Width = 3,
+                        RadiusX = 1.5,
+                        RadiusY = 1.5,
+                        Fill = (IBrush)this.FindResource(ActualThemeVariant, "PrimaryBrush"),
+                    };
+                    // The marker over the ghost: the ghost often covers the gap.
+                    ToolbarOverlay.Children.Add(ghost);
+                    ToolbarOverlay.Children.Add(marker);
+                    group.Opacity = 0.35;
+                }
+
+                Canvas.SetLeft(ghost, point.X - grabOffset.X - 1);
+                Canvas.SetTop(ghost, point.Y - grabOffset.Y - 1);
+                (int index, Rect gap) = FindToolbarDrop(group, point);
+                marker.IsVisible = index != Toolbar.Children.IndexOf(group) && gap.Height > 0;
+                marker.Height = gap.Height;
+                Canvas.SetLeft(marker, gap.X);
+                Canvas.SetTop(marker, gap.Y);
+            };
+            grip.PointerReleased += (_, e) =>
+            {
+                if (ghost != null)
+                {
+                    MoveToolbarGroup(group, e.GetPosition(Toolbar));
+                }
+
+                EndDrag();
+                e.Pointer.Capture(null);
+            };
+            grip.PointerCaptureLost += (_, _) => EndDrag();
+        }
+
+        // The control as it is drawn, at the screen's pixel density.
+        private static Avalonia.Media.Imaging.RenderTargetBitmap Snapshot(Control control)
+        {
+            double scaling = TopLevel.GetTopLevel(control)?.RenderScaling ?? 1;
+            Avalonia.Media.Imaging.RenderTargetBitmap bitmap = new Avalonia.Media.Imaging.RenderTargetBitmap(
+                new PixelSize(Math.Max(1, (int)Math.Ceiling(control.Bounds.Width * scaling)), Math.Max(1, (int)Math.Ceiling(control.Bounds.Height * scaling))),
+                new Vector(96 * scaling, 96 * scaling));
+            bitmap.Render(control);
+            return bitmap;
         }
 
         // Port of RebuildToolbarContextMenu: a check per button, "show all".
@@ -1220,13 +1312,30 @@ namespace c2flux
             Toolbar.Children.AddRange(groups);
         }
 
-        // Drop a group (dragged by its grip) before the group under the
-        // pointer, or at the end.
+        // Where a dragged group lands: before the shown group under the
+        // pointer (or the next one in its row), else at the end. Index is
+        // the group's new place; gap is the marker between the groups.
+        private (int Index, Rect Gap) FindToolbarDrop(StackPanel group, Point point)
+        {
+            // Half the 16 px right margin between groups, less half the marker.
+            const double GapOffset = 8 + 1.5;
+            List<Control> others = Toolbar.Children.Where(child => child != group).ToList();
+            List<Control> shown = others.Where(child => child.IsVisible).ToList();
+            Control before = shown.FirstOrDefault(child => point.Y < child.Bounds.Bottom && (point.Y < child.Bounds.Top || point.X < child.Bounds.Center.X));
+
+            if (before != null)
+            {
+                return (others.IndexOf(before), new Rect(Math.Max(-6, before.Bounds.Left - GapOffset), before.Bounds.Top, 3, before.Bounds.Height));
+            }
+
+            Control last = shown.LastOrDefault();
+            return (others.Count, last == null ? default : new Rect(last.Bounds.Right + 8 - 1.5, last.Bounds.Top, 3, last.Bounds.Height));
+        }
+
+        // Drop a group (dragged by its grip) where FindToolbarDrop says.
         private void MoveToolbarGroup(StackPanel group, Point point)
         {
-            List<Control> others = Toolbar.Children.Where(child => child != group).ToList();
-            int target = others.FindIndex(child => point.Y < child.Bounds.Bottom && (point.Y < child.Bounds.Top || point.X < child.Bounds.Center.X));
-            target = target < 0 ? others.Count : target;
+            int target = FindToolbarDrop(group, point).Index;
 
             Toolbar.Children.Remove(group);
             Toolbar.Children.Insert(Math.Min(target, Toolbar.Children.Count), group);

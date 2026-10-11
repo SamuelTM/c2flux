@@ -22,6 +22,7 @@
     <!-- Each tool strip row is 42 px with the 28 px buttons centered (56 px
          band for one row), as in WinForms. -->
     <Border DockPanel.Dock="Top" Background="{DynamicResource BackgroundSecondaryBrush}" Padding="8,7,8,7">
+      <Panel>
       <WrapPanel x:Name="Toolbar" Orientation="Horizontal">
         <StackPanel x:Name="GroupMain" Orientation="Horizontal" Spacing="5" Margin="0,7,16,7">
           <Border Background="Transparent" Width="7" Margin="0,0,0,0"><Rectangle Classes="grip" /></Border>
@@ -103,6 +104,9 @@
           </Button>
         </StackPanel>
       </WrapPanel>
+      <!-- While a group is dragged: its ghost and the drop marker. -->
+      <Canvas x:Name="ToolbarOverlay" IsHitTestVisible="False" />
+      </Panel>
     </Border>
 
     <!-- Status bar: alert counters, summary text, scan progress. -->
