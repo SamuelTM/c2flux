@@ -16,8 +16,8 @@ mkdir -p "$appdir/usr/bin" "$appdir/usr/share/metainfo" "$appdir/usr/share/icons
 cp -R "$publish/." "$appdir/usr/bin/"
 cp "$here/linux/AppRun" "$appdir/AppRun"
 chmod +x "$appdir/AppRun" "$appdir/usr/bin/c2flux"
-cp "$here/linux/io.github.c2flux.desktop" "$appdir/"
-sed "s/@VERSION@/$version/g" "$here/linux/io.github.c2flux.metainfo.xml" > "$appdir/usr/share/metainfo/io.github.c2flux.metainfo.xml"
+cp "$here/linux/io.github.samueltm.c2flux.desktop" "$appdir/"
+sed "s/@VERSION@/$version/g" "$here/linux/io.github.samueltm.c2flux.metainfo.xml" > "$appdir/usr/share/metainfo/io.github.samueltm.c2flux.metainfo.xml"
 # 256 px icon, made from c2flux.png (sips -z 256 256).
 cp "$here/linux/c2flux.png" "$appdir/c2flux.png"
 cp "$appdir/c2flux.png" "$appdir/usr/share/icons/hicolor/256x256/apps/c2flux.png"

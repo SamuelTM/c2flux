@@ -20,9 +20,9 @@ sed "s/@VERSION@/$version/g" "$here/macos/Info.plist" > "$app/Contents/Info.plis
 iconset="$work/c2flux.iconset"
 mkdir -p "$iconset"
 for size in 16 32 128 256 512; do
-  sips -z $size $size "$here/../src/c2flux.WinForms/Ressources/c2flux.png" --out "$iconset/icon_${size}x${size}.png" >/dev/null
+  sips -z $size $size "$here/../src/c2flux.App/Assets/c2flux.png" --out "$iconset/icon_${size}x${size}.png" >/dev/null
   double=$((size * 2))
-  sips -z $double $double "$here/../src/c2flux.WinForms/Ressources/c2flux.png" --out "$iconset/icon_${size}x${size}@2x.png" >/dev/null
+  sips -z $double $double "$here/../src/c2flux.App/Assets/c2flux.png" --out "$iconset/icon_${size}x${size}@2x.png" >/dev/null
 done
 iconutil -c icns "$iconset" -o "$app/Contents/Resources/c2flux.icns"
 

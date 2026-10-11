@@ -54,9 +54,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Publish app and benchmark tool
+      - name: Build scanners and benchmark tool
         run: |
-          dotnet publish src/c2flux.WinForms/c2flux.csproj --configuration Release --runtime win-x64 --self-contained false --output "$env:RUNNER_TEMP\app"
+          dotnet build src/c2flux.Platform.Windows/c2flux.Platform.Windows.csproj --configuration Release --output "$env:RUNNER_TEMP\app"
           dotnet publish tests/c2flux.Benchmarks/c2flux.Benchmarks.csproj --configuration Release --output "$env:RUNNER_TEMP\bench"
 
       - name: Create NTFS test volume (T:)
@@ -87,7 +87,7 @@ jobs:
 
           foreach ($target in $targets) {
             $dump = Join-Path $out "$($target.Scanner).dump"
-            & "$env:RUNNER_TEMP\bench\c2flux-bench.exe" --app "$env:RUNNER_TEMP\app" --scanner $target.Scanner --path $target.Path --dump $dump | Out-File -FilePath (Join-Path $out "$($target.Scanner).json") -Encoding utf8
+            & "$env:RUNNER_TEMP\bench\c2flux-bench.exe" --app "$env:RUNNER_TEMP\app\c2flux.Platform.Windows.dll" --scanner $target.Scanner --path $target.Path --dump $dump | Out-File -FilePath (Join-Path $out "$($target.Scanner).json") -Encoding utf8
             if (-not (Test-Path $dump)) {
               "$($target.Scanner): no result (see artifact)`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
               $failed += $target.Scanner

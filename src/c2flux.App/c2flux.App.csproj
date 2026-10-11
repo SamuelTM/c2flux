@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<!--
-		The cross-platform UI (Avalonia). Replaces c2flux.WinForms; until it is
-		complete (ROADMAP.md, phase 5) both exist side by side.
+		The app: the cross-platform UI (Avalonia) on Windows, macOS and Linux.
 	-->
 
 	<PropertyGroup>
@@ -12,20 +11,20 @@
 		<ImplicitUsings>disable</ImplicitUsings>
 		<AssemblyName>c2flux.App</AssemblyName>
 		<RootNamespace>c2flux</RootNamespace>
-		<ApplicationIcon>..\c2flux.WinForms\Ressources\c2flux.ico</ApplicationIcon>
+		<ApplicationIcon>Assets\c2flux.ico</ApplicationIcon>
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 		<!-- Platform projects are picked at runtime by OperatingSystem checks. -->
 		<NoWarn>$(NoWarn);CA1416</NoWarn>
 
-		<Authors>Daniel Capilla</Authors>
-		<Company>Daniel Capilla</Company>
+		<Authors>Daniel Capilla, Samuel Medeiros</Authors>
+		<Company>Samuel Medeiros</Company>
 		<Product>c² flux - Tree Scanner</Product>
-		<Copyright>Copyright © Daniel Capilla</Copyright>
+		<Copyright>Copyright © Daniel Capilla, Samuel Medeiros</Copyright>
 
-		<Version>1.4.1</Version>
-		<AssemblyVersion>1.4.1</AssemblyVersion>
-		<FileVersion>1.4.1</FileVersion>
-		<InformationalVersion>1.4.1</InformationalVersion>
+		<Version>2.0.0-beta.1</Version>
+		<AssemblyVersion>2.0.0</AssemblyVersion>
+		<FileVersion>2.0.0</FileVersion>
+		<InformationalVersion>2.0.0-beta.1</InformationalVersion>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 	</PropertyGroup>
 
@@ -67,17 +66,15 @@
 		<None Include="Assets\Fonts\Selawik-OFL.txt" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
-	<!-- Shared with the WinForms app until phase 7 removes it. -->
+	<!-- Images, the language files (German and English are built in) and the
+	     third-party licenses, shipped next to the app. -->
 	<ItemGroup>
-		<AvaloniaResource Include="..\c2flux.WinForms\Ressources\c2flux.png" Link="Assets\c2flux.png" />
-		<AvaloniaResource Include="..\c2flux.WinForms\Ressources\molotov.jpg" Link="Assets\molotov.jpg" />
-		<AvaloniaResource Include="..\c2flux.WinForms\Ressources\ko-fi.png" Link="Assets\ko-fi.png" />
-		<AvaloniaResource Include="..\c2flux.WinForms\Ressources\scan-history-details.png" Link="Assets\scan-history-details.png" />
-		<None Include="..\c2flux.WinForms\Ressources\Languages\lang_*.json"
-		      Exclude="..\c2flux.WinForms\Ressources\Languages\lang_de.json;..\c2flux.WinForms\Ressources\Languages\lang_en.json"
-		      Link="Languages\%(Filename)%(Extension)"
+		<AvaloniaResource Include="Assets\c2flux.png;Assets\molotov.jpg;Assets\ko-fi.png;Assets\scan-history-details.png" />
+		<None Include="Languages\lang_*.json"
+		      Exclude="Languages\lang_de.json;Languages\lang_en.json"
 		      CopyToOutputDirectory="PreserveNewest"
 		      CopyToPublishDirectory="PreserveNewest" />
+		<None Include="Licenses\*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
 	</ItemGroup>
 
 </Project>

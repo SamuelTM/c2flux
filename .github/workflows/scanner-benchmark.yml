@@ -110,12 +110,21 @@ jobs:
           if (-not $project) { throw "No c2flux.csproj found in baseline" }
           dotnet publish $project --configuration Release --runtime win-x64 --self-contained false --output "$env:RUNNER_TEMP\apps\baseline"
 
+      # Since the WinForms app is gone (phase 7) the scanners of a candidate
+      # live in c2flux.Platform.Windows; older refs still build the app.
       - name: Publish candidate app
         if: env.BASELINE_ONLY != 'true'
         run: |
-          $project = @('src/c2flux.WinForms/c2flux.csproj', 'c2flux.csproj') | ForEach-Object { Join-Path 'candidate' $_ } | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $project) { throw "No c2flux.csproj found in candidate" }
-          dotnet publish $project --configuration Release --runtime win-x64 --self-contained false --output "$env:RUNNER_TEMP\apps\candidate"
+          $platform = 'candidate/src/c2flux.Platform.Windows/c2flux.Platform.Windows.csproj'
+          $app = @('src/c2flux.WinForms/c2flux.csproj', 'c2flux.csproj') | ForEach-Object { Join-Path 'candidate' $_ } | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if ($app) {
+            dotnet publish $app --configuration Release --runtime win-x64 --self-contained false --output "$env:RUNNER_TEMP\apps\candidate"
+            "CANDIDATE_APP=$env:RUNNER_TEMP\apps\candidate" >> $env:GITHUB_ENV
+          }
+          else {
+            dotnet build $platform --configuration Release --output "$env:RUNNER_TEMP\apps\candidate"
+            "CANDIDATE_APP=$env:RUNNER_TEMP\apps\candidate\c2flux.Platform.Windows.dll" >> $env:GITHUB_ENV
+          }
 
       - name: Publish benchmark tool
         run: dotnet publish candidate/tests/c2flux.Benchmarks/c2flux.Benchmarks.csproj --configuration Release --output "$env:RUNNER_TEMP\bench"
@@ -148,7 +157,7 @@ jobs:
           )
 
           if ($env:BASELINE_ONLY -ne 'true') {
-            $arguments += @('--candidate-app', "$env:RUNNER_TEMP\apps\candidate")
+            $arguments += @('--candidate-app', $env:CANDIDATE_APP)
           }
 
           # Static targets: exact tree comparison.

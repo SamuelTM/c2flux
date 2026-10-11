@@ -1,4 +1,9 @@
-name: Build and Release c2flux
+name: Release
+
+# A tag v* builds the packages for every system (package.yml), then creates
+# the GitHub release with them. Final releases also add their notes to
+# CHANGELOG.md on the default branch; pre-releases (-alpha, -beta, -rc) do
+# not. A manual run can instead rebuild CHANGELOG.md from all releases.
 
 on:
   push:
@@ -8,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag, e.g. v1.3.4"
+        description: "Release tag, e.g. v2.0.0"
         required: false
         type: string
 
@@ -26,17 +31,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
-    runs-on: windows-latest
+  meta:
+    name: Tag and version
+    if: ${{ !inputs.backfill_changelog }}
+    runs-on: ubuntu-latest
 
     outputs:
-      tag: ${{ steps.release_tag.outputs.tag }}
+      tag: ${{ steps.version.outputs.tag }}
       version: ${{ steps.version.outputs.version }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
 
     steps:
-      - name: Release-Tag ermitteln
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.backfill_changelog) }}
-        id: release_tag
+      - name: Read the tag
+        id: version
         shell: pwsh
         run: |
           if ("${{ github.event_name }}" -eq "workflow_dispatch") {
@@ -54,87 +61,54 @@ jobs:
               throw "Release tag must start with 'v'"
           }
 
+          $version = $tag.TrimStart("v")
+          $isPrerelease = $version -match "-(alpha|beta|rc)(\.|$)"
+
           "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "is_prerelease=$($isPrerelease.ToString().ToLower())" >> $env:GITHUB_OUTPUT
 
-      - name: Release-Quellstand auschecken
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.backfill_changelog) }}
-        uses: actions/checkout@v4
+  packages:
+    name: Packages
+    needs: meta
+    uses: ./.github/workflows/package.yml
+    with:
+      ref: ${{ needs.meta.outputs.tag }}
+      version: ${{ needs.meta.outputs.version }}
+
+  release:
+    name: Release
+    needs: [meta, packages]
+    if: ${{ always() && (inputs.backfill_changelog || needs.packages.result == 'success') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download packages
+        if: ${{ !inputs.backfill_changelog }}
+        uses: actions/download-artifact@v7
         with:
-          ref: ${{ steps.release_tag.outputs.tag }}
-          fetch-depth: 0
+          pattern: c2flux-package-*
+          merge-multiple: true
+          path: packages
 
-      - name: Default-Branch für Backfill auschecken
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.backfill_changelog }}
-        uses: actions/checkout@v4
+      - name: Create the GitHub release
+        if: ${{ !inputs.backfill_changelog }}
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.meta.outputs.tag }}
+          name: ${{ needs.meta.outputs.tag }}
+          files: packages/*
+          generate_release_notes: true
+          prerelease: ${{ needs.meta.outputs.is_prerelease }}
+
+      - name: Check out the default branch for CHANGELOG.md
+        if: ${{ inputs.backfill_changelog || needs.meta.outputs.is_prerelease != 'true' }}
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
 
-      - name: .NET 10 einrichten
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.backfill_changelog) }}
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Abhängigkeiten wiederherstellen
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.backfill_changelog) }}
-        run: dotnet restore c2flux.sln
-
-      - name: Versionsinformationen ermitteln
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.backfill_changelog) }}
-        id: version
-        shell: pwsh
-        run: |
-          $tag = "${{ steps.release_tag.outputs.tag }}"
-          $version = $tag.TrimStart("v")
-          $baseVersion = $version.Split("-")[0]
-          $assemblyVersion = "$baseVersion.0"
-          $isPrerelease = $version -match "-(alpha|beta|rc)(\.|$)"
-
-          "version=$version" >> $env:GITHUB_OUTPUT
-          "assembly_version=$assemblyVersion" >> $env:GITHUB_OUTPUT
-          "is_prerelease=$($isPrerelease.ToString().ToLower())" >> $env:GITHUB_OUTPUT
-
-      - name: Projekt veröffentlichen
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.backfill_changelog) }}
-        run: >
-          dotnet publish src/c2flux.WinForms/c2flux.csproj
-          --configuration Release
-          --runtime win-x64
-          --self-contained false
-          --output publish
-          -p:Version=${{ steps.version.outputs.version }}
-          -p:AssemblyVersion=${{ steps.version.outputs.assembly_version }}
-          -p:FileVersion=${{ steps.version.outputs.assembly_version }}
-          -p:InformationalVersion=${{ steps.version.outputs.version }}
-
-      - name: ZIP erstellen
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.backfill_changelog) }}
-        shell: pwsh
-        run: |
-          Compress-Archive `
-            -Path "publish\*" `
-            -DestinationPath "c2flux-v${{ steps.version.outputs.version }}-win-x64.zip"
-
-      - name: GitHub Release erstellen
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.backfill_changelog) }}
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ steps.release_tag.outputs.tag }}
-          name: ${{ steps.release_tag.outputs.tag }}
-          files: c2flux-v${{ steps.version.outputs.version }}-win-x64.zip
-          generate_release_notes: true
-          prerelease: ${{ steps.version.outputs.is_prerelease }}
-
-      - name: Default-Branch für CHANGELOG aktualisieren
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.backfill_changelog) }}
-        shell: pwsh
-        run: |
-          git fetch origin "${{ github.event.repository.default_branch }}"
-          git checkout "${{ github.event.repository.default_branch }}"
-          git pull --ff-only origin "${{ github.event.repository.default_branch }}"
-
-      - name: CHANGELOG.md vollständig aus Releases neu aufbauen
+      - name: Rebuild CHANGELOG.md from all releases
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.backfill_changelog }}
         shell: pwsh
         env:
@@ -184,13 +158,13 @@ jobs:
               [System.Text.UTF8Encoding]::new($false)
           )
 
-      - name: Neues Release in CHANGELOG.md ergänzen
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.backfill_changelog) }}
+      - name: Add the new release to CHANGELOG.md
+        if: ${{ !inputs.backfill_changelog && needs.meta.outputs.is_prerelease != 'true' }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "${{ steps.release_tag.outputs.tag }}"
+          $tag = "${{ needs.meta.outputs.tag }}"
           $release = gh release view $tag --json body | ConvertFrom-Json
           $body = [string]$release.body
 
@@ -214,7 +188,8 @@ jobs:
               [System.Text.UTF8Encoding]::new($false)
           )
 
-      - name: CHANGELOG.md committen
+      - name: Commit CHANGELOG.md
+        if: ${{ inputs.backfill_changelog || needs.meta.outputs.is_prerelease != 'true' }}
         shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
@@ -230,7 +205,7 @@ jobs:
               $commitMessage = "Rebuild CHANGELOG from GitHub releases"
           }
           else {
-              $commitMessage = "Update CHANGELOG for ${{ steps.release_tag.outputs.tag }}"
+              $commitMessage = "Update CHANGELOG for ${{ needs.meta.outputs.tag }}"
           }
 
           git commit -m $commitMessage
@@ -239,32 +214,3 @@ jobs:
           git fetch origin $defaultBranch
           git rebase "origin/$defaultBranch"
           git push origin "HEAD:$defaultBranch"
-
-  # Phase 6: the Avalonia packages for every RID, attached to the release
-  # the build job created (next to the WinForms ZIP until phase 7).
-  packages:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.backfill_changelog) }}
-    needs: build
-    uses: ./.github/workflows/package.yml
-    with:
-      ref: ${{ needs.build.outputs.tag }}
-      version: ${{ needs.build.outputs.version }}
-
-  attach:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.backfill_changelog) }}
-    needs: [build, packages]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download packages
-        uses: actions/download-artifact@v7
-        with:
-          pattern: c2flux-package-*
-          merge-multiple: true
-          path: packages
-
-      - name: Attach to the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ needs.build.outputs.tag }}" packages/* --clobber --repo "${{ github.repository }}"
-

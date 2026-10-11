@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.c2flux</id>
+  <id>io.github.samueltm.c2flux</id>
   <name>c² flux</name>
   <summary>See what takes up space on your drives</summary>
   <metadata_license>CC0-1.0</metadata_license>
@@ -8,8 +8,8 @@
   <description>
     <p>Scans a drive or folder and shows its size as a tree, table, pie, bar, sunburst and treemap, with search, storage history and duplicate analysis.</p>
   </description>
-  <launchable type="desktop-id">io.github.c2flux.desktop</launchable>
-  <url type="homepage">https://github.com/UncleRiot/c2flux</url>
+  <launchable type="desktop-id">io.github.samueltm.c2flux.desktop</launchable>
+  <url type="homepage">https://github.com/SamuelTM/c2flux</url>
   <releases>
     <release version="@VERSION@" />
   </releases>

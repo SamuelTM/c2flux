@@ -35,27 +35,6 @@ jobs:
       - name: Build
         run: dotnet build c2flux.sln --configuration Release --no-restore
 
-      - name: Build benchmark tool
-        run: dotnet build tests/c2flux.Benchmarks/c2flux.Benchmarks.csproj --configuration Release
-
-      - name: Build screenshot tool
-        run: dotnet build tests/c2flux.Screenshots/c2flux.Screenshots.csproj --configuration Release
-
-      - name: Publish (same settings as release.yml)
-        run: >
-          dotnet publish src/c2flux.WinForms/c2flux.csproj
-          --configuration Release
-          --runtime win-x64
-          --self-contained false
-          --output publish
-
-      - name: Upload build
-        uses: actions/upload-artifact@v7
-        with:
-          name: c2flux-win-x64-${{ github.sha }}
-          path: publish
-          retention-days: 7
-
   core-tests:
     name: Core and app tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

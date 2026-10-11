@@ -7,7 +7,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>c² flux</string>
 	<key>CFBundleIdentifier</key>
-	<string>io.github.c2flux</string>
+	<string>io.github.samueltm.c2flux</string>
 	<key>CFBundleExecutable</key>
 	<string>c2flux</string>
 	<key>CFBundleIconFile</key>
@@ -19,7 +19,7 @@
 	<key>CFBundleVersion</key>
 	<string>@VERSION@</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © Daniel Capilla</string>
+	<string>Copyright © Daniel Capilla, Samuel Medeiros</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>12.0</string>
 	<key>NSHighResolutionCapable</key>

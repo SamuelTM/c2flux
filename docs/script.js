@@ -54,15 +54,16 @@ sections.forEach(section => observer.observe(section));
 
 async function loadLatestRelease() {
   try {
+    // The newest release, pre-releases included ("latest" skips them).
     const response = await fetch(
-      "https://api.github.com/repos/UncleRiot/c2flux/releases/latest",
+      "https://api.github.com/repos/SamuelTM/c2flux/releases?per_page=1",
       { headers: { "Accept": "application/vnd.github+json" } }
     );
 
     if (!response.ok) return;
 
-    const release = await response.json();
-    const tag = release.tag_name;
+    const [release] = await response.json();
+    const tag = release && release.tag_name;
     if (!tag) return;
 
     document.getElementById("hero-version").textContent = tag;

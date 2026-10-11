@@ -1,4 +1,4 @@
-![Windows](https://img.shields.io/badge/Windows-10%2B-0078D6?logo=windows&logoColor=white) ![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white) ![C%23](https://img.shields.io/badge/C%23-239120?logo=csharp&logoColor=white) ![Platform](https://img.shields.io/badge/Platform-x64-lightgrey) ![License](https://img.shields.io/github/license/UncleRiot/c2flux) ![Release](https://img.shields.io/github/v/release/UncleRiot/c2flux)
+![Windows](https://img.shields.io/badge/Windows-10%2B-0078D6?logo=windows&logoColor=white) ![macOS](https://img.shields.io/badge/macOS-12%2B-000000?logo=apple&logoColor=white) ![Linux](https://img.shields.io/badge/Linux-AppImage-FCC624?logo=linux&logoColor=black) ![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white) ![C%23](https://img.shields.io/badge/C%23-239120?logo=csharp&logoColor=white) ![Platform](https://img.shields.io/badge/Platform-x64%20%7C%20ARM64-lightgrey) ![License](https://img.shields.io/github/license/SamuelTM/c2flux) ![Release](https://img.shields.io/github/v/release/SamuelTM/c2flux?include_prereleases)
 
 # c² flux – Tree Scanner
 
@@ -8,13 +8,14 @@ A huge thank you to everyone behind these projects — you’re amazing! Thanks 
 
 - [itsWindows11.NtfsReader](https://github.com/itsWindows11/NtfsReader)
   (This project includes a modified version of itsWindows11/NtfsReader)
-- [AntdUI](https://github.com/AntdUI/AntdUI)
+- [Avalonia](https://github.com/AvaloniaUI/Avalonia), the cross-platform UI
+- [AntdUI](https://github.com/AntdUI/AntdUI), whose look the interface keeps
 
 ---
 
 **Scan your drives, get an overview of used disk space, find everything. Fast.**
 
-[![Download c2flux](https://img.shields.io/github/v/release/UncleRiot/c2flux?label=%E2%AC%87%EF%B8%8F%20Download&style=for-the-badge&color=brightgreen)](https://github.com/UncleRiot/c2flux/releases/latest)
+[![Download c2flux](https://img.shields.io/github/v/release/SamuelTM/c2flux?include_prereleases&label=%E2%AC%87%EF%B8%8F%20Download&style=for-the-badge&color=brightgreen)](https://github.com/SamuelTM/c2flux/releases)
 
 [![Changelog](https://img.shields.io/badge/%F0%9F%93%9D%20Changelog-View-blue?style=for-the-badge)](CHANGELOG.md)
 
@@ -140,23 +141,23 @@ Fastest scan mode.
 
 ## Documentation
 
-📖 **Documentation:** See the [GitHub Wiki](https://github.com/UncleRiot/c2flux/wiki) for instructions and usage guides.
+📖 **Documentation:** See the [GitHub Wiki](https://github.com/SamuelTM/c2flux/wiki) for instructions and usage guides.
 
 <br>
 
 ## Requirements
 
-- Windows 10 or newer
-- Windows x64
-- .NET 10 Desktop Runtime
+- Windows 10 or newer, macOS 12 or newer, or a 64-bit Linux desktop
+- x64 or ARM64
+- Nothing else: the packages include the .NET runtime
 
-> NTFS MFT scanning requires administrator privileges.
+> On Windows, the fast NTFS MFT scan requires administrator privileges.
 
 <br>
 
-## c² flux 2.0: Windows, macOS and Linux
+## Download and installation
 
-Starting with version 2.0, c² flux runs on Windows, macOS and Linux, on x64 and ARM64. The packages include everything they need: no .NET runtime has to be installed. Each release lists one file per system:
+Each release lists one file per system:
 
 | System | File |
 |---|---|
@@ -220,7 +221,7 @@ Only continue if you downloaded c² flux from the official GitHub repository.
 
 ## Security and Packaging
 
-> **Security and packaging note:** VirusTotal and other automated analysis platforms may report heuristic findings for c² flux. A short explanation of these findings and the current evaluation of single-file versus multi-file releases is available here: https://github.com/UncleRiot/c2flux/wiki/Security-scanner-findings-and-release-packaging
+> **Security and packaging note:** VirusTotal and other automated analysis platforms may report heuristic findings for c² flux. A short explanation of these findings and the current evaluation of single-file versus multi-file releases is available here: https://github.com/SamuelTM/c2flux/wiki/Security-scanner-findings-and-release-packaging
 
 <br>
 

@@ -1,5 +1,7 @@
 # Referências de fidelidade visual
 
+> **Referências congeladas.** O app WinForms e a ferramenta que gerava estas capturas (`c2flux-shots`, workflow `ui-screenshots.yml`) foram removidos na Fase 7. As imagens ficam como estão; a CI continua comparando a interface nova com elas (`tests/fidelity/compare.py`). Para gerar referências novas, use os dois a partir de um commit anterior à remoção (por exemplo `8c5860e`).
+
 Capturas da interface WinForms atual, usadas na Fase 5 do [ROADMAP](../../ROADMAP.md) como modelo para a nova interface em Avalonia. Cada tela nova deve ser comparada com a imagem de mesmo nome em `reference/`.
 
 ## `reference/`

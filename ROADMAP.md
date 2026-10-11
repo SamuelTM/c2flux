@@ -440,7 +440,7 @@ Os pacotes saem de [`packaging/`](packaging/) pelo workflow reutilizável `packa
 - [ ] Matriz de funcionalidades (seção 5) completamente marcada
 - [ ] Período beta público (`v2.0.0-beta.N`) com builds para os três SOs
 - [ ] Coleta de feedback, sobretudo de usuários Windows, para detectar regressões de fidelidade ou desempenho
-- [ ] Remover o projeto `c2flux.WinForms` e as dependências do AntdUI
+- [x] Remover o projeto `c2flux.WinForms` e as dependências do AntdUI: saíram o app WinForms, a ferramenta de screenshots e o `ui-screenshots.yml` (as referências ficaram congeladas em `docs/fidelity`); os assets e as licenças de terceiros foram para `src/c2flux.App`; a conformidade e o benchmark carregam os scanners de `c2flux.Platform.Windows`; o `release.yml` gera só os pacotes novos. Links, identificadores (`io.github.samueltm.c2flux`) e copyright apontam para o fork; comentários em alemão só existiam no WinForms
 - [ ] Lançar `v2.0.0`
 
 ---
