@@ -126,6 +126,7 @@
   "Message.SettingsSaveFailedPrefix": "تعذر حفظ الإعدادات: ",
   "Message.SettingsSaveFailed": "تعذر حفظ الإعدادات.",
   "Status.FreeSpace": "المساحة الحرة {0}: ‏{1} (من {2})، حجم الكتلة: {3}",
+  "Status.ClusterSize": "حجم الكتلة",
   "Status.FreeSpaceWithFileCount": "المساحة الحرة {0}: ‏{1} (من {2})، الملفات: {3:N0}، حجم الكتلة: {4}",
   "Status.ScanCacheSave": "{0} | {1} | المجلدات: {2} | الملفات: {3}",
   "Status.CacheVerification": "تم تحميل ذاكرة التخزين المؤقت - جارٍ التحقق من التغييرات: {0} | {1} | المجلدات: {2} | الملفات: {3}",

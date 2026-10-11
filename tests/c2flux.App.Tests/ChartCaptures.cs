@@ -292,6 +292,42 @@ namespace c2flux.AppTests
             }
         }
 
+        // The Full Disk Access notice: long text and labels must fit.
+        [AvaloniaFact]
+        public void FullDiskAccessNotice()
+        {
+            Window owner = new Window { Width = 400, Height = 300 };
+            owner.Show();
+
+            try
+            {
+                Task<bool> choice = AppDialogs.ShowWarningChoiceAsync(
+                    owner,
+                    LocalizationService.Format("MacOS.FullDiskAccessMessage", AppConstants.ApplicationName),
+                    LocalizationService.GetText("MacOS.FullDiskAccessOpen"),
+                    LocalizationService.GetText("MacOS.FullDiskAccessContinue"));
+                Dispatcher.UIThread.RunJobs();
+                Window dialog = owner.OwnedWindows.Single();
+                using (WriteableBitmap frame = dialog.CaptureRenderedFrame())
+                {
+                    frame.Save(OutputPath("dialog-full-disk-access"));
+                }
+
+                foreach (TextBlock text in dialog.GetVisualDescendants().OfType<TextBlock>())
+                {
+                    Assert.True(text.Bounds.Width >= text.DesiredSize.Width - 1, "text cut: " + text.Text);
+                }
+
+                dialog.Close();
+                Dispatcher.UIThread.RunJobs();
+                Assert.False(choice.Result);
+            }
+            finally
+            {
+                owner.Close();
+            }
+        }
+
         private static void CaptureWindow(string name, Window window)
         {
             window.Show();

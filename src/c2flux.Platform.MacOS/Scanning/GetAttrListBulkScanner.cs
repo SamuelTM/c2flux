@@ -37,9 +37,10 @@ namespace c2flux
     // the data volume is already reachable through the firmlinks at the root
     // (/Users, /Applications, ...) and would be counted twice.
     //
-    // shortcut: hard links are counted once per link and only the logical
-    // size (data fork length) is read; add ATTR_FILE_LINKCOUNT/ALLOCSIZE when
-    // the UI gets an allocated-size mode.
+    // A file counts what it occupies when that is less than its length:
+    // sparse files (Docker.raw: 228 GB long, 3 GB on disk) and compressed
+    // ones, as du shows them. shortcut: hard links are counted once per link;
+    // add ATTR_FILE_LINKCOUNT when that matters.
     public sealed class GetAttrListBulkScanner : IFileSystemScanner
     {
         private const int BufferSize = 256 * 1024;
@@ -124,7 +125,7 @@ namespace c2flux
             {
                 BitmapCount = AttrBitMapCount,
                 CommonAttr = AttrCmnReturnedAttrs | AttrCmnName | AttrCmnError | AttrCmnObjType | AttrCmnModTime,
-                FileAttr = AttrFileDataLength,
+                FileAttr = AttrFileDataLength | AttrFileDataAllocSize,
             };
 
             byte[] buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
@@ -222,6 +223,13 @@ namespace c2flux
             if ((fileAttr & AttrFileDataLength) != 0)
             {
                 dataLength = BinaryPrimitives.ReadInt64LittleEndian(entry.Slice(field));
+                field += sizeof(long);
+            }
+
+            // Returned after the length (attributes come in bit order).
+            if ((fileAttr & AttrFileDataAllocSize) != 0)
+            {
+                dataLength = Math.Min(dataLength, BinaryPrimitives.ReadInt64LittleEndian(entry.Slice(field)));
             }
 
             if (string.IsNullOrEmpty(name))
@@ -290,6 +298,7 @@ namespace c2flux
         private const uint AttrCmnError = 0x20000000;
         private const uint AttrCmnReturnedAttrs = 0x80000000;
         private const uint AttrFileDataLength = 0x00000200;
+        private const uint AttrFileDataAllocSize = 0x00000400;
 
         private const uint VReg = 1;
         private const uint VDir = 2;

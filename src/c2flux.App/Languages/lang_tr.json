@@ -126,6 +126,7 @@
   "Message.SettingsSaveFailedPrefix": "Ayarlar kaydedilemedi: ",
   "Message.SettingsSaveFailed": "Ayarlar kaydedilemedi.",
   "Status.FreeSpace": "Boş alan {0}: {1} ({2} toplam), küme boyutu: {3}",
+  "Status.ClusterSize": "Küme boyutu",
   "Status.FreeSpaceWithFileCount": "Boş alan {0}: {1} ({2} toplam), dosyalar: {3:N0}, küme boyutu: {4}",
   "Status.ScanCacheSave": "{0} | {1} | Klasörler: {2} | Dosyalar: {3}",
   "Status.CacheVerification": "Önbellek yüklendi - değişiklikler doğrulanıyor: {0} | {1} | Klasörler: {2} | Dosyalar: {3}",

@@ -103,7 +103,9 @@ def check(manifest, dump):
             continue
 
         if kind == "file":
-            if seen["size"] != entry["size"]:
+            # A sparse file may count what it occupies (macOS), up to its length.
+            sparse_ok = entry.get("sparse") and 0 < seen["size"] <= entry["size"]
+            if seen["size"] != entry["size"] and not sparse_ok:
                 findings["size"].append({"path": path, "expected": entry["size"], "seen": seen["size"]})
             seen_unix = ticks_to_unix(seen["ticks"])
             if abs(seen_unix - entry["mtime_utc"]) > 2:

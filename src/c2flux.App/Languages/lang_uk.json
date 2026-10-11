@@ -126,6 +126,7 @@
   "Message.SettingsSaveFailedPrefix": "Не вдалося зберегти налаштування: ",
   "Message.SettingsSaveFailed": "Не вдалося зберегти налаштування.",
   "Status.FreeSpace": "Вільне місце {0}: {1} (з {2}), розмір кластера: {3}",
+  "Status.ClusterSize": "Розмір кластера",
   "Status.FreeSpaceWithFileCount": "Вільне місце {0}: {1} (з {2}), файлів: {3:N0}, розмір кластера: {4}",
   "Status.ScanCacheSave": "{0} | {1} | Папки: {2} | Файли: {3}",
   "Status.CacheVerification": "Кеш завантажено — перевірка змін: {0} | {1} | Папки: {2} | Файли: {3}",

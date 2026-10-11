@@ -139,12 +139,6 @@ Fastest scan mode.
 
 <br>
 
-## Documentation
-
-📖 **Documentation:** See the [GitHub Wiki](https://github.com/SamuelTM/c2flux/wiki) for instructions and usage guides.
-
-<br>
-
 ## Requirements
 
 - Windows 10 or newer, macOS 12 or newer, or a 64-bit Linux desktop
@@ -188,16 +182,6 @@ If it reports that FUSE is missing, install `libfuse2` (`libfuse2t64` on Ubuntu 
 
 <br>
 
-## Support
-
-❤️ If you’d like to support my work with a small contribution, I’d really appreciate it. ❤️
-
-<br>
-
-<a href="https://ko-fi.com/uncleriot"><img src="https://github.com/user-attachments/assets/57680fed-c0b7-44fa-ac74-076903bd7eec" alt="Support me on Ko-fi" width="174"></a>
-
-<br>
-
 ## Windows SmartScreen warning
 
 <img width="438" height="173" alt="grafik" src="https://github.com/user-attachments/assets/429951bb-ab24-49a3-89a8-ecb4b0a7fec1" />
@@ -216,12 +200,6 @@ Only continue if you downloaded c² flux from the official GitHub repository.
 4. c² flux will start.
 
 > **Important:** Do not run the application if you downloaded it from an unknown or untrusted source.
-
-<br>
-
-## Security and Packaging
-
-> **Security and packaging note:** VirusTotal and other automated analysis platforms may report heuristic findings for c² flux. A short explanation of these findings and the current evaluation of single-file versus multi-file releases is available here: https://github.com/SamuelTM/c2flux/wiki/Security-scanner-findings-and-release-packaging
 
 <br>
 

@@ -16,10 +16,6 @@ namespace c2flux
             "https://github.com/SamuelTM/c2flux";
         public const string GitHubLatestReleaseApiUrl =
             "https://api.github.com/repos/SamuelTM/c2flux/releases/latest";
-        public const string HelpUrl =
-            "https://github.com/SamuelTM/c2flux/wiki";
-        public const string KoFiUrl =
-            "https://ko-fi.com/uncleriot";
         public const string GitHubUserAgent =
             "c2flux";
     }

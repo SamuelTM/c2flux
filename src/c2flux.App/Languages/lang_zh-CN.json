@@ -126,6 +126,7 @@
   "Message.SettingsSaveFailedPrefix": "无法保存设置: ",
   "Message.SettingsSaveFailed": "无法保存设置。",
   "Status.FreeSpace": "可用空间 {0}: {1}（共 {2}），簇大小：{3}",
+  "Status.ClusterSize": "簇大小",
   "Status.FreeSpaceWithFileCount": "可用空间 {0}: {1}（共 {2}），文件：{3:N0}，簇大小：{4}",
   "Status.ScanCacheSave": "{0} | {1} | 文件夹: {2} | 文件: {3}",
   "Status.CacheVerification": "缓存已加载 - 正在验证更改: {0} | {1} | 文件夹: {2} | 文件: {3}",

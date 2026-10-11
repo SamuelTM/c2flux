@@ -126,6 +126,7 @@
   "Message.SettingsSaveFailedPrefix": "無法儲存設定: ",
   "Message.SettingsSaveFailed": "無法儲存設定。",
   "Status.FreeSpace": "可用空間 {0}: {1}（共 {2}），叢集大小：{3}",
+  "Status.ClusterSize": "叢集大小",
   "Status.FreeSpaceWithFileCount": "可用空間 {0}: {1}（共 {2}），檔案：{3:N0}，叢集大小：{4}",
   "Status.ScanCacheSave": "{0} | {1} | 資料夾: {2} | 檔案: {3}",
   "Status.CacheVerification": "緩存已載入 - 正在驗證更改: {0} | {1} | 資料夾: {2} | 檔案: {3}",

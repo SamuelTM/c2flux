@@ -12,8 +12,8 @@
        status bar. -->
   <DockPanel>
     <!-- Shows the menu inside the window on Windows and Linux; on macOS the
-         same menu goes to the system menu bar. -->
-    <Border DockPanel.Dock="Top" Background="{DynamicResource BackgroundSecondaryBrush}"
+         same menu goes to the system menu bar and this band is hidden. -->
+    <Border x:Name="MenuBand" DockPanel.Dock="Top" Background="{DynamicResource BackgroundSecondaryBrush}"
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1">
       <NativeMenuBar Height="32" />
     </Border>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -145,6 +146,7 @@ namespace c2flux
             ConfigureToolbar();
             BuildAlertCounters();
             AppAlertLog.Changed += OnAlertLogChanged;
+            LocalizationService.LanguageChanged += OnLanguageChanged;
 
             ApplyWindowSettings();
             ApplyPartitionPanelVisibility();
@@ -209,12 +211,11 @@ namespace c2flux
                     Item("Search.Title", () => OpenSearch(null))),
                 Submenu(
                     "Menu.Help",
-                    Item("Menu.OnlineHelp", () => FileManager.Open(AppConstants.HelpUrl)),
-                    new NativeMenuItemSeparator(),
                     Item("Menu.About", async () => await ShowAboutAsync())),
             };
 
             NativeMenu.SetMenu(this, main);
+            MenuBand.IsVisible = !OperatingSystem.IsMacOS();
         }
 
         internal Task ShowAboutAsync() => new AboutWindow(_settings).ShowDialog(this);
@@ -523,33 +524,37 @@ namespace c2flux
 
         internal FileSystemEntry CurrentRootEntry => _currentRootEntry;
 
-        private bool _fullDiskAccessChecked;
 
         // macOS hides folders like ~/Library/Mail from apps without Full Disk
         // Access; a scan that covers the home folder would silently miss them.
         // Asked once per run, for scans that include the home folder.
-        private async Task CheckFullDiskAccessAsync(string rootPath)
+        // macOS without Full Disk Access, scanning something in the home
+        // folder: asked before every such scan. Open Settings stops the scan
+        // (false), Continue scans without those folders.
+        private async Task<bool> CheckFullDiskAccessAsync(string rootPath)
         {
             string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-            if (!OperatingSystem.IsMacOS() || _fullDiskAccessChecked || !EntryTreeCanvas.IsSameOrDescendantPath(home, rootPath) || HasFullDiskAccess(home))
+            if (!OperatingSystem.IsMacOS() || !EntryTreeCanvas.IsSameOrDescendantPath(home, rootPath) || HasFullDiskAccess(home))
             {
-                return;
+                return true;
             }
 
-            _fullDiskAccessChecked = true;
-            AppAlertLog.AddWarning(LocalizationService.GetText("Alert.Scan"), LocalizationService.Format("MacOS.FullDiskAccessMessage", AppConstants.ApplicationName));
-
-            bool openSettings = await AppDialogs.ShowWarningYesNoAsync(
+            string message = LocalizationService.Format("MacOS.FullDiskAccessMessage", AppConstants.ApplicationName);
+            bool openSettings = await AppDialogs.ShowWarningChoiceAsync(
                 this,
-                LocalizationService.Format("MacOS.FullDiskAccessMessage", AppConstants.ApplicationName),
-                yesText: LocalizationService.GetText("MacOS.FullDiskAccessOpen"),
-                noText: LocalizationService.GetText("MacOS.FullDiskAccessContinue"));
+                message,
+                LocalizationService.GetText("MacOS.FullDiskAccessOpen"),
+                LocalizationService.GetText("MacOS.FullDiskAccessContinue"));
 
             if (openSettings)
             {
                 FileManager.Open("x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles");
+                return false;
             }
+
+            AppAlertLog.AddWarning(LocalizationService.GetText("Alert.Scan"), message);
+            return true;
         }
 
         // ~/Library/Safari is protected by TCC: listing it fails without Full
@@ -576,7 +581,11 @@ namespace c2flux
 
         private async Task StartScanAsync(string rootPath)
         {
-            await CheckFullDiskAccessAsync(rootPath);
+            if (!await CheckFullDiskAccessAsync(rootPath))
+            {
+                return;
+            }
+
             string normalizedRootPath = NormalizeScanPath(rootPath);
             ViewMode viewMode = _settings.SelectedViewMode;
 
@@ -1492,7 +1501,25 @@ namespace c2flux
 
         // ----- status bar -------------------------------------------------
 
-        private void SetStatusText(string text) => StatusText.Text = text;
+        private Func<string> _localizedStatus;
+
+        // Plain texts stay as they are when the language changes.
+        private void SetStatusText(string text)
+        {
+            _localizedStatus = null;
+            StatusText.Text = text;
+        }
+
+        private void OnLanguageChanged()
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_localizedStatus != null)
+                {
+                    StatusText.Text = _localizedStatus();
+                }
+            });
+        }
 
         private void SetSelectedEntrySummary(FileSystemEntry entry, int fileCount)
         {
@@ -1503,12 +1530,26 @@ namespace c2flux
             }
 
             string name = !string.IsNullOrWhiteSpace(entry.FullPath) ? entry.FullPath : entry.Name ?? string.Empty;
-            SetStatusText(string.Format(
-                "{0} | Size: {1} | Files: {2:N0} | Cluster-Size: {3:N0}",
+            long clusterSize = Volumes.GetClusterSize(entry.FullPath);
+            SetLocalizedStatus(() => BuildStatusLine(
                 name,
-                SizeFormatter.Format(entry.SizeBytes),
-                Math.Max(0, fileCount),
-                Volumes.GetClusterSize(entry.FullPath)));
+                ("Common.Size", SizeFormatter.Format(entry.SizeBytes)),
+                ("Common.Files", Math.Max(0, fileCount).ToString("N0", CultureInfo.CurrentCulture)),
+                ("Status.ClusterSize", clusterSize.ToString("N0", CultureInfo.CurrentCulture))));
+        }
+
+        // "C:\ | Size: 4 GB | Files: 15,147 | Cluster-Size: 4,096", with the
+        // labels in the current language.
+        internal static string BuildStatusLine(string name, params (string Key, string Value)[] parts)
+        {
+            return string.Join(" | ", parts.Select(part => LocalizationService.GetText(part.Key) + ": " + part.Value).Prepend(name));
+        }
+
+        // A status built from texts is built again when the language changes.
+        private void SetLocalizedStatus(Func<string> build)
+        {
+            SetStatusText(build());
+            _localizedStatus = build;
         }
 
         private void UpdateStatusForDrive(string rootPath) => UpdateStatusForDrive(rootPath, null);
@@ -1529,13 +1570,12 @@ namespace c2flux
             }
 
             long clusterSize = Volumes.GetClusterSize(volume.RootPath);
-            SetStatusText(fileCount.HasValue
-                ? string.Format(
-                    "{0} | Size: {1} | Free: {2} | Files: {3:N0} | Cluster-Size: {4:N0}",
-                    volume.RootPath, SizeFormatter.Format(volume.TotalBytes), SizeFormatter.Format(volume.FreeBytes), fileCount.Value, clusterSize)
-                : string.Format(
-                    "{0} | Size: {1} | Free: {2} | Cluster-Size: {3:N0}",
-                    volume.RootPath, SizeFormatter.Format(volume.TotalBytes), SizeFormatter.Format(volume.FreeBytes), clusterSize));
+            SetLocalizedStatus(() => BuildStatusLine(
+                volume.RootPath,
+                new[] { ("Common.Size", SizeFormatter.Format(volume.TotalBytes)), ("Common.Free", SizeFormatter.Format(volume.FreeBytes)) }
+                    .Concat(fileCount.HasValue ? new[] { ("Common.Files", fileCount.Value.ToString("N0", CultureInfo.CurrentCulture)) } : Array.Empty<(string, string)>())
+                    .Append(("Status.ClusterSize", clusterSize.ToString("N0", CultureInfo.CurrentCulture)))
+                    .ToArray()));
         }
 
         private void SetScanProgress(double? percent, TimeSpan? elapsed, bool visible)
@@ -1683,6 +1723,7 @@ namespace c2flux
             }
 
             AppAlertLog.Changed -= OnAlertLogChanged;
+            LocalizationService.LanguageChanged -= OnLanguageChanged;
             _settings.HasMainWindowBounds = true;
             _settings.MainWindowMaximized = WindowState == WindowState.Maximized;
 

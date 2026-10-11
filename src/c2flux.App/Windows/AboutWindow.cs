@@ -11,7 +11,7 @@ using Avalonia.Platform;
 namespace c2flux
 {
     // Port of the WinForms AboutForm: the cat, name, copyright, version, the
-    // GitHub update status and links, and the Ko-fi button.
+    // GitHub update status and the repository link.
     public sealed class AboutWindow : Window
     {
         // LinkLabel colors on dark and light backgrounds.
@@ -26,7 +26,8 @@ namespace c2flux
             Title = LocalizationService.Format("About.Title", AppConstants.ApplicationName);
             Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://c2flux.App/Assets/c2flux.png")));
             Width = 475;
-            Height = 309;
+            // 309 in WinForms, with a help link and the Ko-fi button.
+            Height = 240;
             CanResize = false;
             CanMinimize = false;
             CanMaximize = false;
@@ -45,22 +46,16 @@ namespace c2flux
             Place(canvas, _updateShadow, 128, 108);
             Place(canvas, _update, 127, 107);
             Place(canvas, Link(AppConstants.GitHubRepositoryUrl, AppConstants.GitHubRepositoryUrl), 125, 130);
-            Place(canvas, Link("Help: " + AppConstants.HelpUrl, AppConstants.HelpUrl), 125, 154);
             Place(canvas, new TextBlock
             {
-                Text = LocalizationService.Format("About.FreeText", AppConstants.ApplicationName) + Environment.NewLine + LocalizationService.GetText("About.SupportText"),
+                Text = LocalizationService.Format("About.FreeText", AppConstants.ApplicationName),
                 Width = 435,
                 TextWrapping = TextWrapping.Wrap,
-            }, 23, 194);
-
-            // The PictureBox stretches the image to its 179x42 bounds.
-            Image koFi = new Image { Source = LoadKoFi(), Width = 179, Height = 42, Stretch = Stretch.Fill, Cursor = new Cursor(StandardCursorType.Hand) };
-            koFi.PointerPressed += (_, _) => FileManager.Open(AppConstants.KoFiUrl);
-            Place(canvas, koFi, 20, 244);
+            }, 23, 168);
 
             Button ok = new Button { Content = LocalizationService.GetText("Common.OK"), Width = 90, Height = 32, HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center, Classes = { "ant", "dialog" }, IsDefault = true, IsCancel = true };
             ok.Click += (_, _) => Close();
-            Place(canvas, ok, 365, 254);
+            Place(canvas, ok, 365, 192);
             Content = canvas;
 
             if (settings.AutoCheckForUpdates)
@@ -149,35 +144,6 @@ namespace c2flux
             });
             panel.Children.Add(new Avalonia.Controls.Shapes.Ellipse { Width = 78, Height = 78, Margin = new Thickness(2), Stroke = Brushes.SteelBlue, StrokeThickness = 2 });
             return panel;
-        }
-
-        // ko-fi.png has a white background; WinForms made it transparent.
-        private static Bitmap LoadKoFi()
-        {
-            using Bitmap source = new Bitmap(AssetLoader.Open(new Uri("avares://c2flux.App/Assets/ko-fi.png")));
-            PixelSize size = source.PixelSize;
-            byte[] pixels = new byte[size.Width * size.Height * 4];
-            GCHandle handle = GCHandle.Alloc(pixels, GCHandleType.Pinned);
-
-            try
-            {
-                source.CopyPixels(new PixelRect(size), handle.AddrOfPinnedObject(), pixels.Length, size.Width * 4);
-
-                for (int index = 0; index < pixels.Length; index += 4)
-                {
-                    if (pixels[index] == 255 && pixels[index + 1] == 255 && pixels[index + 2] == 255)
-                    {
-                        pixels[index] = pixels[index + 1] = pixels[index + 2] = pixels[index + 3] = 0;
-                    }
-                }
-
-                // Same channel order as the decoded source (RGBA on some OSes).
-                return new Bitmap(source.Format ?? PixelFormat.Bgra8888, AlphaFormat.Premul, handle.AddrOfPinnedObject(), size, new Vector(96, 96), size.Width * 4);
-            }
-            finally
-            {
-                handle.Free();
-            }
         }
 
         private static void Place(Canvas canvas, Control control, double x, double y)

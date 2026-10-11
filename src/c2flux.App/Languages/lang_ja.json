@@ -126,6 +126,7 @@
   "Message.SettingsSaveFailedPrefix": "設定を保存できませんでした: ",
   "Message.SettingsSaveFailed": "設定を保存できませんでした。",
   "Status.FreeSpace": "空き領域 {0}: {1}（{2} 中）、クラスター サイズ: {3}",
+  "Status.ClusterSize": "クラスター サイズ",
   "Status.FreeSpaceWithFileCount": "空き領域 {0}: {1}（{2} 中）、ファイル: {3:N0}、クラスター サイズ: {4}",
   "Status.ScanCacheSave": "{0} | {1} | フォルダー: {2} | ファイル: {3}",
   "Status.CacheVerification": "キャッシュを読み込みました - 変更を確認中: {0} | {1} | フォルダー: {2} | ファイル: {3}",

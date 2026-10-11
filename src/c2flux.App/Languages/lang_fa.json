@@ -126,6 +126,7 @@
   "Message.SettingsSaveFailedPrefix": "تنظیمات ذخیره نشد: ",
   "Message.SettingsSaveFailed": "تنظیمات ذخیره نشد.",
   "Status.FreeSpace": "فضای آزاد {0}: ‏{1} (از {2})، اندازهٔ کلاستر: {3}",
+  "Status.ClusterSize": "اندازهٔ کلاستر",
   "Status.FreeSpaceWithFileCount": "فضای آزاد {0}: ‏{1} (از {2})، فایل‌ها: {3:N0}، اندازهٔ کلاستر: {4}",
   "Status.ScanCacheSave": "{0} | {1} | پوشه‌ها: {2} | فایل‌ها: {3}",
   "Status.CacheVerification": "کش بارگذاری شد - در حال بررسی تغییرات: {0} | {1} | پوشه‌ها: {2} | فایل‌ها: {3}",

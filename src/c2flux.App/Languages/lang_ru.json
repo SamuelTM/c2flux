@@ -126,6 +126,7 @@
   "Message.SettingsSaveFailedPrefix": "Не удалось сохранить настройки: ",
   "Message.SettingsSaveFailed": "Не удалось сохранить настройки.",
   "Status.FreeSpace": "Свободное место {0}: {1} (из {2}), размер кластера: {3}",
+  "Status.ClusterSize": "Размер кластера",
   "Status.FreeSpaceWithFileCount": "Свободное место {0}: {1} (из {2}), файлов: {3:N0}, размер кластера: {4}",
   "Status.ScanCacheSave": "{0} | {1} | Папки: {2} | Файлы: {3}",
   "Status.CacheVerification": "Кэш загружен — проверка изменений: {0} | {1} | Папки: {2} | Файлы: {3}",

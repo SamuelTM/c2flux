@@ -126,6 +126,7 @@
   "Message.SettingsSaveFailedPrefix": "সেটিংস সংরক্ষণ করা যায়নি: ",
   "Message.SettingsSaveFailed": "সেটিংস সংরক্ষণ করা যায়নি।",
   "Status.FreeSpace": "খালি স্থান {0}: {1} ({2}-এর মধ্যে), ক্লাস্টারের আকার: {3}",
+  "Status.ClusterSize": "ক্লাস্টারের আকার",
   "Status.FreeSpaceWithFileCount": "খালি স্থান {0}: {1} ({2}-এর মধ্যে), ফাইল: {3:N0}, ক্লাস্টারের আকার: {4}",
   "Status.ScanCacheSave": "{0} | {1} | ফোল্ডার: {2} | ফাইল: {3}",
   "Status.CacheVerification": "ক্যাশ লোড হয়েছে - পরিবর্তন যাচাই হচ্ছে: {0} | {1} | ফোল্ডার: {2} | ফাইল: {3}",

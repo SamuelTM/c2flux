@@ -81,6 +81,42 @@ namespace c2flux
             return result;
         }
 
+        // Like ShowWarningYesNoAsync, but for longer texts and labels: the
+        // window grows with the message (wrapped at 380 px) and the buttons
+        // with their text. True for accept; cancel is highlighted.
+        public static async Task<bool> ShowWarningChoiceAsync(Window owner, string message, string acceptText, string cancelText, string title = null)
+        {
+            Window dialog = CreateDialog(title, double.NaN, double.NaN);
+            dialog.SizeToContent = SizeToContent.WidthAndHeight;
+            Button accept = CreateButton(acceptText, primary: false);
+            Button cancel = CreateButton(cancelText, primary: true);
+            bool result = false;
+
+            foreach (Button button in new[] { accept, cancel })
+            {
+                button.MinWidth = 84;
+                button.Height = 32;
+                button.Padding = new Thickness(16, 0);
+            }
+
+            accept.IsDefault = true;
+            cancel.IsCancel = true;
+            accept.Click += (_, _) => { result = true; dialog.Close(); };
+            cancel.Click += (_, _) => dialog.Close();
+
+            TextBlock text = CreateMessage(message);
+            text.MaxWidth = 380;
+            Grid body = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), Margin = new Thickness(28, 28, 24, 0) };
+            DialogIcon icon = new DialogIcon { Kind = DialogIconKind.Warning, Width = 32, Height = 32, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 4, 22, 0) };
+            Grid.SetColumn(text, 1);
+            body.Children.Add(icon);
+            body.Children.Add(text);
+            StackPanel buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 10, Margin = new Thickness(24, 20, 20, 20), Children = { accept, cancel } };
+            dialog.Content = new StackPanel { Children = { body, buttons } };
+            await Show(dialog, owner);
+            return result;
+        }
+
         public static async Task<(bool Restart, bool DoNotShowAgain)> ShowElevationPromptAsync(Window owner)
         {
             Window dialog = CreateDialog(AppConstants.ApplicationName, 480, 250);

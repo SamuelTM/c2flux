@@ -126,6 +126,7 @@
   "Message.SettingsSaveFailedPrefix": "सेटिंग्स सहेजी नहीं जा सकीं: ",
   "Message.SettingsSaveFailed": "सेटिंग्स सहेजी नहीं जा सकीं।",
   "Status.FreeSpace": "खाली स्थान {0}: {1} ({2} में से), क्लस्टर आकार: {3}",
+  "Status.ClusterSize": "क्लस्टर आकार",
   "Status.FreeSpaceWithFileCount": "खाली स्थान {0}: {1} ({2} में से), फ़ाइलें: {3:N0}, क्लस्टर आकार: {4}",
   "Status.ScanCacheSave": "{0} | {1} | फ़ोल्डर: {2} | फ़ाइलें: {3}",
   "Status.CacheVerification": "कैश लोड हो गया - परिवर्तनों की पुष्टि की जा रही है: {0} | {1} | फ़ोल्डर: {2} | फ़ाइलें: {3}",
