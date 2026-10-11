@@ -573,14 +573,17 @@ namespace c2flux
             context.FillRectangle(new SolidColorBrush(Color.FromArgb(110, 0, 0, 0)), header);
             DrawHorizontalLine(context, new SolidColorBrush(ChartColors.Lighten(familyColor, 1.18D)), header.Left, header.Right - 1, header.Bottom - 1);
 
+            // The size only in a full-height band (a short one pushed it over
+            // the bottom line); otherwise the name alone, centered.
             double textWidth = Math.Max(0, header.Width - 8);
-            QueueTextLine(node.Entry.Name, new Rect(header.X + 4, header.Y, textWidth, Math.Min(LineHeight, header.Height)));
+            bool drawSize = header.Height >= LineHeight * 2;
+            QueueTextLine(node.Entry.Name, new Rect(header.X + 4, header.Y, textWidth, drawSize ? LineHeight : header.Height - 1));
 
-            if (header.Height > LineHeight)
+            if (drawSize)
             {
                 QueueTextLine(
                     SizeFormatter.Format(node.Entry.SizeBytes),
-                    new Rect(header.X + 4, header.Y + LineHeight, textWidth, Math.Min(LineHeight, header.Height - LineHeight)));
+                    new Rect(header.X + 4, header.Y + LineHeight, textWidth, LineHeight));
             }
         }
 
@@ -679,76 +682,9 @@ namespace c2flux
                 return _cachedRootNode;
             }
 
-            // Files the scan has listed but not yet attached to a folder; the
-            // path maps are only needed to place those.
-            List<FileSystemEntry> pendingFiles = _entry.IsDirectory
-                ? EntryIndex.PendingFiles(_rootEntry ?? _entry).Where(file => !string.IsNullOrWhiteSpace(file.FullPath) && EntryTreeCanvas.IsSameOrDescendantPath(file.FullPath, _entry.FullPath)).ToList()
-                : new List<FileSystemEntry>();
-
-            if (pendingFiles.Count == 0)
-            {
-                // Nodes below are made when drawn: most are never drawn.
-                _cachedRootNode = TreemapNode.For(_entry);
-                return _cachedRootNode;
-            }
-
-            Dictionary<string, TreemapNode> directoriesByPath = new Dictionary<string, TreemapNode>(StringComparer.OrdinalIgnoreCase);
-            HashSet<string> includedFilePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            TreemapNode rootNode = BuildDirectoryTree(_entry, directoriesByPath, includedFilePaths);
-
-            foreach (FileSystemEntry file in pendingFiles)
-            {
-                if (!includedFilePaths.Add(NormalizePath(file.FullPath)))
-                {
-                    continue;
-                }
-
-                string parentPath = Path.GetDirectoryName(file.FullPath);
-
-                if (!string.IsNullOrWhiteSpace(parentPath) &&
-                    directoriesByPath.TryGetValue(NormalizePath(parentPath), out TreemapNode parentNode))
-                {
-                    parentNode.Children.Add(new TreemapNode(file));
-                }
-            }
-
-            SortChildren(rootNode);
-            _cachedRootNode = rootNode;
-            return rootNode;
-        }
-
-        private static TreemapNode BuildDirectoryTree(FileSystemEntry entry, Dictionary<string, TreemapNode> directoriesByPath, HashSet<string> includedFilePaths)
-        {
-            TreemapNode node = new TreemapNode(entry);
-
-            if (!entry.IsDirectory)
-            {
-                if (!string.IsNullOrWhiteSpace(entry.FullPath))
-                {
-                    includedFilePaths.Add(NormalizePath(entry.FullPath));
-                }
-
-                return node;
-            }
-
-            if (!string.IsNullOrWhiteSpace(entry.FullPath))
-            {
-                directoriesByPath[NormalizePath(entry.FullPath)] = node;
-            }
-
-            List<FileSystemEntry> children;
-
-            lock (entry.Children)
-            {
-                children = new List<FileSystemEntry>(entry.Children);
-            }
-
-            foreach (FileSystemEntry child in children.Where(child => child != null))
-            {
-                node.Children.Add(BuildDirectoryTree(child, directoriesByPath, includedFilePaths));
-            }
-
-            return node;
+            // Nodes below are made when drawn: most are never drawn.
+            _cachedRootNode = TreemapNode.For(_entry, _rootEntry ?? _entry);
+            return _cachedRootNode;
         }
 
         private static int CompareNodes(TreemapNode left, TreemapNode right)
@@ -757,23 +693,6 @@ namespace c2flux
             return sizeCompare != 0
                 ? sizeCompare
                 : string.Compare(left.DisplayName, right.DisplayName, StringComparison.CurrentCultureIgnoreCase);
-        }
-
-        private static void SortChildren(TreemapNode node)
-        {
-            node.Children.Sort(CompareNodes);
-
-            foreach (TreemapNode child in node.Children)
-            {
-                SortChildren(child);
-            }
-        }
-
-        private static string NormalizePath(string path)
-        {
-            string native = EntryPaths.ToNativeSeparators(path.Trim());
-            string trimmed = native.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            return trimmed.Length == 0 ? native : trimmed;
         }
 
         // ----- families ---------------------------------------------------
@@ -1030,11 +949,12 @@ namespace c2flux
 
         internal sealed class TreemapNode
         {
-            // Lazy nodes of a finished tree, kept per entry so another
-            // selection draws the same folders without making them again.
+            // Lazy nodes, kept per entry so another selection draws the same
+            // folders without making them again (live trees are copies).
             private static readonly ConditionalWeakTable<FileSystemEntry, TreemapNode> LazyNodes = new ConditionalWeakTable<FileSystemEntry, TreemapNode>();
 
             private List<TreemapNode> _children;
+            private FileSystemEntry _root;
 
             public TreemapNode(FileSystemEntry entry)
                 : this(entry, lazyChildren: false)
@@ -1052,8 +972,9 @@ namespace c2flux
                 }
             }
 
-            public static TreemapNode For(FileSystemEntry entry) =>
-                LazyNodes.GetValue(entry, key => new TreemapNode(key, lazyChildren: true));
+            // root: the scanned tree, for files listed but not in Children.
+            public static TreemapNode For(FileSystemEntry entry, FileSystemEntry root) =>
+                LazyNodes.GetValue(entry, key => new TreemapNode(key, lazyChildren: true) { _root = root });
 
             private TreemapNode(string displayName, long explicitSizeBytes, int aggregateCount, FileSystemEntry aggregateParentEntry)
             {
@@ -1105,7 +1026,7 @@ namespace c2flux
                 return _positiveTotals.Value;
             }
 
-            // Sorted as SortChildren sorts the nodes built up front.
+            // Children and listed files not in Children, largest first.
             private List<TreemapNode> CreateChildren()
             {
                 List<TreemapNode> children = new List<TreemapNode>();
@@ -1121,9 +1042,14 @@ namespace c2flux
                     {
                         if (child != null)
                         {
-                            children.Add(For(child));
+                            children.Add(For(child, _root));
                         }
                     }
+                }
+
+                foreach (FileSystemEntry file in EntryIndex.PendingChildren(_root, Entry))
+                {
+                    children.Add(For(file, _root));
                 }
 
                 children.Sort(CompareNodes);

@@ -1092,7 +1092,7 @@ namespace c2flux
             }
 
             string prefix = NormalizeScanPath(entry.FullPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-            return EntryIndex.FileCount(_currentRootEntry, entry) + EntryIndex.PendingFiles(_currentRootEntry).Count(file =>
+            return EntryIndex.FileCount(_currentRootEntry, entry) + EntryIndex.UnplacedFiles(_currentRootEntry).Count(file =>
                 file.FullPath != null && file.FullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
         }
 

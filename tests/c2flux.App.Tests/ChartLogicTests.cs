@@ -178,10 +178,11 @@ namespace c2flux.AppTests
             Assert.Null(EntryIndex.LargestFiles(root, File("/elsewhere", 1), 2));
         }
 
-        // Files in AllFiles but not yet in a folder's Children, refreshed
-        // when AllFiles grows.
+        // Files in AllFiles but not in a folder's Children (a scan in
+        // progress, or "Show files in tree" off) go under their folder by
+        // path; the index is built again when AllFiles grows.
         [Fact]
-        public void Pending_files_are_the_listed_files_not_yet_attached()
+        public void Listed_files_not_in_the_tree_are_placed_under_their_folder()
         {
             FileSystemEntry root = new FileSystemEntry { Name = "root", FullPath = "/root", IsDirectory = true };
             FileSystemEntry folder = new FileSystemEntry { Name = "a", FullPath = "/root/a", IsDirectory = true };
@@ -191,18 +192,22 @@ namespace c2flux.AppTests
             folder.Children.Add(attached);
             root.AllFiles.AddRange(new[] { attached, pending });
 
-            Assert.Equal(new[] { pending }, EntryIndex.PendingFiles(root));
-            Assert.Equal(1, EntryIndex.FileCount(root, root));
-            Assert.Equal(1, EntryIndex.FileCount(root, folder));
+            Assert.Equal(new[] { pending }, EntryIndex.PendingChildren(root, folder));
+            Assert.Empty(EntryIndex.PendingChildren(root, root));
+            Assert.Equal(2, EntryIndex.FileCount(root, folder));
+            Assert.Equal(new[] { attached, pending }, EntryIndex.LargestFiles(root, root, 10));
+            Assert.Empty(EntryIndex.UnplacedFiles(root));
 
             FileSystemEntry later = new FileSystemEntry { Name = "z", FullPath = "/root/z", SizeBytes = 3 };
-            root.AllFiles.Add(later);
-            Assert.Equal(new[] { pending, later }, EntryIndex.PendingFiles(root));
+            FileSystemEntry lost = new FileSystemEntry { Name = "q", FullPath = "/root/gone/q", SizeBytes = 4 };
+            root.AllFiles.AddRange(new[] { later, lost });
+            Assert.Equal(new[] { later }, EntryIndex.PendingChildren(root, root));
+            Assert.Equal(new[] { lost }, EntryIndex.UnplacedFiles(root));
+            Assert.Equal(3, EntryIndex.FileCount(root, root));
 
-            folder.Children.Add(pending);
-            root.AllFiles.Remove(later);
-            Assert.Empty(EntryIndex.PendingFiles(root));
-            Assert.Equal(2, EntryIndex.FileCount(root, root));
+            // The treemap and its table show them like attached files.
+            Treemap.TreemapNode node = Treemap.TreemapNode.For(folder, root);
+            Assert.Equal(new[] { "y", "x" }, node.Children.Select(child => child.DisplayName));
         }
     }
 }

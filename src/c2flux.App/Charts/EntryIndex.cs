@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
@@ -6,30 +8,38 @@ namespace c2flux
 {
     // One walk over a scanned tree, kept until the root's AllFiles grows, so
     // a selection in a finished scan walks nothing:
-    // - the attached files in tree order, so each folder's files are one
-    //   range of an array (its file count, its largest files);
-    // - the files a scan in progress has listed in AllFiles but not yet
-    //   attached to a folder's Children.
+    // - the files in tree order, so each folder's files are one range of an
+    //   array (its file count, its largest files);
+    // - the files listed in AllFiles but not in any folder's Children (a
+    //   scan in progress, or "Show files in tree" off), placed under their
+    //   folder by path once.
     internal static class EntryIndex
     {
         private sealed record Snapshot(
             List<FileSystemEntry> Source,
             int Count,
-            List<FileSystemEntry> Pending,
+            List<FileSystemEntry> Unplaced,
+            Dictionary<FileSystemEntry, List<FileSystemEntry>> PendingByDirectory,
             Dictionary<FileSystemEntry, (int Start, int End)> Ranges,
             FileSystemEntry[] Files,
             long[] Sizes);
 
         private static readonly ConditionalWeakTable<FileSystemEntry, Snapshot> Cache = new ConditionalWeakTable<FileSystemEntry, Snapshot>();
 
-        // May still hold files attached since: callers skip those by path.
-        public static List<FileSystemEntry> PendingFiles(FileSystemEntry root) => root == null ? new List<FileSystemEntry>() : Get(root).Pending;
+        private static readonly List<FileSystemEntry> None = new List<FileSystemEntry>();
 
-        // Attached files below directory, which lies in root's tree.
+        // Listed files whose folder is not (yet) in the tree.
+        public static List<FileSystemEntry> UnplacedFiles(FileSystemEntry root) => root == null ? None : Get(root).Unplaced;
+
+        // Listed files in directory that are not in its Children.
+        public static List<FileSystemEntry> PendingChildren(FileSystemEntry root, FileSystemEntry directory) =>
+            root != null && Get(root).PendingByDirectory.TryGetValue(directory, out List<FileSystemEntry> files) ? files : None;
+
+        // Files below directory, which lies in root's tree.
         public static int FileCount(FileSystemEntry root, FileSystemEntry directory) =>
             Get(root).Ranges.TryGetValue(directory, out (int Start, int End) range) ? range.End - range.Start : 0;
 
-        // The count largest attached files below directory, largest last;
+        // The count largest files below directory, largest last;
         // null when directory is not in root's tree.
         public static List<FileSystemEntry> LargestFiles(FileSystemEntry root, FileSystemEntry directory, int count)
         {
@@ -84,26 +94,69 @@ namespace c2flux
                 allFiles = new List<FileSystemEntry>(source);
             }
 
+            Dictionary<FileSystemEntry, List<FileSystemEntry>> pendingByDirectory = new Dictionary<FileSystemEntry, List<FileSystemEntry>>(ReferenceEqualityComparer.Instance);
             List<FileSystemEntry> files = new List<FileSystemEntry>();
-            Dictionary<FileSystemEntry, (int Start, int End)> ranges = Walk(root, files);
-            List<FileSystemEntry> pending = new List<FileSystemEntry>();
+            Dictionary<FileSystemEntry, (int Start, int End)> ranges = Walk(root, files, pendingByDirectory);
+            List<FileSystemEntry> unplaced = new List<FileSystemEntry>();
 
-            // shortcut: as many attached files as listed ones counts as all
-            // attached (true for every scanner); compare by reference if not.
+            // shortcut: as many files in the tree as listed ones counts as all
+            // in the tree (true for every scanner); compare by reference if not.
             if (allFiles.Count != files.Count)
             {
                 HashSet<FileSystemEntry> attached = new HashSet<FileSystemEntry>(files, ReferenceEqualityComparer.Instance);
-                pending = allFiles.Where(file => file != null && !file.IsDirectory && !attached.Contains(file)).ToList();
+                Dictionary<string, FileSystemEntry> directories = new Dictionary<string, FileSystemEntry>(
+                    OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
+                foreach (FileSystemEntry directory in ranges.Keys)
+                {
+                    if (!string.IsNullOrWhiteSpace(directory.FullPath))
+                    {
+                        directories[Key(directory.FullPath)] = directory;
+                    }
+                }
+
+                foreach (FileSystemEntry file in allFiles)
+                {
+                    if (file == null || file.IsDirectory || attached.Contains(file))
+                    {
+                        continue;
+                    }
+
+                    string parent = string.IsNullOrWhiteSpace(file.FullPath) ? null : Path.GetDirectoryName(file.FullPath);
+
+                    if (!string.IsNullOrWhiteSpace(parent) && directories.TryGetValue(Key(parent), out FileSystemEntry directory))
+                    {
+                        if (!pendingByDirectory.TryGetValue(directory, out List<FileSystemEntry> list))
+                        {
+                            pendingByDirectory[directory] = list = new List<FileSystemEntry>();
+                        }
+
+                        list.Add(file);
+                    }
+                    else
+                    {
+                        unplaced.Add(file);
+                    }
+                }
+
+                // Again, with the placed files in their folders' ranges.
+                if (pendingByDirectory.Count > 0)
+                {
+                    files.Clear();
+                    ranges = Walk(root, files, pendingByDirectory);
+                }
             }
 
-            Snapshot snapshot = new Snapshot(source, allFiles.Count, pending, ranges, files.ToArray(), files.Select(file => file.SizeBytes).ToArray());
+            Snapshot snapshot = new Snapshot(source, allFiles.Count, unplaced, pendingByDirectory, ranges, files.ToArray(), files.Select(file => file.SizeBytes).ToArray());
             Cache.AddOrUpdate(root, snapshot);
             return snapshot;
         }
 
-        // Depth first, so a folder's files are added between its start and
-        // its end.
-        private static Dictionary<FileSystemEntry, (int Start, int End)> Walk(FileSystemEntry root, List<FileSystemEntry> files)
+        private static string Key(string path) => Path.TrimEndingDirectorySeparator(EntryPaths.ToNativeSeparators(path));
+
+        // Depth first, so a folder's files (and its placed pending ones) are
+        // added between its start and its end.
+        private static Dictionary<FileSystemEntry, (int Start, int End)> Walk(FileSystemEntry root, List<FileSystemEntry> files, Dictionary<FileSystemEntry, List<FileSystemEntry>> pendingByDirectory)
         {
             Dictionary<FileSystemEntry, (int Start, int End)> ranges = new Dictionary<FileSystemEntry, (int Start, int End)>(ReferenceEqualityComparer.Instance);
             Stack<(FileSystemEntry Entry, int Start)> pending = new Stack<(FileSystemEntry Entry, int Start)>();
@@ -126,6 +179,11 @@ namespace c2flux
                 }
 
                 pending.Push((entry, files.Count));
+
+                if (pendingByDirectory.TryGetValue(entry, out List<FileSystemEntry> placed))
+                {
+                    files.AddRange(placed);
+                }
 
                 lock (entry.Children)
                 {
