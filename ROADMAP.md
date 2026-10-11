@@ -438,7 +438,7 @@ Os pacotes saem de [`packaging/`](packaging/) pelo workflow reutilizável `packa
 ### Fase 7: Paridade, transição e lançamento 2.0
 
 - [ ] Matriz de funcionalidades (seção 5) completamente marcada
-- [ ] Período beta público (`v2.0.0-beta.N`) com builds para os três SOs
+- [ ] Período beta público (`v2.0.0-beta.N`) com builds para os três SOs: [`v2.0.0-beta.1`](https://github.com/SamuelTM/c2flux/releases/tag/v2.0.0-beta.1) publicada em 11/10/2026 (pré-lançamento, seis pacotes); o período segue aberto
 - [ ] Coleta de feedback, sobretudo de usuários Windows, para detectar regressões de fidelidade ou desempenho
 - [x] Remover o projeto `c2flux.WinForms` e as dependências do AntdUI: saíram o app WinForms, a ferramenta de screenshots e o `ui-screenshots.yml` (as referências ficaram congeladas em `docs/fidelity`); os assets e as licenças de terceiros foram para `src/c2flux.App`; a conformidade e o benchmark carregam os scanners de `c2flux.Platform.Windows`; o `release.yml` gera só os pacotes novos. Links, identificadores (`io.github.samueltm.c2flux`) e copyright apontam para o fork; comentários em alemão só existiam no WinForms
 - [ ] Lançar `v2.0.0`
