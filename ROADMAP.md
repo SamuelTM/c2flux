@@ -350,7 +350,7 @@ public sealed class ScanOptions
 
 **Objetivo:** recriar a interface com a maior fidelidade possível à atual.
 
-#### 5.1 Fundação
+#### 5.1 Fundação ✅
 
 - [x] Projeto Avalonia com MVVM leve (CommunityToolkit.Mvvm): `src/c2flux.App`, ao lado do WinForms até a Fase 7. **Desvio:** Avalonia **12.1.3** em vez de 11 — a 12 já era a estável mais recente (a 12.1.4 tinha 1 dia e ficou para depois). Testes em `tests/c2flux.App.Tests` (plataforma *headless* do Avalonia, xunit v3), no CI nos três SOs
 - [x] **Tema Ant Design:** paleta (claro e escuro) e raios (6 px nos controles, 8 px em popups) de `AntdThemeService.cs` em `Themes/AntTokens.axaml`, fonte de 12 px (Segoe UI 9 pt). **Decisão:** sem Semi.Avalonia (outra linguagem visual, que teria de ser desfeita); a base é o `FluentTheme` que já vem no Avalonia, recolorido pela paleta. Os `ControlTheme` com os estados (hover, foco, pressionado, desabilitado) de cada controle são escritos nas Fases 5.3 e 5.4, à medida que os controles são portados e comparados com as referências
@@ -359,7 +359,7 @@ public sealed class ScanOptions
 - [x] **RTL:** árabe, hebraico, persa e urdu (`LocalizationService.IsRightToLeft`) viram `FlowDirection.RightToLeft` em todas as janelas. Espelhamento de cada tela: conferir nas capturas da Fase 5.3 em diante
 - [x] Fontes: **Selawik** embutida (SIL OFL, da Microsoft, com as métricas da Segoe UI do WinForms: larguras de texto iguais às do original em todos os SOs). Na 5.1 era a Inter, ~15% mais larga, o que quebrava a barra de ferramentas em duas linhas; a troca baixou a diferença de todos os gráficos. CJK, tailandês e devanágari usam o *fallback* automático para fontes do sistema. No Linux, o pacote da Fase 6 deve depender de `fonts-noto-cjk`
 - [x] Ícone do app (o mesmo `c2flux.png`/`.ico` do WinForms) e decorações nativas da janela. Barra customizada: não por enquanto; reavaliar depois das capturas da Fase 5.3
-- [x] Menu de aplicativo nativo no macOS: Sobre e Ajustes (⌘,) no menu do app, desabilitados até as janelas existirem (Fase 5.4); Ocultar, Serviços e Sair (⌘Q) o Avalonia já adiciona. Atalhos da Fase 5.3: usar `PlatformHotkeyConfiguration.CommandModifiers` (⌘ no macOS, Ctrl nos outros), nunca `Ctrl` fixo
+- [x] Menu de aplicativo nativo no macOS: Sobre e Ajustes (⌘,) no menu do app, ligados às janelas da Fase 5.3; Ocultar, Serviços e Sair (⌘Q) o Avalonia já adiciona. Atalhos da Fase 5.3: usar `PlatformHotkeyConfiguration.CommandModifiers` (⌘ no macOS, Ctrl nos outros), nunca `Ctrl` fixo
 
 #### 5.2 Gráficos (desenho customizado) ✅
 
@@ -376,7 +376,7 @@ Portar de GDI+ para `DrawingContext` do Avalonia (ou SkiaSharp direto, se for pr
 - [x] **Comparação:** `tests/fixtures/generate_chart_fixture.py` gera uma árvore fixa; `c2flux-shots --charts` desenha cada gráfico do WinForms com ela (`docs/fidelity/charts/`) e os testes do app desenham o port com os mesmos dados (`ChartCaptures`). Achados: o WinForms mistura transparência em luz linear (`ChartColors.BlendLinear`); o texto segue as métricas da Segoe UI e do `TextRenderer` (`DrawnControl`); com `PixelOffsetMode.Half`, um traço de 1 px em *c* acende o pixel *c* − 1; o destaque do sistema é `#0078D4`. Diferença média de 1 a 7 níveis por pixel em todos os gráficos (`docs/fidelity/README.md`)
 - [x] Virtualização e cache de renderização para árvores com milhões de entradas: a árvore desenha só as linhas visíveis (200 mil filhos expandidos em 215 ms, eram 2 s antes de medir a largura só pelos textos mais longos); o treemap guarda o desenho num bitmap (redesenho em 0 ms) e limita 160 blocos por pasta (1 milhão de arquivos em ~0,6 s, como o algoritmo original). Medido no macOS, headless, Release
 
-#### 5.3 Janelas e controles
+#### 5.3 Janelas e controles ✅
 
 Ordem sugerida: o que é visto primeiro vem antes.
 
