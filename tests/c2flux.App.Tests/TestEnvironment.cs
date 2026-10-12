@@ -29,6 +29,7 @@ namespace c2flux.AppTests
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("en-US");
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
             Program.RegisterPlatformServices();
+            App.LayoutOverride = AppLayout.WindowsDarkMode;
         }
 
         public static AppBuilder BuildAvaloniaApp()

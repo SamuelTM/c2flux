@@ -81,7 +81,8 @@ namespace c2flux
         public bool EntryColumnPercentVisible { get; set; } = true;
         public bool EntryColumnPathVisible { get; set; } = true;
         public TreeSortMode TreeSortMode { get; set; } = TreeSortMode.SizeDescending;
-        public AppLayout Layout { get; set; } = AppLayout.WindowsDarkMode;
+        // Follows the system's light or dark mode (WinForms started dark).
+        public AppLayout Layout { get; set; } = AppLayout.WindowsDefault;
         public ViewMode SelectedViewMode { get; set; } = ViewMode.Table;
         public string LanguageCode { get; set; } = LocalizationService.EnglishLanguageCode;
         public bool SaveScanHistory { get; set; }

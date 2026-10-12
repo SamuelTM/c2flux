@@ -67,7 +67,7 @@ namespace c2flux
             AppSettings settings = AppSettings.Load();
             AppAlertLog.Configure(settings.LogLevel, settings.AutoSaveLog, settings.MaximumLogFileSizeMb);
             LocalizationService.Initialize(settings.LanguageCode);
-            ApplyLayout(settings.Layout);
+            ApplyLayout(LayoutOverride ?? settings.Layout);
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
@@ -188,6 +188,10 @@ namespace c2flux
 
             return Directory.Exists(path) ? path : null;
         }
+
+        // Set by the tests: their reference captures are of the dark theme,
+        // whatever the settings file (which tests rewrite) or the runner say.
+        internal static AppLayout? LayoutOverride { get; set; }
 
         // WindowsDefault follows the OS (Windows, macOS and Linux all report it).
         public static void ApplyLayout(AppLayout layout)
