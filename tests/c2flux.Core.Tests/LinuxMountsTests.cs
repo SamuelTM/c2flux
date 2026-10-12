@@ -39,5 +39,40 @@ namespace c2flux.Core.Tests
                 LinuxScanner.MountsBelow("/home/", LinuxMounts.Parse(MountInfo)));
             Assert.Empty(LinuxScanner.MountsBelow("/homes", LinuxMounts.Parse(MountInfo)));
         }
+
+        // A sparse file counts what it occupies (as du shows it), not its
+        // length: Docker.raw showed 228 GB for 3 GB on disk. Linux only.
+        [Fact]
+        public async System.Threading.Tasks.Task A_sparse_file_counts_what_it_occupies()
+        {
+            if (!System.OperatingSystem.IsLinux())
+            {
+                return;
+            }
+
+            string folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "c2flux-sparse-" + System.Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(folder);
+
+            try
+            {
+                using (System.IO.FileStream file = System.IO.File.Create(System.IO.Path.Combine(folder, "sparse.bin")))
+                {
+                    file.SetLength(64L * 1024 * 1024);
+                    file.Position = 32L * 1024 * 1024;
+                    file.WriteByte(1);
+                }
+
+                System.IO.File.WriteAllBytes(System.IO.Path.Combine(folder, "dense.bin"), new byte[2 * 1024 * 1024]);
+                FileSystemEntry root = await new LinuxScanner(new AppSettings()).ScanAsync(folder, null, System.Threading.CancellationToken.None, default);
+                long Size(string name) => root.Children.Single(child => child.Name == name).SizeBytes;
+
+                Assert.InRange(Size("sparse.bin"), 1, 1024 * 1024);
+                Assert.Equal(2 * 1024 * 1024, Size("dense.bin"));
+            }
+            finally
+            {
+                System.IO.Directory.Delete(folder, recursive: true);
+            }
+        }
     }
 }

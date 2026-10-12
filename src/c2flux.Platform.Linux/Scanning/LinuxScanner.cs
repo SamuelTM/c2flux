@@ -37,6 +37,10 @@ namespace c2flux
     {
         private const string MountInfoPath = "/proc/self/mountinfo";
 
+        // shortcut: only files from 1 MiB get their size on disk (one statx
+        // each); smaller sparse files keep their length, a few KB off at most.
+        private const long AllocatedSizeMinimum = 1024 * 1024;
+
         private readonly ManagedScanner _engine;
 
         public LinuxScanner(AppSettings settings)
@@ -85,8 +89,26 @@ namespace c2flux
                     return;
                 }
 
+                int first = entries.Count;
                 ManagedScanner.ReadWithFileSystemEnumerable(directoryPath, entries);
+                UseAllocatedSizes(directoryPath, entries, first);
             };
+        }
+
+        // A sparse file counts what it occupies, as du and the macOS scanner
+        // count it, never more than its length.
+        internal static void UseAllocatedSizes(string directoryPath, List<DirectoryEntryData> entries, int first)
+        {
+            for (int index = first; index < entries.Count; index++)
+            {
+                DirectoryEntryData entry = entries[index];
+
+                if (!entry.IsDirectory && !entry.IsLink && entry.Length >= AllocatedSizeMinimum &&
+                    LinuxAllocatedSize.TryRead(Path.Combine(directoryPath, entry.Name), out long allocated) && allocated < entry.Length)
+                {
+                    entries[index] = new DirectoryEntryData(entry.Name, false, false, allocated, entry.LastWriteTimeUtc);
+                }
+            }
         }
 
         // Mount points strictly below rootPath. The root's own mount is the one
