@@ -375,7 +375,8 @@ namespace c2flux
             {
                 foreach (VolumeInfo volume in volumes)
                 {
-                    string label = string.IsNullOrWhiteSpace(volume.Label) ? LocalizationService.GetText("Drive.LocalDisk") : volume.Label;
+                    // Linux names an unlabeled "/" after its path: "/  /".
+                    string label = string.IsNullOrWhiteSpace(volume.Label) || volume.Label == volume.RootPath ? LocalizationService.GetText("Drive.LocalDisk") : volume.Label;
                     _drives.Add(new DriveItem(volume.RootPath, volume.RootPath + "  " + label));
                 }
 
