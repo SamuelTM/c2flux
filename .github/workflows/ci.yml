@@ -364,6 +364,8 @@ jobs:
           sync
 
       - name: Compare
+        # With pipefail: tee alone would hide a failed comparison.
+        shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/work"
           sudo env "DOTNET_ROOT=$DOTNET_ROOT" python3 tests/disk-model/run.py /dev/mapper/c2flux-disk /mnt/disk/tree "$RUNNER_TEMP/baseline/c2flux.Core.Tests" "$RUNNER_TEMP/current/c2flux.Core.Tests" "$RUNNER_TEMP/work" | tee "$RUNNER_TEMP/table.md"
