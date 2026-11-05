@@ -298,6 +298,27 @@ jobs:
 
       - name: Test
         run: dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --filter "FullyQualifiedName~Network_shares" --logger "console;verbosity=normal"
+        env:
+          C2FLUX_TIMINGS: ${{ runner.temp }}/timings-just-started.txt
+
+      # A new NFS server makes locks wait out its grace period (usually 90 s).
+      # A second, fast run tells that from a slowness users would see too.
+      - name: Test again on a server past its grace period
+        shell: bash
+        run: |
+          sleep 100
+          dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --no-build --filter "FullyQualifiedName~Network_shares"
+        env:
+          C2FLUX_TIMINGS: ${{ runner.temp }}/timings-settled.txt
+
+      - name: Timings
+        if: always()
+        shell: bash
+        run: |
+          for file in "$RUNNER_TEMP"/timings-*.txt; do
+            echo "== $(basename "$file")"
+            cat "$file"
+          done
 
   # Phase 6: the app packaged for every RID (package.yml).
   packages:

@@ -344,14 +344,27 @@ namespace c2flux.Core.Tests
                 {
                     string a = Path.Combine(directory, Guid.NewGuid().ToString("N") + ".bin");
                     string b = Path.Combine(directory, Guid.NewGuid().ToString("N") + ".bin");
+                    System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
                     WriteToDisk(a, content, 0, Size);
+                    long firstWrite = watch.ElapsedMilliseconds;
                     WriteToDisk(b, content, 0, Size);
+                    long secondWrite = watch.ElapsedMilliseconds;
 
                     Assert.True(NativeHiddenCloneChecker()(a), directory + " was not recognized");
+                    long check = watch.ElapsedMilliseconds;
 
                     RedundancyAnalysisGroup group = AnalyzeWith(NativeExtentReader(), Entries(Size, a, b));
+                    long analyze = watch.ElapsedMilliseconds;
                     Assert.True(group.TotalMayBeOverstated, directory);
                     Assert.Equal(Size * 2L, group.TotalSizeBytes);
+
+                    // Where the time goes on a share: CI prints this file.
+                    string timings = Environment.GetEnvironmentVariable("C2FLUX_TIMINGS");
+
+                    if (!string.IsNullOrEmpty(timings))
+                    {
+                        File.AppendAllText(timings, directory + ": first write " + firstWrite + " ms, second write " + (secondWrite - firstWrite) + " ms, check " + (check - secondWrite) + " ms, analysis " + (analyze - check) + " ms" + Environment.NewLine);
+                    }
                 }
             }
             finally
