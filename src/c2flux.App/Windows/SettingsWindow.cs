@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -39,7 +37,6 @@ namespace c2flux
         private readonly List<(Button Tab, Control Page)> _pages = new List<(Button, Control)>();
         private readonly Border _pageHost;
         private readonly bool _windowsOptions;
-        private bool _isLoadingLanguageItems;
 
         private readonly CheckBox _showFilesInTree = Check("Settings.ShowFilesInTree");
         private readonly ComboBox _bufferSize = Select();
@@ -52,8 +49,6 @@ namespace c2flux
         private readonly TextBlock _redundancyCacheSize = Label();
         private readonly Button _clearRedundancyCache = Button("Settings.ClearRedundancyCache");
         private readonly ComboBox _language = Select();
-        private readonly Button _addLanguage = RoundButton("+");
-        private readonly Button _deleteLanguage = RoundButton("−");
 
         private readonly Button _fillColor = Button("Settings.SelectColor");
         private readonly Border _fillPreview = new Border { BorderThickness = new Thickness(1), BorderBrush = Brushes.Black };
@@ -171,11 +166,6 @@ namespace c2flux
         {
             bool windows = _windowsOptions;
             _bufferSize.ItemsSource = BufferSizes.Select(size => size.Text).ToList();
-            _language.SelectionChanged += (_, _) => OnLanguageChanged();
-            _addLanguage.Click += async (_, _) => await AddLanguageAsync();
-            _deleteLanguage.Click += async (_, _) => await DeleteLanguageAsync();
-            ToolTip.SetTip(_addLanguage, LocalizationService.GetText("Settings.AddLanguage"));
-            ToolTip.SetTip(_deleteLanguage, LocalizationService.GetText("Settings.DeleteLanguage"));
             _clearRedundancyCache.Click += (_, _) =>
             {
                 RedundancyHashCacheService.Clear();
@@ -186,7 +176,7 @@ namespace c2flux
             // up by its own pitch.
             (double Top, bool Shown, (Control Control, double X, double Y, double Width, double Height)[] Controls)[] rows =
             {
-                (24, true, new[] { Item(Text("Settings.Language"), 34, 26, 70, 32), Item(_language, 104, 24, 216, 32), Item(_addLanguage, 320, 24, 32, 32), Item(_deleteLanguage, 346, 24, 32, 32) }),
+                (24, true, new[] { Item(Text("Settings.Language"), 34, 26, 70, 32), Item(_language, 104, 24, 216, 32) }),
                 (64, true, new[] { Item(_showFilesInTree, 24, 64, 420, 24) }),
                 (100, windows, new[] { Item(Text("Settings.NtQueryDirectoryBufferSize"), 34, 102, 125, 28), Item(_bufferSize, 160, 100, 108, 32) }),
                 (144, true, new[] { Item(_skipReparsePoints, 24, 144, 420, 24) }),
@@ -427,138 +417,12 @@ namespace c2flux
         private void ReloadLanguageItems(string selectedCode)
         {
             string normalized = LocalizationService.NormalizeLanguageCode(selectedCode);
-            _isLoadingLanguageItems = true;
-
-            try
-            {
-                List<LanguageItem> items = LocalizationService.GetAvailableLanguageCodes()
-                    .Select(code => new LanguageItem(LocalizationService.GetLanguageDisplayName(code), code))
-                    .OrderBy(item => item.Text, StringComparer.CurrentCultureIgnoreCase)
-                    .ToList();
-                _language.ItemsSource = items;
-                int index = items.FindIndex(item => string.Equals(item.Code, normalized, StringComparison.OrdinalIgnoreCase));
-                _language.SelectedIndex = index >= 0 ? index : items.Count > 0 ? 0 : -1;
-            }
-            finally
-            {
-                _isLoadingLanguageItems = false;
-            }
-
-            UpdateDeleteLanguage();
-        }
-
-        private void UpdateDeleteLanguage()
-        {
-            _deleteLanguage.IsEnabled = _language.SelectedItem is LanguageItem item && !LocalizationService.IsBuiltInLanguage(item.Code);
-        }
-
-        private async void OnLanguageChanged()
-        {
-            UpdateDeleteLanguage();
-
-            if (_isLoadingLanguageItems || _language.SelectedItem is not LanguageItem item || LocalizationService.CanLoadLanguage(item.Code))
-            {
-                return;
-            }
-
-            await AppDialogs.ShowWarningOkAsync(this, "The selected language file could not be loaded. English will be used instead.", LocalizationService.GetText("Common.Warning"));
-            ReloadLanguageItems(LocalizationService.EnglishLanguageCode);
-        }
-
-        private async Task AddLanguageAsync()
-        {
-            if (!await AppDialogs.ShowWarningYesNoAsync(this, LocalizationService.GetText("Settings.AddLanguageWarning"), LocalizationService.GetText("Common.Warning")))
-            {
-                return;
-            }
-
-            string directory = LocalizationService.GetSettingsDirectoryPath();
-            Directory.CreateDirectory(directory);
-            string file = await FileDialogs.OpenAsync(this, LocalizationService.GetText("Settings.AddLanguage"), LocalizationService.GetText("Settings.LanguageFileFilter"), directory);
-
-            if (file == null)
-            {
-                return;
-            }
-
-            string code = GetLanguageCodeFromFileName(Path.GetFileName(file));
-
-            if (code == null || !IsValidLanguageFile(file))
-            {
-                await AppDialogs.ShowWarningOkAsync(this, LocalizationService.GetText("Settings.InvalidLanguageFile"), LocalizationService.GetText("Common.Warning"));
-                return;
-            }
-
-            try
-            {
-                string source = Path.GetFullPath(file);
-                string target = Path.GetFullPath(LocalizationService.GetLanguageFilePath(code));
-
-                if (!string.Equals(source, target, StringComparison.OrdinalIgnoreCase))
-                {
-                    File.Copy(source, target, true);
-                }
-
-                ReloadLanguageItems(code);
-            }
-            catch (Exception exception)
-            {
-                await AppDialogs.ShowErrorOkAsync(this, LocalizationService.GetText("Settings.LanguageImportFailed") + Environment.NewLine + Environment.NewLine + exception.Message);
-            }
-        }
-
-        private async Task DeleteLanguageAsync()
-        {
-            if (_language.SelectedItem is not LanguageItem item || LocalizationService.IsBuiltInLanguage(item.Code) ||
-                !await AppDialogs.ShowWarningYesNoAsync(this, LocalizationService.Format("Settings.DeleteLanguageConfirm", item.Text), LocalizationService.GetText("Common.Warning")))
-            {
-                return;
-            }
-
-            try
-            {
-                string path = LocalizationService.GetLanguageFilePath(item.Code);
-
-                if (File.Exists(path))
-                {
-                    File.Delete(path);
-                }
-
-                ReloadLanguageItems(LocalizationService.EnglishLanguageCode);
-            }
-            catch
-            {
-                await AppDialogs.ShowErrorOkAsync(this, LocalizationService.GetText("Settings.LanguageDeleteFailed"));
-            }
-        }
-
-        // "lang_<code>.json" with a code that is already normalized.
-        internal static string GetLanguageCodeFromFileName(string fileName)
-        {
-            if (string.IsNullOrWhiteSpace(fileName) ||
-                !fileName.StartsWith("lang_", StringComparison.OrdinalIgnoreCase) ||
-                !fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
-                fileName.Length <= 10)
-            {
-                return null;
-            }
-
-            string code = fileName.Substring(5, fileName.Length - 10);
-            string normalized = LocalizationService.NormalizeLanguageCode(code);
-            return string.Equals(normalized, code, StringComparison.OrdinalIgnoreCase) ? normalized : null;
-        }
-
-        private static bool IsValidLanguageFile(string path)
-        {
-            try
-            {
-                Dictionary<string, string> texts = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path));
-                return texts != null && texts.Count > 0;
-            }
-            catch
-            {
-                return false;
-            }
+            List<LanguageItem> items = LocalizationService.GetAvailableLanguageCodes()
+                .Select(code => new LanguageItem(LocalizationService.GetLanguageDisplayName(code), code))
+                .OrderBy(item => item.Text, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+            _language.ItemsSource = items;
+            _language.SelectedIndex = items.FindIndex(item => item.Code == normalized);
         }
 
         // ----- saving -----------------------------------------------------

@@ -7,7 +7,7 @@ Plano para transformar o c² flux, hoje exclusivo do Windows (WinForms + AntdUI)
 ## 1. Objetivos e princípios
 
 1. **Uma base de código.** C# / .NET 10 em todas as plataformas. Código específico de SO fica isolado atrás de interfaces, nunca espalhado pela UI.
-2. **Fidelidade visual.** A nova interface deve ser reconhecível como o c² flux atual: mesmo layout, mesmas cores Ant Design, mesmos gráficos (Treemap, Sunburst, Pizza, Barras, Tabela), mesmos temas claro/escuro e os 30 idiomas.
+2. **Fidelidade visual.** A nova interface deve ser reconhecível como o c² flux atual: mesmo layout, mesmas cores Ant Design, mesmos gráficos (Treemap, Sunburst, Pizza, Barras, Tabela), mesmos temas claro/escuro. Idiomas: inglês e português do Brasil (os outros foram removidos depois do beta.4).
 3. **Velocidade máxima por SO.** Cada plataforma usa a sua API de varredura mais rápida, com fallback automático para métodos mais simples.
 4. **Nunca quebrar o Windows.** Durante toda a migração, a versão Windows continua funcionando e sendo lançada. A troca de UI só acontece quando houver paridade.
 5. **Migração incremental.** Cada fase entrega algo que compila, roda e pode ser testado.
@@ -460,7 +460,7 @@ Legenda: ✅ igual ao atual · 🟡 adaptado ao SO · ⛔ não se aplica
 | Histórico de armazenamento | ✅ | ✅ | ✅ |
 | Análise de redundância (duplicados) | ✅ | ✅ | ✅ |
 | Exportação CSV | ✅ | ✅ | ✅ |
-| 30 idiomas, incluindo RTL | ✅ | ✅ | ✅ |
+| Inglês e português do Brasil | ✅ | ✅ | ✅ |
 | Tema claro/escuro/sistema | ✅ | ✅ | ✅ |
 | Menu de contexto | ✅ shell nativo | 🟡 menu próprio | 🟡 menu próprio |
 | Ícones de arquivo do sistema | ✅ | 🟡 NSWorkspace | 🟡 tema freedesktop |

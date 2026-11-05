@@ -66,12 +66,11 @@
 		<None Include="Assets\Fonts\Selawik-OFL.txt" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
-	<!-- Images, the language files (German and English are built in) and the
+	<!-- Images, the Portuguese texts (English is built in) and the
 	     third-party licenses, shipped next to the app. -->
 	<ItemGroup>
 		<AvaloniaResource Include="Assets\c2flux.png;Assets\molotov.jpg;Assets\scan-history-details.png" />
-		<None Include="Languages\lang_*.json"
-		      Exclude="Languages\lang_de.json;Languages\lang_en.json"
+		<None Include="Languages\lang_pt.json"
 		      CopyToOutputDirectory="PreserveNewest"
 		      CopyToPublishDirectory="PreserveNewest" />
 		<None Include="Licenses\*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

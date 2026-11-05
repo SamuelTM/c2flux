@@ -103,7 +103,7 @@ Search from everywhere, directly!
   - Inspect detailed differences between scan states
 - Windows Explorer integration
 - Light and dark themes
-- Multilingual interface with 30 languages
+- Interface in English and Brazilian Portuguese
 
 <br>
 

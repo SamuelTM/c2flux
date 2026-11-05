@@ -29,7 +29,6 @@
 
 	<!-- Stand-ins for the languages shipped next to the executable. -->
 	<ItemGroup>
-		<None Include="Languages\*.json" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 </Project>

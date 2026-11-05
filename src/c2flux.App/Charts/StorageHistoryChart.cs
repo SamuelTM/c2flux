@@ -131,11 +131,8 @@ namespace c2flux
             }
 
             long change = value - GetDisplayValue(_records[index - 1]);
-            bool german = string.Equals(LocalizationService.CurrentLanguageCode, LocalizationService.GermanLanguageCode, StringComparison.OrdinalIgnoreCase);
             // Not in the language files in WinForms either.
-            string description = german
-                ? change > 0 ? "Seit letzter Messung gestiegen" : change < 0 ? "Seit letzter Messung gesunken" : "Seit letzter Messung unverändert"
-                : change > 0 ? "Increased since last measurement" : change < 0 ? "Decreased since last measurement" : "Unchanged since last measurement";
+            string description = change > 0 ? "Increased since last measurement" : change < 0 ? "Decreased since last measurement" : "Unchanged since last measurement";
 
             return hint + string.Format(CultureInfo.CurrentCulture, "\n- {0}: {1}", description, SizeFormatter.Format(Math.Abs(change)));
         }

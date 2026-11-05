@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 
 namespace c2flux
 {
     public static class LocalizationService
     {
-        public const string GermanLanguageCode = "de";
         public const string EnglishLanguageCode = "en";
+        public const string PortugueseLanguageCode = "pt";
 
         private static readonly object SyncRoot = new object();
         private static Dictionary<string, string> _texts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -21,12 +20,6 @@ namespace c2flux
 
         // Raised after Load swaps the texts, so UIs can refresh at runtime.
         public static event Action LanguageChanged;
-
-        // Arabic, Hebrew, Persian and Urdu are written right to left.
-        public static bool IsRightToLeft(string languageCode)
-        {
-            return NormalizeLanguageCode(languageCode) is "ar" or "he" or "fa" or "ur";
-        }
 
         public static void Initialize(string languageCode)
         {
@@ -45,8 +38,6 @@ namespace c2flux
 
         public static void Load(string languageCode)
         {
-            EnsureLanguageFiles();
-
             string normalizedLanguageCode = NormalizeLanguageCode(languageCode);
             Dictionary<string, string> fallbackTexts = CreateEnglishTexts();
             Dictionary<string, string> loadedTexts =
@@ -129,147 +120,27 @@ namespace c2flux
             }
         }
 
+        // Portuguese is the one other language; any other code (a language of
+        // an older version included) is English.
         public static string NormalizeLanguageCode(string languageCode)
         {
-            if (string.IsNullOrWhiteSpace(languageCode))
-                return EnglishLanguageCode;
+            string code = languageCode?.Trim().ToLowerInvariant() ?? string.Empty;
 
-            string normalizedLanguageCode = languageCode.Trim().ToLowerInvariant();
-
-            foreach (char character in normalizedLanguageCode)
-            {
-                if (!char.IsLetterOrDigit(character) &&
-                    character != '-' &&
-                    character != '_')
-                {
-                    return EnglishLanguageCode;
-                }
-            }
-
-            return normalizedLanguageCode;
-        }
-
-        public static bool IsBuiltInLanguage(string languageCode)
-        {
-            string normalizedLanguageCode = NormalizeLanguageCode(languageCode);
-
-            return string.Equals(
-                       normalizedLanguageCode,
-                       GermanLanguageCode,
-                       StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(
-                       normalizedLanguageCode,
-                       EnglishLanguageCode,
-                       StringComparison.OrdinalIgnoreCase);
+            return code == PortugueseLanguageCode || code.StartsWith("pt-", StringComparison.Ordinal) || code.StartsWith("pt_", StringComparison.Ordinal)
+                ? PortugueseLanguageCode
+                : EnglishLanguageCode;
         }
 
         public static string[] GetAvailableLanguageCodes()
         {
-            EnsureLanguageFiles();
-
-            try
-            {
-                return new[]
-                    {
-                        GermanLanguageCode,
-                        EnglishLanguageCode
-                    }
-                    .Concat(
-                        GetLanguageDirectoryPaths()
-                            .Where(Directory.Exists)
-                            .SelectMany(directoryPath => Directory.GetFiles(
-                                directoryPath,
-                                "lang_*.json",
-                                SearchOption.TopDirectoryOnly))
-                            .Select(Path.GetFileNameWithoutExtension)
-                            .Where(fileName =>
-                                !string.IsNullOrWhiteSpace(fileName) &&
-                                fileName.StartsWith(
-                                    "lang_",
-                                    StringComparison.OrdinalIgnoreCase))
-                            .Select(fileName =>
-                                NormalizeLanguageCode(
-                                    fileName.Substring(5)))
-                            .Where(languageCode =>
-                                !IsBuiltInLanguage(languageCode)))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(
-                        languageCode => languageCode,
-                        StringComparer.OrdinalIgnoreCase)
-                    .ToArray();
-            }
-            catch (Exception exception)
-            {
-                AppAlertLog.AddError(
-                    "Localization",
-                    "The available language files could not be enumerated.",
-                    "Path: " + GetSettingsDirectoryPath() +
-                    Environment.NewLine +
-                    exception);
-
-                AddStartupWarning(
-                    "The available language files could not be read. Built-in languages will remain available.");
-
-                return new[]
-                {
-                    GermanLanguageCode,
-                    EnglishLanguageCode
-                };
-            }
-        }
-
-        public static bool CanLoadLanguage(string languageCode)
-        {
-            string normalizedLanguageCode = NormalizeLanguageCode(languageCode);
-
-            if (IsBuiltInLanguage(normalizedLanguageCode))
-            {
-                return true;
-            }
-
-            string languageFilePath = ResolveLanguageFilePath(normalizedLanguageCode);
-
-            try
-            {
-                string json = File.ReadAllText(languageFilePath);
-                Dictionary<string, string> loadedTexts =
-                    JsonSerializer.Deserialize<Dictionary<string, string>>(json);
-
-                return loadedTexts != null && loadedTexts.Count > 0;
-            }
-            catch (Exception exception)
-                when (exception is IOException ||
-                      exception is UnauthorizedAccessException ||
-                      exception is JsonException ||
-                      exception is NotSupportedException)
-            {
-                AppAlertLog.AddError(
-                    "Localization",
-                    "The external language file could not be loaded.",
-                    "Path: " + languageFilePath +
-                    Environment.NewLine +
-                    exception);
-
-                return false;
-            }
+            return new[] { EnglishLanguageCode, PortugueseLanguageCode };
         }
 
         public static string GetLanguageDisplayName(string languageCode)
         {
             string normalizedLanguageCode = NormalizeLanguageCode(languageCode);
 
-            if (string.Equals(
-                    normalizedLanguageCode,
-                    GermanLanguageCode,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return GetText("Settings.LanguageGerman");
-            }
-
-            if (string.Equals(
-                    normalizedLanguageCode,
-                    EnglishLanguageCode,
-                    StringComparison.OrdinalIgnoreCase))
+            if (normalizedLanguageCode == EnglishLanguageCode)
             {
                 return GetText("Settings.LanguageEnglish");
             }
@@ -283,124 +154,6 @@ namespace c2flux
             }
 
             return normalizedLanguageCode.ToUpperInvariant();
-        }
-
-        // Where a language file is installed or removed: the user's language
-        // directory.
-        public static string GetLanguageFilePath(string languageCode)
-        {
-            return Path.Combine(
-                GetSettingsDirectoryPath(),
-                GetLanguageFileName(languageCode));
-        }
-
-        // Where a language is read from: a file the user installed wins over
-        // the one shipped with the app.
-        public static string ResolveLanguageFilePath(string languageCode)
-        {
-            string userFilePath = GetLanguageFilePath(languageCode);
-
-            if (File.Exists(userFilePath))
-            {
-                return userFilePath;
-            }
-
-            string bundledFilePath = Path.Combine(
-                GetBundledLanguageDirectoryPath(),
-                GetLanguageFileName(languageCode));
-
-            return File.Exists(bundledFilePath) ? bundledFilePath : userFilePath;
-        }
-
-        // Languages the user added (writable). On Windows this is the same
-        // directory as the bundled languages, next to c2flux.exe.
-        public static string GetSettingsDirectoryPath()
-        {
-            return Path.Combine(AppPaths.DataDirectory, "Languages");
-        }
-
-        // Languages shipped with the app (read-only on macOS and Linux).
-        public static string GetBundledLanguageDirectoryPath()
-        {
-            return Path.Combine(AppPaths.ResourcesDirectory, "Languages");
-        }
-
-        private static string[] GetLanguageDirectoryPaths()
-        {
-            return new[]
-                {
-                    GetSettingsDirectoryPath(),
-                    GetBundledLanguageDirectoryPath()
-                }
-                .Distinct(PathComparer)
-                .ToArray();
-        }
-
-        private static readonly StringComparer PathComparer =
-            OperatingSystem.IsWindows()
-                ? StringComparer.OrdinalIgnoreCase
-                : StringComparer.Ordinal;
-
-        private static string GetLanguageFileName(string languageCode)
-        {
-            return "lang_" + NormalizeLanguageCode(languageCode) + ".json";
-        }
-
-        public static void EnsureLanguageFiles()
-        {
-            string languageDirectoryPath = GetSettingsDirectoryPath();
-
-            try
-            {
-                Directory.CreateDirectory(languageDirectoryPath);
-            }
-            catch (Exception exception)
-                when (exception is IOException ||
-                      exception is UnauthorizedAccessException)
-            {
-                AppAlertLog.AddError(
-                    "Localization",
-                    "The language directory could not be created or accessed.",
-                    "Path: " + languageDirectoryPath +
-                    Environment.NewLine +
-                    exception);
-
-                AddStartupWarning(
-                    "The language directory could not be accessed. Built-in languages will be used.");
-
-                return;
-            }
-
-            DeleteLegacyBuiltInLanguageFile(GermanLanguageCode);
-            DeleteLegacyBuiltInLanguageFile(EnglishLanguageCode);
-        }
-
-        private static void DeleteLegacyBuiltInLanguageFile(
-            string languageCode)
-        {
-            string languageFilePath = GetLanguageFilePath(languageCode);
-
-            try
-            {
-                if (File.Exists(languageFilePath))
-                {
-                    File.Delete(languageFilePath);
-                }
-            }
-            catch (Exception exception)
-                when (exception is IOException ||
-                      exception is UnauthorizedAccessException)
-            {
-                AppAlertLog.AddError(
-                    "Localization",
-                    "An outdated built-in language file could not be deleted.",
-                    "Path: " + languageFilePath +
-                    Environment.NewLine +
-                    exception);
-
-                AddStartupWarning(
-                    "An outdated language file could not be removed. The application will continue with the built-in language data.");
-            }
         }
 
         private static Dictionary<string, string> LoadLanguageFile(
@@ -420,24 +173,16 @@ namespace c2flux
             string normalizedLanguageCode =
                 NormalizeLanguageCode(languageCode);
 
-            if (string.Equals(
-                    normalizedLanguageCode,
-                    GermanLanguageCode,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return CreateGermanTexts();
-            }
-
-            if (string.Equals(
-                    normalizedLanguageCode,
-                    EnglishLanguageCode,
-                    StringComparison.OrdinalIgnoreCase))
+            if (normalizedLanguageCode == EnglishLanguageCode)
             {
                 return CreateEnglishTexts();
             }
 
-            string languageFilePath =
-                ResolveLanguageFilePath(normalizedLanguageCode);
+            // Shipped with the app.
+            string languageFilePath = Path.Combine(
+                AppPaths.ResourcesDirectory,
+                "Languages",
+                "lang_" + normalizedLanguageCode + ".json");
 
             try
             {
@@ -466,7 +211,7 @@ namespace c2flux
 
                 AppAlertLog.AddError(
                     "Localization",
-                    "The external language file could not be loaded.",
+                    "The language file could not be loaded.",
                     "Path: " + languageFilePath +
                     Environment.NewLine +
                     exception);
@@ -503,453 +248,6 @@ namespace c2flux
                 Environment.NewLine +
                 Environment.NewLine +
                 message;
-        }
-
-        private static Dictionary<string, string> CreateGermanTexts()
-        {
-            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["Search.Title"] = "Suche",
-                ["Search.Source"] = "Suchquelle",
-                ["Search.Source.CurrentScan"] = "Aktueller Scan",
-                ["Search.Source.SavedScan"] = "Gespeicherter SQLite-Scan",
-                ["Search.SavedScan"] = "Gespeicherter Scan",
-                ["Search.Text"] = "Suchtext",
-                ["Search.MatchMode"] = "Suchmodus",
-                ["Search.MatchMode.Contains"] = "Enthält",
-                ["Search.MatchMode.StartsWith"] = "Beginnt mit",
-                ["Search.MatchMode.ExactName"] = "Exakter Name",
-                ["Search.MatchMode.FileExtension"] = "Dateiendung",
-                ["Search.Scope"] = "Suchumfang",
-                ["Search.Scope.FilesAndFolders"] = "Dateien und Ordner",
-                ["Search.Scope.FilesOnly"] = "Nur Dateien",
-                ["Search.Scope.FoldersOnly"] = "Nur Ordner",
-                ["Search.Filters"] = "Filter",
-                ["Search.MinimumSize"] = "Mindestgröße (MB)",
-                ["Search.MaximumSize"] = "Maximalgröße (MB)",
-                ["Search.ModifiedAfter"] = "Geändert nach",
-                ["Search.ModifiedBefore"] = "Geändert vor",
-                ["Search.FileTypes"] = "Dateitypen",
-                ["Search.PathContains"] = "Pfad enthält",
-                ["Search.ResetFilters"] = "Filter zurücksetzen",
-                ["Search.Start"] = "Suchen",
-                ["Search.Cancel"] = "Abbrechen",
-                ["Calendar.Cancel"] = "Abbrechen",
-                ["Calendar.OK"] = "OK",
-                ["Calendar.Now"] = "Jetzt",
-                ["Calendar.Today"] = "Heute",
-                ["Search.NoData"] = "Kein aktueller Scan verfügbar. Führen Sie zuerst einen Scan durch.",
-                ["Search.NoSavedScan"] = "Wählen Sie einen gespeicherten Scan aus.",
-                ["Search.NoSavedScansAvailable"] = "Keine gespeicherten SQLite-Scans verfügbar.",
-                ["Search.LoadingSavedScan"] = "Gespeicherter Scan wird geladen...",
-                ["Search.LoadSavedScanFailed"] = "Der gespeicherte Scan konnte nicht geladen werden.",
-                ["Search.EnterCriteria"] = "Geben Sie einen Suchtext ein oder aktivieren Sie mindestens einen Filter.",
-                ["Search.Searching"] = "Suche läuft...",
-                ["Search.Completed"] = "{0:N0} Ergebnisse in {1:0.00} Sekunden",
-                ["Search.Canceled"] = "Suche abgebrochen — {0:N0} unvollständige Ergebnisse in {1:0.00} Sekunden",
-                ["Search.Drive"] = "Laufwerk",
-                ["Search.FullPath"] = "Vollständiger Pfad",
-                ["Search.Modified"] = "Geändert",
-                ["Search.OpenParentFolder"] = "Übergeordneten Ordner öffnen",
-                ["Search.CopyFullPath"] = "Vollständigen Pfad kopieren",
-                ["Search.CopyName"] = "Namen kopieren",
-                ["Search.ItemMissing"] = "Der Eintrag existiert an diesem Speicherort nicht mehr.",
-                ["Common.OK"] = "OK",
-                ["Common.Cancel"] = "Abbrechen",
-                ["Common.Retry"] = "Wiederholen",
-                ["Common.Yes"] = "Ja",
-                ["Common.No"] = "Nein",
-                ["Common.Close"] = "Schließen",
-                ["Common.Ready"] = "Bereit",
-                ["Common.Unknown"] = "Unbekannt",
-                ["Common.Name"] = "Name",
-                ["Common.Size"] = "Größe",
-                ["Common.Free"] = "Frei",
-                ["Common.FreePercent"] = "% Frei",
-                ["Common.Bytes"] = "Bytes",
-                ["Common.Percent"] = "Anteil",
-                ["Chart.TableUsage"] = "Belegung",
-                ["Common.Path"] = "Pfad",
-                ["Common.Folder"] = "Ordner",
-                ["Common.Folders"] = "Ordner",
-                ["Common.Files"] = "Dateien",
-                ["Toolbar.FilesRequiresTreeFiles"] = "Zuerst Dateien im Baum aktivieren.",
-                ["Common.Information"] = "Information",
-                ["Common.Warning"] = "Warnung",
-                ["Common.Error"] = "Fehler",
-                ["Common.General"] = "Allgemein",
-                ["Menu.File"] = "Datei",
-                ["Menu.NewScan"] = "Neuer Scan...",
-                ["Menu.View"] = "Ansicht",
-                ["Menu.Tools"] = "Werkzeuge",
-                ["Menu.CompareScans"] = "Scans vergleichen",
-                ["Toolbar.CompareScansDisabled"] = "Zum Aktivieren dieser Funktion: Einstellungen → Statistics → „Scan-History speichern“ aktivieren.",
-                ["Menu.ExportCsv"] = "Export CSV",
-                ["Menu.SaveScanResult"] = "Scan speichern...",
-                ["Menu.LoadScanResult"] = "Scan laden...",
-                ["Menu.Analysis"] = "Analyse",
-                ["Menu.SpaceHistory"] = "Speicherverlauf",
-                ["Menu.Settings"] = "Einstellungen",
-                ["Menu.Exit"] = "Beenden",
-                ["Menu.Help"] = "Hilfe",
-                ["Menu.OnlineHelp"] = "Online-Hilfe",
-                ["Menu.About"] = "Über",
-                ["Toolbar.Drive"] = "Laufwerk:",
-                ["Toolbar.Open"] = "Öffnen",
-                ["Toolbar.ScanStart"] = "Scan starten",
-                ["Toolbar.ScanCancel"] = "Scan abbrechen",
-                ["Toolbar.ScanHistorySaving"] = "Scan-Historie wird gespeichert",
-                ["Toolbar.SelectFolderAndScan"] = "Ordner auswählen und scannen",
-                ["Toolbar.Table"] = "▦ Tabelle",
-                ["Toolbar.PieChart"] = "◔ Kuchendiagramm",
-                ["Toolbar.BarChart"] = "▥ Balkenchart",
-                ["Toolbar.Sunburst"] = "Sunburst",
-                ["Toolbar.Treemap"] = "Treemap",
-                ["Toolbar.Export"] = "Export",
-                ["Toolbar.ExportCsv"] = "CSV exportieren",
-                ["Toolbar.PauseResume"] = "Scan pausieren/fortsetzen",
-                ["Toolbar.CustomizeButtons"] = "Symbolleisten-Buttons",
-                ["Toolbar.ShowAllButtons"] = "Alle Buttons einblenden",
-                ["Toolbar.ScanButton"] = "Scan starten/abbrechen",
-                ["Toolbar.PauseButton"] = "Pause/Fortsetzen",
-                ["Toolbar.OpenFolderButton"] = "Ordner öffnen",
-                ["Toolbar.TableButton"] = "Tabelle",
-                ["Toolbar.PieChartButton"] = "Kuchendiagramm",
-                ["Toolbar.BarChartButton"] = "Balkenchart",
-                ["Toolbar.SunburstButton"] = "Sunburst",
-                ["Toolbar.TreemapButton"] = "Treemap",
-                ["Toolbar.ExportButton"] = "Export",
-                ["Toolbar.AnalysisButton"] = "Analyse",
-                ["Toolbar.StorageHistoryButton"] = "Speicherverlauf",
-                ["Toolbar.CompareScansButton"] = "Scans vergleichen",
-                ["Toolbar.SearchButton"] = "Suche",
-                ["Context.OpenInExplorer"] = "Im Explorer öffnen",
-                ["Context.Export"] = "Export",
-                ["Context.CopyToClipboard"] = "In Zwischenablage kopieren",
-                ["Context.CopyPath"] = "Pfad kopieren",
-                ["Context.RemoveFromTreePane"] = "\"{0}\" aus Baumansicht entfernen",
-                ["Context.MoveToTrash"] = "In den Papierkorb verschieben",
-                ["Context.CopyTreeText"] = "Baum als Text kopieren ({0})",
-                ["Context.CopyTreeCsv"] = "Baum als CSV kopieren ({0})",
-                ["Context.DepthUnlimited"] = "alle Ebenen",
-                ["Context.DepthLevels"] = "Tiefe {0}",
-                ["Export.Progress"] = "„{0}“ wird exportiert...",
-                ["Trash.Confirm"] = "„{0}“ in den Papierkorb verschieben?",
-                ["Trash.Failed"] = "„{0}“ konnte nicht in den Papierkorb verschoben werden.",
-                ["Dialog.SelectFolder"] = "Ordner zum Scannen auswählen",
-                ["Dialog.FileName"] = "Dateiname",
-                ["Dialog.FileAlreadyExists"] = "Die Datei \"{0}\" ist bereits vorhanden. Möchten Sie sie ersetzen?",
-                ["Message.NoPathSelected"] = "Kein Pfad ausgewählt.",
-                ["Message.PathNotFoundPrefix"] = "Pfad nicht gefunden: ",
-                ["Message.SettingsSaveFailedPrefix"] = "Einstellungen konnten nicht gespeichert werden: ",
-                ["Message.SettingsSaveFailed"] = "Die Einstellungen konnten nicht gespeichert werden.",
-                ["Status.FreeSpace"] = "Freier Speicherplatz {0} {1} (von {2}), Clustersize: {3}",
-                ["Status.FreeSpaceWithFileCount"] = "Freier Speicherplatz {0} {1} (von {2}), Dateien: {3:N0}, Clustersize: {4}",
-                ["Status.ScanCacheSave"] = "{0} | {1} | Ordner: {2} | Dateien: {3}",
-                ["Status.CacheVerification"] = "Cache geladen - überprüfe Änderungen: {0} | {1} | Ordner: {2} | Dateien: {3}",
-                ["Status.FastScan"] = "Schnellscan: {0} | {1} | Ordner: {2} | Dateien: {3}",
-                ["Status.MftFastScanRunning"] = "NTFS-MFT-Schnellscan läuft...",
-                ["Status.MftUnavailableNtQuery"] = "MFT-Schnellscan nicht verfügbar - NT-API-Schnellscan läuft...",
-                ["Status.NtQueryUnavailableNormal"] = "NT-API-Schnellscan nicht verfügbar - normaler Scan läuft...",
-                ["Status.NtQueryRunning"] = "NT-API-Schnellscan läuft...",
-                ["Status.ScanRunning"] = "Scan läuft...",
-                ["Status.ScanCanceled"] = "Scan abgebrochen",
-                ["Status.TitleCacheVerification"] = "Cache geladen / überprüfe Änderungen",
-                ["Status.ScanCompletedTitle"] = "Scan: 100% / abgeschlossen",
-                ["Status.ScanHistorySaving"] = "Scan abgeschlossen, Scan-Historie wird gespeichert: {0}%",
-                ["Status.ScanHistorySavingTitle"] = "Scan-Historie wird gespeichert: {0}%",
-                ["Status.ExportCopied"] = "Export in Zwischenablage kopiert: ",
-                ["Status.ExportSaved"] = "Export gespeichert: ",
-                ["Status.CacheSave"] = "Scan abgeschlossen, Cache wird gespeichert...",
-                ["Alert.Scan"] = "Scan",
-                ["Alert.ToolTipInformation"] = "Informationen anzeigen",
-                ["Alert.ToolTipWarning"] = "Warnungen anzeigen",
-                ["Alert.ToolTipError"] = "Fehler anzeigen",
-                ["Alert.MftUnavailable"] = "MFT-Schnellscan nicht verfügbar: {0}",
-                ["Alert.NtQueryUnavailable"] = "NT-API-Schnellscan nicht verfügbar: {0}",
-                ["Alert.NormalScanUnavailable"] = "Normaler Scan nicht verfügbar: {0}",
-                ["Alert.ManagedScanUnavailable"] = "Scan nicht verfügbar: {0}",
-                ["Alert.NativeScanUnavailable"] = "Schnellscan nicht verfügbar: {0}",
-                ["Alert.ExpectedSystemDirectorySingle"] = "1 Systemordner wurde erwartungsgemäß übersprungen.",
-                ["Alert.ExpectedSystemDirectoryMultiple"] = "{0} Systemordner wurden erwartungsgemäß übersprungen.",
-                ["Alert.SkippedDirectorySingle"] = "1 Ordner konnte nicht gelesen werden.",
-                ["Alert.SkippedDirectoryMultiple"] = "{0} Ordner konnten nicht gelesen werden.",
-                ["Alert.UnknownSkippedDirectories"] = "{0} weitere Ordner konnten nicht gelesen werden. Details wurden nicht erfasst.",
-                ["Alert.Reason"] = "Grund: {0}",
-                ["Alert.UnknownReason"] = "Unbekannt",
-                ["Alert.Win32Error"] = "Win32-Fehler {0}: {1}",
-                ["Alert.NtStatusOpen"] = "Ordner konnte nicht geöffnet werden. NTSTATUS: {0}",
-                ["Alert.NtStatusRead"] = "Ordner konnte nicht gelesen werden. NTSTATUS: {0}",
-                ["Alert.NtQueryRootOpenFailed"] = "NT-API-Schnellscan konnte den Root-Pfad nicht öffnen: {0}",
-                ["Alert.NtQueryRootReadFailed"] = "NT-API-Schnellscan konnte den Root-Pfad nicht lesen: {0}",
-                ["Alert.InvalidNtfsDrive"] = "Kein gültiges NTFS-Laufwerk.",
-                ["Alert.ScanHistorySaveFailed"] = "Scan-History konnte nicht gespeichert werden: {0}",
-                ["Status.MftFastScanCompleted"] = "MFT-Schnellscan abgeschlossen",
-                ["Settings.Title"] = "Einstellungen",
-                ["Settings.General"] = "Allgemein",
-                ["Settings.Export"] = "Export",
-                ["Settings.Colors"] = "Farben",
-                ["Settings.LayoutTab"] = "UI",
-                ["Settings.Statistics"] = "History",
-                ["Settings.Logging"] = "Logging",
-                ["Settings.LogLevel"] = "Log-Level:",
-                ["Settings.AutoSaveLog"] = "Log automatisch speichern",
-                ["Settings.MaximumLogFileSizeMb"] = "Max. Log-Größe:",
-                ["Settings.MaximumLogFileSizeMbInvalid"] = "Die maximale Log-Größe muss mindestens 1 MB betragen.",
-                ["Settings.SaveScanHistory"] = "Scan-History speichern (deprecated)",
-                ["Settings.SaveScanHistoryHelp"] = "Speichert Scandaten, damit Änderungen der Speichernutzung (Wachstum oder Schrumpfung) verfolgt werden können. Es werden nur die 10 größten Änderungen gespeichert.",
-                ["Settings.StorageHistoryDetails"] = "Save detailed scan history",
-                ["Settings.StorageHistoryDetailsHelp"] = "Erfasst nach einem Laufwerksscan einen kompakten NTFS-Datei-Snapshot für die Scan-History-Detailansicht. Dafür wird die MFT einmal zusätzlich gelesen. Auf sehr großen Laufwerken kann sich der Scanabschluss dadurch verlängern. Allgemein -> Dateien im Baum anzeigen wird automatisch aktiviert und kann nicht deaktiviert werden, solange die detaillierte Historie aktiv ist.",
-                ["Settings.StorageHistoryDetailsDatabaseSize"] = "Datenbank-Größe: {0}",
-                ["Settings.StorageHistoryDetailsReusableSpace"] = "Wiederverwendbarer DB-Speicher: {0}",
-                ["Settings.StorageHistoryDetailsAutoCompact"] = "Auto-compact DB",
-                ["Settings.StorageHistoryDetailsAutoPurge"] = "Auto-Purge",
-                ["Settings.StorageHistoryDetailsAutoPurgeMaximumAgeDays"] = "Details löschen, die älter sind als (Tage):",
-                ["Settings.StorageHistoryDetailsAutoPurgeMaximumAgeDaysInvalid"] = "Das maximale Alter muss mindestens 1 Tag betragen.",
-                ["Settings.StorageHistoryDetailsAutoPurgeMaximumSnapshotsPerDrive"] = "Maximale Snapshots pro Laufwerk:",
-                ["Settings.StorageHistoryDetailsAutoPurgeMaximumSnapshotsPerDriveInvalid"] = "Die maximale Anzahl Snapshots pro Laufwerk muss mindestens 1 betragen.",
-                ["Settings.ScanHistoryDatabasePath"] = "Datenbank-Pfad:",
-                ["Settings.MoveDatabase"] = "Durchsuchen...",
-                ["Settings.DatabaseSize"] = "Datenbank-Größe: {0}",
-                ["Settings.DatabaseSizeUnavailable"] = "—",
-                ["Settings.ScanHistoryMaximumScansPerPath"] = "Maximale Scans pro Pfad:",
-                ["Settings.ScanHistoryMaximumScansPerPathInvalid"] = "Die maximale Anzahl gespeicherter Scans pro Pfad muss mindestens 1 betragen.",
-                ["DatabaseBrowse.Title"] = "Datenbank auswählen",
-                ["DatabaseBrowse.CurrentPath"] = "Aktueller Datenbank-Pfad:",
-                ["DatabaseBrowse.Hint"] = "Wähle genau aus, was mit der Datenbank geschehen soll. Bestehende Dateien werden niemals überschrieben.",
-                ["DatabaseBrowse.MoveCurrent"] = "DB an neuen Speicherort verschieben",
-                ["DatabaseBrowse.UseExisting"] = "Vorhandene DB verwenden",
-                ["DatabaseBrowse.CreateNew"] = "Neue DB erstellen",
-                ["DatabaseBrowse.MoveSelectTitle"] = "Neuen Speicherort für die aktuelle Datenbank wählen",
-                ["DatabaseBrowse.UseExistingSelectTitle"] = "Vorhandene Datenbank auswählen",
-                ["DatabaseBrowse.CreateNewSelectTitle"] = "Pfad für die neue Datenbank wählen",
-                ["DatabaseBrowse.Filter"] = "SQLite-Datenbank (*.db)|*.db|Alle Dateien (*.*)|*.*",
-                ["DatabaseBrowse.TargetExists"] = "Am ausgewählten Ziel existiert bereits eine Datei. Sie wird nicht überschrieben.",
-                ["DatabaseBrowse.SourceMissing"] = "Die ausgewählte Datenbank existiert nicht mehr.",
-                ["DatabaseBrowse.MoveConfirm"] = "Die aktuelle Datenbank an den ausgewählten Ort verschieben?",
-                ["DatabaseBrowse.SelectionRequired"] = "Bitte den Datenbank-Pfad erneut über „Durchsuchen...“ auswählen.",
-                ["DatabaseBrowse.ApplyFailed"] = "Die Datenbank-Auswahl konnte nicht übernommen werden.",
-                ["ScanHistory.Title"] = "Scan-Historie",
-                ["ScanHistory.DatabaseMaintenanceTitle"] = "Scan-History-Datenbank",
-                ["ScanHistory.DatabaseMaintenanceMessage"] = "Die Scan-History-Datenbank wird optimiert.\nBitte warten und die Anwendung nicht schließen.",
-                ["ScanHistory.BaselineScan"] = "Ausgangsscan:",
-                ["ScanHistory.CompareScan"] = "Vergleichsscan:",
-                ["ScanHistory.Compare"] = "Vergleichen",
-                ["ScanHistory.CompareProgressTitle"] = "Scan-Historie – Vergleich: {0} %",
-                ["ScanHistory.Refresh"] = "Aktualisieren",
-                ["ScanHistory.ScanCount"] = "{0} gespeicherte Scans",
-                ["ScanHistory.SelectDifferentScans"] = "Bitte wählen Sie zwei unterschiedliche Scans aus.",
-                ["ScanHistory.Scans"] = "Scans",
-                ["ScanHistory.Summary"] = "Zusammenfassung",
-                ["ScanHistory.Overview"] = "Wachstumsübersicht",
-                ["ScanHistory.OverviewBack"] = "Zurück",
-                ["ScanHistory.OverviewTotalGrowth"] = "Gesamtwachstum: {0}",
-                ["ScanHistory.OverviewNewFiles"] = "Neue Dateien: {0}",
-                ["ScanHistory.OverviewChangedFiles"] = "Geänderte Dateien: {0}",
-                ["ScanHistory.OverviewDeletedFiles"] = "Gelöschte Dateien: {0}",
-                ["ScanHistory.OverviewLargestFolder"] = "Größter Ordnerzuwachs: {0}",
-                ["ScanHistory.OverviewLargestFile"] = "Größte neue Datei: {0}",
-                ["ScanHistory.OverviewLargestGrowth"] = "Größter Zuwachs",
-                ["ScanHistory.OverviewMostNewFiles"] = "Meiste neue Dateien",
-                ["ScanHistory.OverviewLargestNewFiles"] = "Größte neue Dateien",
-                ["ScanHistory.OverviewValue"] = "Wert",
-                ["ScanHistory.OverviewNoGrowth"] = "Kein positives Wachstum auf dieser Ebene.",
-                ["ScanHistory.OverviewDriveComparison"] = "Laufwerk – vorher / nachher",
-                ["ScanHistory.OverviewFolders"] = "Ordner mit den größten Änderungen",
-                ["ScanHistory.OverviewNewFilesView"] = "Größte neue Dateien",
-                ["ScanHistory.OverviewChangedFilesView"] = "Größte geänderte Dateien",
-                ["ScanHistory.OverviewBefore"] = "Vorher",
-                ["ScanHistory.OverviewAfter"] = "Nachher",
-                ["ScanHistory.OverviewNew"] = "Neu",
-                ["ScanHistory.OverviewFileCountShort"] = "{0} neue Datei(en)",
-                ["ScanHistory.FolderGrowth"] = "Ordnerwachstum",
-                ["ScanHistory.NewFiles"] = "Neue Dateien",
-                ["ScanHistory.ChangedFiles"] = "Geänderte Dateien",
-                ["ScanHistory.DeletedFiles"] = "Gelöschte Dateien",
-                ["ScanHistory.Date"] = "Datum",
-                ["ScanHistory.RootPath"] = "Stammpfad",
-                ["ScanHistory.TotalSize"] = "Gesamtgröße",
-                ["ScanHistory.Metric"] = "Kennzahl",
-                ["ScanHistory.Value"] = "Wert",
-                ["ScanHistory.Path"] = "Pfad",
-                ["ScanHistory.BaselineSize"] = "Ausgangsgröße",
-                ["ScanHistory.CompareSize"] = "Vergleichsgröße",
-                ["ScanHistory.Delta"] = "Änderung",
-                ["ScanHistory.BaselineFiles"] = "Ausgangsdateien",
-                ["ScanHistory.CompareFiles"] = "Vergleichsdateien",
-                ["ScanHistory.InvalidChronologicalOrder"] = "Der Ausgangsscan muss älter als der Vergleichsscan sein.",
-                ["ScanHistory.LastWriteUtc"] = "Letzte Änderung",
-                ["Settings.BarChartBarHeight"] = "Balkenhöhe:",
-                ["Settings.BarChartBarHeightDefault"] = "(Default: {0})",
-                ["Settings.UiDesigner"] = "UI-Designer",
-                ["Settings.UiDesignerTitle"] = "UI-Seite gestalten",
-                ["Settings.UiDesignerControl"] = "Element",
-                ["Settings.UiDesignerLeft"] = "X",
-                ["Settings.UiDesignerTop"] = "Y",
-                ["Settings.UiDesignerWidth"] = "Breite",
-                ["Settings.UiDesignerHeight"] = "Höhe",
-                ["Settings.UiDesignerReset"] = "Standard",
-                ["Settings.BarChartBarHeightInvalid"] = "Die Balkenhöhe muss zwischen 5 und 30 Pixel liegen.",
-                ["Settings.SunburstDepth"] = "Sunburst-Tiefe:",
-                ["Settings.SunburstDepthHint"] = "(0 = unbegrenzt, max. 50)",
-                ["Settings.SunburstDepthInvalid"] = "Die Sunburst-Tiefe muss zwischen 0 und 50 liegen.",
-                ["Settings.SunburstMaxItems"] = "Max. Elemente:",
-                ["Settings.SunburstMaxItemsInvalid"] = "Die maximale Anzahl muss zwischen 100 und 10000 liegen.",
-                ["Settings.PartitionFillLight"] = "Füllanzeige:",
-                ["Settings.PartitionFillDark"] = "Füllanzeige:",
-                ["Settings.SelectColor"] = "Farbe auswählen",
-                ["Settings.Brightness"] = "Helligkeit:",
-                ["Settings.Language"] = "Sprache:",
-                ["Settings.LanguageGerman"] = "Deutsch",
-                ["Settings.LanguageEnglish"] = "Englisch",
-                ["Settings.AddLanguage"] = "Sprache hinzufügen",
-                ["Settings.DeleteLanguage"] = "Sprache löschen",
-                ["Settings.AddLanguageWarning"] = "Fügen Sie nur vertrauenswürdige JSON-Sprachdateien hinzu. Fortfahren?",
-                ["Settings.DeleteLanguageConfirm"] = "Soll die Sprache „{0}“ wirklich gelöscht werden?",
-                ["Settings.LanguageFileFilter"] = "JSON-Sprachdateien (lang_*.json)|lang_*.json",
-                ["Settings.InvalidLanguageFile"] = "Die ausgewählte Sprachdatei ist ungültig. Erwartet wird eine JSON-Datei mit dem Namen lang_<code>.json.",
-                ["Settings.LanguageImportFailed"] = "Die Sprachdatei konnte nicht hinzugefügt werden.",
-                ["Settings.LanguageDeleteFailed"] = "Die Sprachdatei konnte nicht gelöscht werden.",
-                ["Settings.ShowFilesInTree"] = "Dateien im Baum anzeigen",
-                ["Settings.NtQueryDirectoryBufferSize"] = "NT-Query-Buffer:",
-                ["Settings.SkipReparsePoints"] = "Reparse Points / Junctions überspringen",
-                ["Settings.ShowPartitionPanel"] = "Partitionsfenster anzeigen",
-                ["Settings.StartElevated"] = "Starten mit erhöhten Rechten",
-                ["Settings.ShowElevationPrompt"] = "Admin-Hinweis beim Start anzeigen",
-                ["Settings.ShellContextMenu"] = "Explorer-Kontextmenü: c² flux: Laufwerk scannen",
-                ["Settings.ShellSearchContextMenu"] = "Explorer-Kontextmenü: c² flux: Suchen",
-                ["Settings.AutoCheckForUpdates"] = "Automatisch nach Updates suchen",
-                ["Settings.RedundancyCacheSize"] = "Redundanz-Cache-Größe: {0}",
-                ["Settings.ClearRedundancyCache"] = "Redundanz-Cache leeren",
-                ["Settings.Layout"] = "Design:",
-                ["Settings.LayoutWindowsDefault"] = "Windows default",
-                ["Settings.LayoutWindowsLight"] = "Windows light mode",
-                ["Settings.LayoutWindowsDark"] = "Windows dark mode",
-                ["Settings.ExportPath"] = "Path exportieren",
-                ["Settings.ExportSizeGb"] = "Size (GB) exportieren",
-                ["Settings.ExportSizeMb"] = "Size (MB) exportieren",
-                ["Settings.ExportMaxDepth"] = "Maximale Ebenen/Tiefe:",
-                ["Settings.ExportMaxDepthInvalid"] = "Die maximale Ebenen/Tiefe muss leer oder eine Zahl ab 0 sein.",
-                ["Settings.ShellContextMenuFailed"] = "Der Explorer-Kontextmenüeintrag konnte nicht aktualisiert werden.",
-                ["AlertHistory.Title"] = "Kurzprotokoll",
-                ["AlertHistory.Type"] = "Typ",
-                ["AlertHistory.Category"] = "Kategorie",
-                ["AlertHistory.Message"] = "Meldung",
-                ["AlertHistory.Details"] = "Details:",
-                ["AlertHistory.CreatedAt"] = "Datum und Zeit",
-                ["AlertHistory.Confirmed"] = "Bestätigt",
-                ["AlertHistory.Confirm"] = "Bestätigen",
-                ["AlertHistory.Delete"] = "Löschen",
-                ["AlertHistory.ConfirmAll"] = "Alle bestätigen",
-                ["AlertHistory.DeleteAll"] = "Alle löschen",
-                ["About.Title"] = "Über {0}",
-                ["About.VersionPrefix"] = "Version: ",
-                ["About.UpdateChecking"] = "Update wird geprüft...",
-                ["About.UpdateCheckDisabled"] = "Automatische Updateprüfung deaktiviert",
-                ["About.GitHubUnavailable"] = "GitHub nicht erreichbar",
-                ["About.NoNewVersion"] = "Keine neue Version verfügbar",
-                ["About.UpdateAvailable"] = "Update verfügbar: {0}",
-                ["About.UpdateAvailableMessage"] = "Eine neue Version von {0} ist verfügbar: {1}",
-                ["About.UpdateChangelog"] = "Changelog",
-                ["About.UpdateDownload"] = "Download",
-                ["About.UpdateLater"] = "Später",
-                ["About.FreeText"] = "{0} ist kostenlos nutzbar.",
-                ["About.SupportText"] = "Wenn dir dieses Tool hilft, kannst du die Entwicklung hier unterstützen:",
-                                ["Elevation.Message"] = "Möchten Sie {0} mit erhöhten Rechten ausführen, um die Scangeschwindigkeit und Genauigkeit zu steigern?",
-                ["Elevation.Important"] = "Wichtig: Der MFT-Scan ist wesentlich schneller, erfordert jedoch Administratorrechte.",
-                ["Elevation.DoNotShowAgain"] = "Diese Meldung nicht mehr anzeigen",
-                ["MacOS.FullDiskAccessMessage"] = "macOS erlaubt {0} nicht, alle Ordner zu lesen (z. B. Mail, Safari, Nachrichten). Ihre Größen fehlen im Scan.\n\nErteilen Sie in den Systemeinstellungen unter Datenschutz & Sicherheit den \"Festplattenvollzugriff\" und starten Sie {0} neu.",
-                ["MacOS.FullDiskAccessOpen"] = "Einstellungen",
-                ["MacOS.FullDiskAccessContinue"] = "Weiter",
-                ["Chart.NoData"] = "Keine Daten vorhanden.",
-                ["Chart.Other"] = "Sonstige",
-                ["Chart.TooltipDates"] = "Erstellt: {0}{1}Geändert: {2}{1}Letzter Zugriff: {3}",
-                ["Chart.PieTooltip"] = "{0}{1}Erstellt: {2}{1}Geändert: {3}{1}Letzter Zugriff: {4}",
-                ["Chart.ItemLabel"] = "{0} - {1} ({2:0.0} %)",
-                ["Chart.Directory"] = "Directory",
-                ["Chart.FilePrefix"] = "File:",
-                ["Status.ScanPaused"] = "Scan pausiert",
-                ["Status.ClusterSize"] = "Clustergröße",
-                ["Status.Scanning"] = "Scan läuft...",
-                ["Advanced.Title"] = "Analyse",
-                ["Advanced.FileTypes"] = "Dateiendungen",
-                ["Advanced.LargestFiles"] = "Größte Dateien",
-                ["Advanced.Redundancies"] = "Redundanzen",
-                ["Advanced.Redundancy.Progress.SizeGrouping"] = "Dateigrößen",
-                ["Advanced.Redundancy.Progress.LiveRead"] = "Live lesen",
-                ["Advanced.Redundancy.Progress.CacheRead"] = "Cache lesen",
-                ["Advanced.Redundancy.Progress.FileIdentity"] = "Datei-IDs",
-                ["Advanced.Redundancy.Progress.CacheSave"] = "Cache speichern",
-                ["Advanced.Redundancy.Progress.Completed"] = "Abgeschlossen",
-                ["Advanced.Count"] = "Anzahl",
-                ["Advanced.FileType"] = "Dateityp",
-                ["Advanced.Usage"] = "Belegung",
-                ["Advanced.SizeGb"] = "Größe (GB)",
-                ["Advanced.SizeMb"] = "Größe (MB)",
-                ["Advanced.Files"] = "Dateien",
-                ["Advanced.Bytes"] = "Bytes",
-                ["Advanced.Modified"] = "Geändert",
-                ["Advanced.NoExtension"] = "(ohne Erweiterung)",
-                ["Advanced.FileCategories"] = "Dateitypen",
-                ["Advanced.FileType.Images"] = "Bilder",
-                ["Advanced.FileType.Video"] = "Videos",
-                ["Advanced.FileType.Audio"] = "Audio",
-                ["Advanced.FileType.Documents"] = "Dokumente",
-                ["Advanced.FileType.Archives"] = "Archive",
-                ["Advanced.FileType.Applications"] = "Anwendungen",
-                ["Advanced.FileType.SystemFiles"] = "Systemdateien",
-                ["Advanced.FileType.Development"] = "Entwicklung",
-                ["Advanced.FileType.Databases"] = "Datenbanken",
-                ["Advanced.FileType.DiskImages"] = "Datenträgerabbilder und virtuelle Datenträger",
-                ["Advanced.FileType.Backups"] = "Sicherungen",
-                ["Advanced.FileType.LogFiles"] = "Protokolldateien",
-                ["Advanced.FileType.TemporaryFiles"] = "Temporäre Dateien",
-                ["Advanced.FileType.GameFiles"] = "Spieldateien",
-                ["Advanced.FileType.OtherFiles"] = "Andere Dateien",
-                ["Csv.FileFilter"] = "CSV files (*.csv)|*.csv",
-                ["Csv.Path"] = "Path",
-                ["Csv.Level"] = "Ebene",
-                ["Csv.SizeGb"] = "Size (GB)",
-                ["Csv.SizeMb"] = "Size (MB)",
-                ["Csv.Root"] = "Root",
-                ["Drive.LocalDisk"] = "Local Disk",
-                ["Drive.Display"] = "{0} ({1})",
-                ["StorageHistory.Title"] = "Speicherverlauf",
-                ["StorageHistory.Path"] = "Scanpfad:",
-                ["StorageHistory.Drive"] = "Laufwerk:",
-                ["StorageHistory.Display"] = "Anzeige:",
-                ["StorageHistory.Intensity"] = "Intensität:",
-                ["StorageHistory.Used"] = "Belegter Speicher",
-                ["StorageHistory.Free"] = "Freier Speicher",
-                ["StorageHistory.Date"] = "Datum",
-                ["StorageHistory.Size"] = "Größe",
-                ["StorageHistory.Change"] = "Änderung",
-                ["StorageHistory.NoData"] = "Keine Verlaufsdaten vorhanden.",
-                ["StorageHistory.Graph"] = "Speicherplatzentwicklung",
-                ["StorageHistory.Range.Last7Days"] = "Letzte 7 Tage",
-                ["StorageHistory.Range.Last14Days"] = "Letzte 14 Tage",
-                ["StorageHistory.Range.Last30Days"] = "Letzte 30 Tage",
-                ["StorageHistory.Range.Last90Days"] = "Letzte 90 Tage",
-                ["StorageHistory.Range.Last365Days"] = "Letzte 365 Tage",
-                ["StorageHistory.Range.All"] = "Gesamter Zeitraum",
-                ["StorageHistory.Range.Custom"] = "Benutzerdefiniert",
-                ["StorageHistory.Calendar"] = "Kalender",
-                ["StorageHistory.From"] = "Von",
-                ["StorageHistory.To"] = "Bis",
-                ["StorageHistory.Delete"] = "Historie löschen",
-                ["StorageHistory.DeleteConfirm"] = "Soll der Verlauf für diesen Scanpfad gelöscht werden?",
-                ["StorageHistory.DeleteRecord"] = "Datenpunkt löschen",
-                ["StorageHistory.DeleteRecordConfirm"] = "Soll der ausgewählte Datenpunkt gelöscht werden?",
-                ["StorageHistory.Details.Menu"] = "Details",
-                ["StorageHistory.Details.Title"] = "Scan History Details",
-                ["StorageHistory.Details.Date"] = "Datum",
-                ["StorageHistory.Details.FilePath"] = "Dateiname / Pfad",
-                ["StorageHistory.Details.ChangeType"] = "Hinzugefügt / Entfernt",
-                ["StorageHistory.Details.Added"] = "Hinzugefügt",
-                ["StorageHistory.Details.Removed"] = "Entfernt",
-                ["StorageHistory.Details.Change"] = "Änderung",
-                ["Status.ScanTitlePrefix"] = "Scan: "
-            };
         }
 
         private static Dictionary<string, string> CreateEnglishTexts()
@@ -1247,16 +545,7 @@ namespace c2flux
                 ["Settings.SelectColor"] = "Select color",
                 ["Settings.Brightness"] = "Brightness:",
                 ["Settings.Language"] = "Language:",
-                ["Settings.LanguageGerman"] = "German",
                 ["Settings.LanguageEnglish"] = "English",
-                ["Settings.AddLanguage"] = "Add language",
-                ["Settings.DeleteLanguage"] = "Delete language",
-                ["Settings.AddLanguageWarning"] = "Only add trusted JSON language files. Continue?",
-                ["Settings.DeleteLanguageConfirm"] = "Do you really want to delete the language “{0}”?",
-                ["Settings.LanguageFileFilter"] = "JSON language files (lang_*.json)|lang_*.json",
-                ["Settings.InvalidLanguageFile"] = "The selected language file is invalid. A JSON file named lang_<code>.json is required.",
-                ["Settings.LanguageImportFailed"] = "The language file could not be added.",
-                ["Settings.LanguageDeleteFailed"] = "The language file could not be deleted.",
                 ["Settings.ShowFilesInTree"] = "Show files in tree",
                 ["Settings.NtQueryDirectoryBufferSize"] = "NT query buffer:",
                 ["Settings.SkipReparsePoints"] = "Skip reparse points / junctions",

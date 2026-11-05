@@ -108,7 +108,7 @@ namespace c2flux.AppTests
         }
 
         [AvaloniaFact]
-        public void Texts_and_direction_follow_the_language_at_runtime()
+        public void Texts_follow_the_language_at_runtime()
         {
             MainWindow window = new MainWindow();
             window.Show();
@@ -118,16 +118,14 @@ namespace c2flux.AppTests
             {
                 SwitchLanguage("en");
                 Assert.Equal("Drive:", status.Text);
-                Assert.Equal(FlowDirection.LeftToRight, window.FlowDirection);
 
+                SwitchLanguage("pt");
+                Assert.Equal("Unidade:", status.Text);
+
+                // A language of an older version, in saved settings.
                 SwitchLanguage("de");
-                Assert.Equal(LocalizationService.GetText("Toolbar.Drive"), status.Text);
-                Assert.NotEqual("Drive:", status.Text);
-
-                SwitchLanguage("ar");
-                Assert.Equal(LocalizationService.GetText("Toolbar.Drive"), status.Text);
-                Assert.NotEqual("Drive:", status.Text);
-                Assert.Equal(FlowDirection.RightToLeft, window.FlowDirection);
+                Assert.Equal("en", LocalizationService.CurrentLanguageCode);
+                Assert.Equal("Drive:", status.Text);
             }
             finally
             {
