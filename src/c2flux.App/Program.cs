@@ -101,6 +101,7 @@ namespace c2flux
                 FileIcons.Reader = MacFileIcons.Read;
                 FileManager.TrashMover = MacTrash.Move;
                 FileIdentities.ExtentReader = MacFileIdentity.TryReadExtents;
+                FileIdentities.HiddenCloneChecker = MacFileIdentity.MayHideClones;
             }
             else
             {

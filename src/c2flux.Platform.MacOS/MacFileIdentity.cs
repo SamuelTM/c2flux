@@ -17,6 +17,9 @@ namespace c2flux
         private const uint FsOptAttrCmnExtended = 0x00000020;
         private const int FLog2PhysExt = 65;
         private const ulong CloneIdExtents = 1UL << 63;
+        private const int StatfsSize = 2168;
+        private const int FileSystemTypeOffset = 72;
+        private const int FileSystemTypeSize = 16;
 
         public static unsafe bool TryRead(string path, out FileIdentity identity, out long usn, out bool hasUsn)
         {
@@ -55,6 +58,25 @@ namespace c2flux
             bool known = TryReadCloneId(path, out ulong cloneId);
             extents = known ? new[] { new FileExtent(CloneIdExtents | cloneId, 1) } : Array.Empty<FileExtent>();
             return known;
+        }
+
+        // For FileIdentities.HiddenCloneChecker: ZFS clones blocks but shows no
+        // extents. shortcut: a dataset mimicking hfs or apfs reports that name
+        // and gets no mark, until the port offers a way to tell them apart.
+        public static bool MayHideClones(string path) => ReadFileSystemType(path) == "zfs";
+
+        // f_fstypename from statfs(2), null when it cannot be read. Intel Macs
+        // need the $INODE64 entry point for this struct layout.
+        public static unsafe string ReadFileSystemType(string path)
+        {
+            byte* buffer = stackalloc byte[StatfsSize];
+            int result = RuntimeInformation.ProcessArchitecture == Architecture.X64
+                ? statfsInode64(path, buffer)
+                : statfs(path, buffer);
+
+            return result == 0
+                ? Marshal.PtrToStringUTF8((IntPtr)(buffer + FileSystemTypeOffset), new ReadOnlySpan<byte>(buffer + FileSystemTypeOffset, FileSystemTypeSize).IndexOf((byte)0))
+                : null;
         }
 
         private static bool TryReadBlocks(string path, out List<FileExtent> blocks)
@@ -141,6 +163,12 @@ namespace c2flux
             public uint FileAttr;
             public uint ForkAttr;
         }
+
+        [DllImport("libc", SetLastError = true)]
+        private static extern unsafe int statfs([MarshalAs(UnmanagedType.LPUTF8Str)] string path, byte* buffer);
+
+        [DllImport("libc", EntryPoint = "statfs$INODE64", SetLastError = true)]
+        private static extern unsafe int statfsInode64([MarshalAs(UnmanagedType.LPUTF8Str)] string path, byte* buffer);
 
         [DllImport("libc", SetLastError = true)]
         private static extern int fcntl(int descriptor, int command, ref Log2Phys query);

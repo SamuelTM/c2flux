@@ -143,7 +143,7 @@ jobs:
           "C2FLUX_CLONE_DIRS=R:\" >> $env:GITHUB_ENV
 
       - name: Test
-        run: dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --filter "FullyQualifiedName~Clones_on_real_volumes|FullyQualifiedName~Compressed_clones" --logger "console;verbosity=normal"
+        run: dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --filter "FullyQualifiedName~Clones_on_real_volumes|FullyQualifiedName~Compressed_clones|FullyQualifiedName~Reads_the_file_system_type" --logger "console;verbosity=normal"
 
   # ZFS shows no shared blocks, so its totals only carry a mark. Apart from
   # clone-volumes: the module comes from the runner's kernel packages.

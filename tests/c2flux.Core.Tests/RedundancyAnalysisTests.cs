@@ -304,6 +304,48 @@ namespace c2flux.Core.Tests
             }
         }
 
+        // No runner can mount ZFS on macOS (the kext needs approval and a
+        // reboot), so this proves the read on two other file systems: the name
+        // must follow the volume. The port registers itself as "zfs".
+        [Fact]
+        public void Reads_the_file_system_type_on_macos()
+        {
+            if (!OperatingSystem.IsMacOS())
+            {
+                return;
+            }
+
+            string directory = TestEnvironment.CreateDirectory("redundancy-fstype");
+            string image = Path.Combine(directory, "hfs.dmg");
+            string mountPoint = Path.Combine(directory, "mount");
+            Directory.CreateDirectory(mountPoint);
+
+            Assert.Equal("apfs", MacFileIdentity.ReadFileSystemType(directory));
+            Assert.False(MacFileIdentity.MayHideClones(directory));
+            Assert.Null(MacFileIdentity.ReadFileSystemType(Path.Combine(directory, "missing")));
+            Assert.False(MacFileIdentity.MayHideClones(Path.Combine(directory, "missing")));
+
+            Assert.Equal(0, Hdiutil("create", "-quiet", "-size", "8m", "-fs", "HFS+", "-volname", "c2flux", image));
+            Assert.Equal(0, Hdiutil("attach", "-quiet", "-nobrowse", "-mountpoint", mountPoint, image));
+
+            try
+            {
+                Assert.Equal("hfs", MacFileIdentity.ReadFileSystemType(mountPoint));
+                Assert.False(MacFileIdentity.MayHideClones(mountPoint));
+            }
+            finally
+            {
+                Hdiutil("detach", "-quiet", "-force", mountPoint);
+            }
+        }
+
+        private static int Hdiutil(params string[] arguments)
+        {
+            using System.Diagnostics.Process process = System.Diagnostics.Process.Start("hdiutil", arguments);
+            process.WaitForExit();
+            return process.ExitCode;
+        }
+
         // A compressed APFS file has no block map: its clone id stands in.
         [Fact]
         public void Compressed_clones_count_once_on_apfs()
