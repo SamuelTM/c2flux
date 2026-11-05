@@ -68,7 +68,7 @@ namespace c2flux
         private readonly CheckBox _exportPath = Check("Settings.ExportPath");
         private readonly CheckBox _exportSizeGb = Check("Settings.ExportSizeGb");
         private readonly CheckBox _exportSizeMb = Check("Settings.ExportSizeMb");
-        private readonly NumericUpDown _exportMaxDepth = new NumericUpDown { Minimum = 0, Maximum = 100, ClipValueToMinMax = true, Increment = 1, FormatString = "0", ParsingNumberStyle = NumberStyles.None, Width = 130 };
+        private readonly NumericUpDown _exportMaxDepth = new NumericUpDown { Minimum = 0, Maximum = 100, ClipValueToMinMax = true, Increment = 1, FormatString = "0", ParsingNumberStyle = NumberStyles.None, Width = 80, Height = 36, Classes = { "ant" } };
 
         private readonly ComboBox _logLevel = Select();
         private readonly CheckBox _autoSaveLog = Check("Settings.AutoSaveLog");

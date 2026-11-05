@@ -710,7 +710,7 @@ namespace c2flux
         private static TextBlock Label(string textKey) => new TextBlock { Text = LocalizationService.GetText(textKey), Classes = { "ant" } };
 
         // AntdUI.InputNumber: MB with two decimals and spin buttons.
-        private static NumericUpDown SizeInput() => new NumericUpDown { Minimum = 0, Maximum = 1048576, Increment = 1, FormatString = "N2", Value = 0 };
+        private static NumericUpDown SizeInput() => new NumericUpDown { Minimum = 0, Maximum = 1048576, Increment = 1, FormatString = "N2", Value = 0, Classes = { "ant" } };
 
         private static CalendarDatePicker DateInput() => new CalendarDatePicker { SelectedDateFormat = CalendarDatePickerFormat.Custom, CustomDateFormatString = "dd.MM.yyyy", SelectedDate = DateTime.Today };
 

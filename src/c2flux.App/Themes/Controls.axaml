@@ -132,6 +132,78 @@
     <Setter Property="BoxShadow" Value="{DynamicResource InputFocusShadow}" />
   </Style>
 
+  <!-- A number field like TextBox.ant, with two arrows in a primary block. -->
+  <Style Selector="NumericUpDown.ant">
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="NumericUpDown.ant /template/ ButtonSpinner">
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Frame" Margin="4" CornerRadius="6" BorderThickness="2" ClipToBounds="True"
+                BorderBrush="{DynamicResource FieldBorderBrush}" Background="{DynamicResource ButtonBackgroundBrush}">
+          <DockPanel>
+            <Grid DockPanel.Dock="Right" Width="20" RowDefinitions="*,*">
+              <RepeatButton Name="PART_IncreaseButton" Classes="spin">
+                <Path Data="M 0,4 L 4,0 L 8,4" />
+              </RepeatButton>
+              <RepeatButton Name="PART_DecreaseButton" Classes="spin" Grid.Row="1">
+                <Path Data="M 0,0 L 4,4 L 8,0" />
+              </RepeatButton>
+            </Grid>
+            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" />
+          </DockPanel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="NumericUpDown.ant:focus-within /template/ ButtonSpinner /template/ Border#Frame">
+    <Setter Property="BorderBrush" Value="{DynamicResource InputFocusBorderBrush}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource InputFocusShadow}" />
+  </Style>
+  <Style Selector="NumericUpDown.ant:disabled /template/ ButtonSpinner /template/ Border#Frame">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBackgroundBrush}" />
+  </Style>
+  <Style Selector="NumericUpDown.ant /template/ TextBox">
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="7,0" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="NumericUpDown.ant:disabled /template/ TextBox">
+    <Setter Property="Foreground" Value="{DynamicResource DisabledTextBrush}" />
+  </Style>
+  <!-- The frame is the spinner's: the text inside has none, in any state. -->
+  <Style Selector="NumericUpDown.ant /template/ TextBox /template/ Border#PART_BorderElement, NumericUpDown.ant /template/ TextBox:pointerover /template/ Border#PART_BorderElement, NumericUpDown.ant /template/ TextBox:focus /template/ Border#PART_BorderElement, NumericUpDown.ant /template/ TextBox:disabled /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="RepeatButton.spin">
+    <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="RepeatButton.spin:pointerover">
+    <Setter Property="Background" Value="{DynamicResource PrimaryHoverBrush}" />
+  </Style>
+  <Style Selector="RepeatButton.spin Path">
+    <Setter Property="Stroke" Value="White" />
+    <Setter Property="StrokeThickness" Value="2" />
+  </Style>
+  <!-- At a limit: the arrow fades, the block stays whole. -->
+  <Style Selector="RepeatButton.spin:disabled Path">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+
   <!-- AntdUI.Button with a border (the Filters button of the search). -->
   <Style Selector="Button.ant.dialog.bordered">
     <Setter Property="BorderThickness" Value="2" />

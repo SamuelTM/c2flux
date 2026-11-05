@@ -8,6 +8,7 @@ using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Input.Raw;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -97,6 +98,35 @@ namespace c2flux.AppTests
 
                 Assert.True(await window.TrySaveAsync());
                 Assert.Equal(expected, settings.ExportMaxDepth);
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
+        // The arrows of the restyled spinner still change the value, up to the limit.
+        [AvaloniaFact]
+        public void The_export_depth_arrows_work()
+        {
+            SettingsWindow window = new SettingsWindow(new AppSettings { ExportMaxDepth = 99 }, windowsOptions: true);
+            window.Show();
+
+            try
+            {
+                window.ShowPage(3);
+                Dispatcher.UIThread.RunJobs();
+                NumericUpDown depth = window.GetVisualDescendants().OfType<NumericUpDown>().Single();
+                Button up = depth.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "PART_IncreaseButton");
+                Button down = depth.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "PART_DecreaseButton");
+
+                up.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Assert.Equal(100, depth.Value);
+                Dispatcher.UIThread.RunJobs();
+                Assert.False(up.IsEffectivelyEnabled);
+
+                down.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Assert.Equal(99, depth.Value);
             }
             finally
             {
