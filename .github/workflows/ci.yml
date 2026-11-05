@@ -171,7 +171,7 @@ jobs:
           truncate -s 1G "$RUNNER_TEMP/zfs.img"
           sudo zpool create -f -m /mnt/zfs c2flux "$RUNNER_TEMP/zfs.img"
           sudo chown "$(id -u):$(id -g)" /mnt/zfs
-          zfs version
+          sudo zfs version
           echo "C2FLUX_ZFS_DIR=/mnt/zfs" >> "$GITHUB_ENV"
 
       - name: Test
