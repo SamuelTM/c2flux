@@ -106,6 +106,7 @@ namespace c2flux
             {
                 FileManager.TrashMover = LinuxTrash.Move;
                 FileIdentities.ExtentReader = LinuxFileExtents.TryRead;
+                FileIdentities.HiddenCloneChecker = LinuxFileExtents.MayHideClones;
             }
         }
 

@@ -172,12 +172,117 @@ namespace c2flux.Core.Tests
             Assert.Equal(4096 + 1024 + 4096, group.TotalSizeBytes);
         }
 
-        // Real clones on the volumes CI prepares (XFS, Btrfs, ReFS). Rewriting
-        // part of a clone leaves only that part unshared.
+        // Only a file system that hides what it shares marks the total.
+        [Fact]
+        public void Hidden_clones_mark_the_total_as_possibly_overstated()
+        {
+            string directory = TestEnvironment.CreateDirectory("redundancy-hidden");
+            string a = Path.Combine(directory, "a.bin");
+            string b = Path.Combine(directory, "b.bin");
+            File.WriteAllBytes(a, new byte[4096]);
+            File.WriteAllBytes(b, new byte[4096]);
+            FileExtentReader nothing = FakeExtents(new Dictionary<string, FileExtent[]>());
+            Func<string, bool> previous = FileIdentities.HiddenCloneChecker;
+
+            try
+            {
+                FileIdentities.HiddenCloneChecker = path => path == b;
+                Assert.True(AnalyzeWith(nothing, Entries(4096, a, b)).TotalMayBeOverstated);
+
+                FileIdentities.HiddenCloneChecker = path => false;
+                Assert.False(AnalyzeWith(nothing, Entries(4096, a, b)).TotalMayBeOverstated);
+            }
+            finally
+            {
+                FileIdentities.HiddenCloneChecker = previous;
+            }
+
+            if (OperatingSystem.IsLinux())
+            {
+                Assert.False(LinuxFileExtents.MayHideClones(a));
+            }
+        }
+
+        // Clones across Btrfs subvolumes: different device numbers, one block
+        // space. C2FLUX_BTRFS_SUBVOLUMES comes from CI.
+        [Fact]
+        public void Clones_on_real_volumes_across_btrfs_subvolumes_share_their_extents()
+        {
+            string subvolumes = Environment.GetEnvironmentVariable("C2FLUX_BTRFS_SUBVOLUMES");
+
+            if (string.IsNullOrEmpty(subvolumes))
+            {
+                return;
+            }
+
+            const int Size = 1024 * 1024;
+            byte[] content = new byte[Size];
+            new Random(23).NextBytes(content);
+            string[] roots = subvolumes.Split(Path.PathSeparator);
+            string original = Path.Combine(roots[0], Guid.NewGuid().ToString("N") + ".bin");
+            string clone = Path.Combine(roots[1], Guid.NewGuid().ToString("N") + ".bin");
+            WriteToDisk(original, content, 0, Size);
+            CloneFile(original, clone, Size);
+            FileIdentityReader previous = FileIdentities.Reader;
+            FileIdentities.Reader = LinuxFileIdentity.TryRead;
+
+            try
+            {
+                Assert.True(LinuxFileIdentity.TryRead(original, out FileIdentity first, out _, out _));
+                Assert.True(LinuxFileIdentity.TryRead(clone, out FileIdentity second, out _, out _));
+                Assert.NotEqual(first.VolumeSerialNumber, second.VolumeSerialNumber);
+                Assert.Equal(Size, AnalyzeWith(LinuxFileExtents.TryRead, Entries(Size, original, clone)).TotalSizeBytes);
+            }
+            finally
+            {
+                FileIdentities.Reader = previous;
+            }
+        }
+
+        // A compressed APFS file has no block map: its clone id stands in.
+        [Fact]
+        public void Compressed_clones_count_once_on_apfs()
+        {
+            if (!OperatingSystem.IsMacOS())
+            {
+                return;
+            }
+
+            string directory = TestEnvironment.CreateDirectory("redundancy-compressed");
+            string plain = Path.Combine(directory, "plain.txt");
+            string compressed = Path.Combine(directory, "compressed.txt");
+            string clone = Path.Combine(directory, "clone.txt");
+            File.WriteAllText(plain, new string('x', 1024 * 1024));
+
+            using (System.Diagnostics.Process ditto = System.Diagnostics.Process.Start("ditto", new[] { "--hfsCompression", plain, compressed }))
+            {
+                ditto.WaitForExit();
+            }
+
+            Assert.Equal(0, clonefile(compressed, clone, 0));
+
+            FileIdentityReader previous = FileIdentities.Reader;
+            FileIdentities.Reader = MacFileIdentity.TryRead;
+
+            try
+            {
+                Assert.Equal(4096, AnalyzeWith(MacFileIdentity.TryReadExtents, Entries(4096, compressed, clone)).TotalSizeBytes);
+            }
+            finally
+            {
+                FileIdentities.Reader = previous;
+            }
+        }
+
+        // Real clones: on the volumes CI prepares (XFS, Btrfs, ReFS), and on
+        // APFS wherever the tests run. Rewriting part of a clone leaves only
+        // that part unshared, even with the same content.
         [Fact]
         public void Clones_on_real_volumes_share_their_extents()
         {
-            string directories = Environment.GetEnvironmentVariable("C2FLUX_CLONE_DIRS");
+            string directories = OperatingSystem.IsMacOS()
+                ? TestEnvironment.CreateDirectory("redundancy-apfs")
+                : Environment.GetEnvironmentVariable("C2FLUX_CLONE_DIRS");
 
             if (string.IsNullOrEmpty(directories))
             {
@@ -231,13 +336,14 @@ namespace c2flux.Core.Tests
             string path = Path.Combine(TestEnvironment.CreateDirectory("redundancy-plain"), "plain.bin");
             WriteToDisk(path, new byte[64 * 1024], 0, 64 * 1024);
 
-            Assert.False(NativeExtentReader()(path, out _));
+            Assert.False(NativeExtentReader()(path, out _, out _));
         }
 
         private static FileExtentReader FakeExtents(Dictionary<string, FileExtent[]> map)
         {
-            return (string path, out IReadOnlyList<FileExtent> extents) =>
+            return (string path, out IReadOnlyList<FileExtent> extents, out ulong volume) =>
             {
+                volume = 0;
                 bool known = map.TryGetValue(path, out FileExtent[] found);
                 extents = found;
                 return known;
@@ -245,10 +351,10 @@ namespace c2flux.Core.Tests
         }
 
         private static FileExtentReader NativeExtentReader() =>
-            OperatingSystem.IsWindows() ? WindowsFileExtents.TryRead : LinuxFileExtents.TryRead;
+            OperatingSystem.IsWindows() ? WindowsFileExtents.TryRead : OperatingSystem.IsMacOS() ? MacFileIdentity.TryReadExtents : LinuxFileExtents.TryRead;
 
         private static FileIdentityReader NativeIdentityReader() =>
-            OperatingSystem.IsWindows() ? WindowsFileIdentity.TryRead : LinuxFileIdentity.TryRead;
+            OperatingSystem.IsWindows() ? WindowsFileIdentity.TryRead : OperatingSystem.IsMacOS() ? MacFileIdentity.TryRead : LinuxFileIdentity.TryRead;
 
         private static FileSystemEntry[] Entries(long occupied, params string[] paths) =>
             paths.Select(path => new FileSystemEntry { Name = Path.GetFileName(path), FullPath = path, SizeBytes = occupied }).ToArray();
@@ -278,6 +384,12 @@ namespace c2flux.Core.Tests
 
         private static void CloneFile(string source, string destination, long length)
         {
+            if (OperatingSystem.IsMacOS())
+            {
+                Assert.Equal(0, clonefile(source, destination, 0));
+                return;
+            }
+
             using FileStream from = new FileStream(source, FileMode.Open, FileAccess.Read);
             using FileStream to = new FileStream(destination, FileMode.CreateNew, FileAccess.ReadWrite);
 

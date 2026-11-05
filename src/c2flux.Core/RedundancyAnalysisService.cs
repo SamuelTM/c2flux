@@ -13,6 +13,7 @@ namespace c2flux
         public long SizeBytes { get; init; }
         public int PhysicalCopyCount { get; init; }
         public long TotalSizeBytes { get; init; }
+        public bool TotalMayBeOverstated { get; init; }
         public IReadOnlyList<string> Locations { get; init; }
     }
 
@@ -425,13 +426,14 @@ namespace c2flux
                     cancellationToken.ThrowIfCancellationRequested();
 
                     long totalSizeBytes =
-                        GetOccupiedBytes(hashGroup);
+                        GetOccupiedBytes(hashGroup, out bool totalMayBeOverstated);
 
                     WorkingGroup workingGroup =
                         new WorkingGroup(
                             hashGroup[0].Name,
                             sizeGroup.Key,
                             totalSizeBytes,
+                            totalMayBeOverstated,
                             hashGroup);
 
                     workingGroups.Add(
@@ -446,6 +448,8 @@ namespace c2flux
                                 workingGroup.PhysicalFiles.Count,
                             TotalSizeBytes =
                                 workingGroup.TotalSizeBytes,
+                            TotalMayBeOverstated =
+                                workingGroup.TotalMayBeOverstated,
                             Locations =
                                 workingGroup.GetLocations()
                         });
@@ -528,6 +532,8 @@ namespace c2flux
                             group.PhysicalFiles.Count,
                         TotalSizeBytes =
                             group.TotalSizeBytes,
+                        TotalMayBeOverstated =
+                            group.TotalMayBeOverstated,
                         Locations =
                             group.GetLocations()
                     })
@@ -558,8 +564,10 @@ namespace c2flux
         // the part of its extents no earlier copy holds. Proportional because
         // compressed extents map more than they occupy.
         private static long GetOccupiedBytes(
-            IReadOnlyList<PhysicalFile> files)
+            IReadOnlyList<PhysicalFile> files,
+            out bool mayBeOverstated)
         {
+            mayBeOverstated = false;
             Dictionary<ulong, List<FileExtent>> seenByVolume =
                 new Dictionary<ulong, List<FileExtent>>();
             FileExtentReader extentReader =
@@ -569,14 +577,15 @@ namespace c2flux
             foreach (PhysicalFile file in files)
             {
                 if (extentReader == null ||
-                    !extentReader(file.PrimaryPath, out IReadOnlyList<FileExtent> extents) ||
+                    !extentReader(file.PrimaryPath, out IReadOnlyList<FileExtent> extents, out ulong volume) ||
                     extents.Count == 0)
                 {
                     total += file.OccupiedBytes;
+                    mayBeOverstated |= FileIdentities.HiddenCloneChecker?.Invoke(file.PrimaryPath) == true;
                     continue;
                 }
 
-                ulong volume = file.Identity.VolumeSerialNumber;
+                volume = volume != 0 ? volume : file.Identity.VolumeSerialNumber;
                 seenByVolume.TryGetValue(volume, out List<FileExtent> seen);
                 seen ??= new List<FileExtent>();
 
@@ -910,17 +919,20 @@ namespace c2flux
                 string name,
                 long sizeBytes,
                 long totalSizeBytes,
+                bool totalMayBeOverstated,
                 IReadOnlyList<PhysicalFile> physicalFiles)
             {
                 Name = name;
                 SizeBytes = sizeBytes;
                 TotalSizeBytes = totalSizeBytes;
+                TotalMayBeOverstated = totalMayBeOverstated;
                 PhysicalFiles = physicalFiles;
             }
 
             public string Name { get; }
             public long SizeBytes { get; }
             public long TotalSizeBytes { get; }
+            public bool TotalMayBeOverstated { get; }
             public IReadOnlyList<PhysicalFile> PhysicalFiles { get; }
 
             public void AddReference(

@@ -359,6 +359,7 @@
   "Advanced.FileTypes": "Extensões",
   "Advanced.LargestFiles": "Maiores arquivos",
   "Advanced.Redundancies": "Duplicados",
+  "Advanced.Redundancy.MayBeOverstated": "≤ O total pode estar alto demais: este sistema de arquivos não mostra quais blocos as cópias compartilham.",
   "Advanced.Redundancy.Progress.SizeGrouping": "Tamanhos dos arquivos",
   "Advanced.Redundancy.Progress.LiveRead": "Lendo os arquivos",
   "Advanced.Redundancy.Progress.CacheRead": "Lendo o cache",

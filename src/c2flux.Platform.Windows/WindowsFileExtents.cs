@@ -20,9 +20,10 @@ namespace c2flux
         private const int ExtentSize = 16;
         private const int ExtentsPerCall = 512;
 
-        public static bool TryRead(string path, out IReadOnlyList<FileExtent> extents)
+        public static bool TryRead(string path, out IReadOnlyList<FileExtent> extents, out ulong volume)
         {
             extents = Array.Empty<FileExtent>();
+            volume = 0;
             List<FileExtent> found = new List<FileExtent>();
             byte[] buffer = new byte[HeaderSize + ExtentsPerCall * ExtentSize];
             char[] fileSystem = new char[32];

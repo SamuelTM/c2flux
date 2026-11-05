@@ -117,7 +117,10 @@ jobs:
             sudo mount -o loop "$RUNNER_TEMP/$fs.img" "/mnt/$fs"
             sudo chown "$(id -u):$(id -g)" "/mnt/$fs"
           done
+          btrfs subvolume create /mnt/btrfs/one
+          btrfs subvolume create /mnt/btrfs/two
           echo "C2FLUX_CLONE_DIRS=/mnt/xfs:/mnt/btrfs" >> "$GITHUB_ENV"
+          echo "C2FLUX_BTRFS_SUBVOLUMES=/mnt/btrfs/one:/mnt/btrfs/two" >> "$GITHUB_ENV"
 
       - name: Create ReFS volume
         if: runner.os == 'Windows'

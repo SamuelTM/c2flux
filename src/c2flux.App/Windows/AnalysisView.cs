@@ -32,6 +32,7 @@ namespace c2flux
             public int Count { get; init; }
             public long SizeBytes { get; init; }
             public long TotalSizeBytes { get; init; }
+            public bool TotalMayBeOverstated { get; init; }
             public bool IsLocation { get; init; }
             public RedundancyRow Group { get; init; }
             public List<RedundancyRow> Children { get; } = new List<RedundancyRow>();
@@ -55,6 +56,13 @@ namespace c2flux
         private readonly DrawnTable<RedundancyRow> _redundancies = new DrawnTable<RedundancyRow>();
         private readonly TableColumn<LargestFileRow> _unitColumn;
         private readonly RedundancyProgress _progress = new RedundancyProgress();
+        private readonly TextBlock _overstatedNote = new TextBlock
+        {
+            Text = LocalizationService.GetText("Advanced.Redundancy.MayBeOverstated"),
+            Margin = new Thickness(8, 4),
+            TextWrapping = TextWrapping.Wrap,
+            IsVisible = false,
+        };
         private readonly List<RedundancyRow> _groups = new List<RedundancyRow>();
         private readonly HashSet<RedundancyRow> _expanded = new HashSet<RedundancyRow>();
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
@@ -108,6 +116,8 @@ namespace c2flux
             DockPanel redundancyPage = new DockPanel();
             DockPanel.SetDock(_progress, Dock.Top);
             redundancyPage.Children.Add(_progress);
+            DockPanel.SetDock(_overstatedNote, Dock.Bottom);
+            redundancyPage.Children.Add(_overstatedNote);
             redundancyPage.Children.Add(_redundancies);
 
             _pages.Children.Add(_extensions);
@@ -167,7 +177,7 @@ namespace c2flux
             _redundancies.Columns.Add(usage);
             _redundancies.Columns.Add(new TableColumn<RedundancyRow>(LocalizationService.GetText("Advanced.Count"), row => row.IsLocation ? string.Empty : row.Count.ToString(CultureInfo.CurrentCulture)) { AutoWidth = true, Alignment = HorizontalAlignment.Right, SortKey = row => row.Count });
             _redundancies.Columns.Add(new TableColumn<RedundancyRow>(LocalizationService.GetText("Advanced.SizeGb"), row => row.IsLocation ? string.Empty : FormatGb(row.SizeBytes)) { AutoWidth = true, Alignment = HorizontalAlignment.Right, SortKey = row => row.SizeBytes });
-            _redundancies.Columns.Add(new TableColumn<RedundancyRow>(LocalizationService.GetText("ScanHistory.TotalSize") + " (GB)", row => row.IsLocation ? string.Empty : FormatGb(row.TotalSizeBytes)) { AutoWidth = true, Alignment = HorizontalAlignment.Right, SortKey = row => row.TotalSizeBytes });
+            _redundancies.Columns.Add(new TableColumn<RedundancyRow>(LocalizationService.GetText("ScanHistory.TotalSize") + " (GB)", row => row.IsLocation ? string.Empty : (row.TotalMayBeOverstated ? "≤ " : string.Empty) + FormatGb(row.TotalSizeBytes)) { AutoWidth = true, Alignment = HorizontalAlignment.Right, SortKey = row => row.TotalSizeBytes });
             _redundancies.Columns.Add(Filler<RedundancyRow>());
 
             // Sorting keeps each group's locations right below it.
@@ -374,7 +384,10 @@ namespace c2flux
                     Count = group.PhysicalCopyCount,
                     SizeBytes = group.SizeBytes,
                     TotalSizeBytes = group.TotalSizeBytes,
+                    TotalMayBeOverstated = group.TotalMayBeOverstated,
                 };
+
+                _overstatedNote.IsVisible |= group.TotalMayBeOverstated;
 
                 foreach (string location in group.Locations)
                 {

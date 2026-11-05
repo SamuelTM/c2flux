@@ -9,8 +9,8 @@ namespace c2flux
     // FileExtentReader for Linux, from the FIEMAP ioctl: covers file systems
     // with reflinks (Btrfs, XFS...). File systems without FIEMAP (NFS, SMB)
     // or without shared extents (ext4) count in full, which is right for ext4.
-    // shortcut: Btrfs subvolumes have their own device numbers, so clones
-    // across subvolumes count in full, compare FS UUIDs if that ever matters.
+    // Btrfs subvolumes have their own device numbers but one block space, so
+    // Btrfs extents are named after the file system's UUID.
     public static class LinuxFileExtents
     {
         private const ulong FsIocFiemap = 0xC020660B;
@@ -28,9 +28,16 @@ namespace c2flux
         private const uint ExtentNotAligned = 0x00000100;
         private const uint ExtentShared = 0x00002000;
 
-        public static unsafe bool TryRead(string path, out IReadOnlyList<FileExtent> extents)
+        private const ulong BtrfsIocFsInfo = 0x8400941F;
+        private const int BtrfsFsInfoSize = 1024;
+        private const int BtrfsFsIdOffset = 16;
+        private const long ZfsMagic = 0x2FC12FC1;
+        private const int StatfsSize = 256;
+
+        public static unsafe bool TryRead(string path, out IReadOnlyList<FileExtent> extents, out ulong volume)
         {
             extents = Array.Empty<FileExtent>();
+            volume = 0;
             List<FileExtent> found = new List<FileExtent>();
             bool shared = false;
             byte[] buffer = new byte[HeaderSize + ExtentsPerCall * ExtentSize];
@@ -38,9 +45,11 @@ namespace c2flux
             try
             {
                 using SafeFileHandle handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                int descriptor = (int)handle.DangerousGetHandle();
                 ulong start = 0;
+                bool last = false;
 
-                while (true)
+                while (!last)
                 {
                     Array.Clear(buffer);
 
@@ -50,7 +59,7 @@ namespace c2flux
                         *(ulong*)(pointer + 8) = ulong.MaxValue;
                         *(uint*)(pointer + ExtentCountOffset) = ExtentsPerCall;
 
-                        if (ioctl((int)handle.DangerousGetHandle(), FsIocFiemap, pointer) != 0)
+                        if (ioctl(descriptor, FsIocFiemap, pointer) != 0)
                         {
                             return false;
                         }
@@ -78,25 +87,43 @@ namespace c2flux
                             shared |= (flags & ExtentShared) != 0;
                             start = *(ulong*)extent + length;
 
-                            if ((flags & ExtentLast) != 0)
-                            {
-                                extents = found;
-                                return shared;
-                            }
+                            last |= (flags & ExtentLast) != 0;
                         }
                     }
                 }
+
+                extents = found;
+                volume = ReadBtrfsId(descriptor);
+                return shared;
             }
             catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
             {
                 return false;
             }
+        }
 
-            extents = found;
-            return shared;
+        // For FileIdentities.HiddenCloneChecker: ZFS clones blocks but shows
+        // no extents, and no per-file count of what it shares.
+        public static unsafe bool MayHideClones(string path)
+        {
+            byte* buffer = stackalloc byte[StatfsSize];
+            return statfs(path, buffer) == 0 && *(long*)buffer == ZfsMagic;
+        }
+
+        // 0 on other file systems, which reject the ioctl.
+        private static unsafe ulong ReadBtrfsId(int descriptor)
+        {
+            byte* info = stackalloc byte[BtrfsFsInfoSize];
+
+            return ioctl(descriptor, BtrfsIocFsInfo, info) == 0
+                ? *(ulong*)(info + BtrfsFsIdOffset) ^ *(ulong*)(info + BtrfsFsIdOffset + 8)
+                : 0;
         }
 
         [DllImport("libc", SetLastError = true)]
         private static extern unsafe int ioctl(int fd, ulong request, byte* argument);
+
+        [DllImport("libc", SetLastError = true)]
+        private static extern unsafe int statfs([MarshalAs(UnmanagedType.LPUTF8Str)] string path, byte* buffer);
     }
 }

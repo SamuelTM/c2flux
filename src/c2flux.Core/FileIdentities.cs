@@ -50,8 +50,10 @@ namespace c2flux
     public readonly record struct FileExtent(ulong Start, ulong Length);
 
     // Reads a file's extents. Returns false when they are unknown or when the
-    // file shares nothing, so that it counts in full.
-    public delegate bool FileExtentReader(string path, out IReadOnlyList<FileExtent> extents);
+    // file shares nothing, so that it counts in full. volume names the space
+    // the extents belong to when it is wider than the file's own volume (Btrfs
+    // subvolumes); 0 means the file's own volume.
+    public delegate bool FileExtentReader(string path, out IReadOnlyList<FileExtent> extents, out ulong volume);
 
     // Where RedundancyAnalysisService gets file identities. Each platform
     // registers its reader at startup (the WinForms Program.Main registers the
@@ -63,6 +65,10 @@ namespace c2flux
 
         // Null until the platform registers its reader.
         public static FileExtentReader ExtentReader { get; set; }
+
+        // True for a file system that can share blocks without showing which
+        // (ZFS): a total there may be too high. Null until registered.
+        public static Func<string, bool> HiddenCloneChecker { get; set; }
 
         public static bool ByPath(string path, out FileIdentity identity, out long usn, out bool hasUsn)
         {

@@ -611,6 +611,7 @@ namespace c2flux
                 ["Advanced.FileTypes"] = "Extensions",
                 ["Advanced.LargestFiles"] = "Largest files",
                 ["Advanced.Redundancies"] = "Redundancies",
+                ["Advanced.Redundancy.MayBeOverstated"] = "≤ The total may be too high: this file system does not show which blocks the copies share.",
                 ["Advanced.Redundancy.Progress.SizeGrouping"] = "File sizes",
                 ["Advanced.Redundancy.Progress.LiveRead"] = "Reading live",
                 ["Advanced.Redundancy.Progress.CacheRead"] = "Reading cache",
