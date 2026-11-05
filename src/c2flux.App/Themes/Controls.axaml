@@ -181,6 +181,7 @@
                   Stroke="{DynamicResource CheckMarkBrush}" />
           </Border>
           <ContentPresenter Name="PART_ContentPresenter" Margin="24,0,0,0" VerticalAlignment="Center"
+                            TextWrapping="Wrap"
                             Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" />
         </Panel>
       </ControlTemplate>

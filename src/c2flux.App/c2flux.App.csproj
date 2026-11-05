@@ -69,7 +69,7 @@
 	<!-- Images, the Portuguese texts (English is built in) and the
 	     third-party licenses, shipped next to the app. -->
 	<ItemGroup>
-		<AvaloniaResource Include="Assets\c2flux.png;Assets\molotov.jpg;Assets\scan-history-details.png" />
+		<AvaloniaResource Include="Assets\c2flux.png;Assets\molotov.jpg" />
 		<None Include="Languages\lang_pt.json"
 		      CopyToOutputDirectory="PreserveNewest"
 		      CopyToPublishDirectory="PreserveNewest" />

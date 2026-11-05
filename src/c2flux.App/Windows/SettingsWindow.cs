@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -8,18 +7,16 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Styling;
 
 namespace c2flux
 {
     // Port of the WinForms SettingsForm: General, UI, History, Export and
-    // Logging pages behind tab buttons, laid out at the WinForms coordinates.
+    // Logging pages behind tab buttons. Pages are rows sized by their text.
     // OK validates and writes the settings; the caller saves and applies
     // them when Saved is true. Windows-only options (NT query buffer,
-    // elevation, Explorer context menu) are left out elsewhere and the rows
-    // below them move up.
+    // elevation, Explorer context menu) are left out elsewhere.
     public sealed class SettingsWindow : Window
     {
         private static readonly (string Text, int Bytes)[] BufferSizes =
@@ -157,7 +154,7 @@ namespace c2flux
             int index = _pages.Count;
             tab.Click += (_, _) => ShowPage(index);
             Place(canvas, tab, x, 16, width, 32);
-            _pages.Add((tab, page));
+            _pages.Add((tab, new ScrollViewer { Content = page, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled }));
         }
 
         // ----- pages ------------------------------------------------------
@@ -172,61 +169,54 @@ namespace c2flux
                 UpdateRedundancyCacheInfo();
             };
 
-            // Rows at their WinForms tops; a row left out moves the next ones
-            // up by its own pitch.
-            (double Top, bool Shown, (Control Control, double X, double Y, double Width, double Height)[] Controls)[] rows =
+            _language.Width = 216;
+            _bufferSize.Width = 108;
+            _clearRedundancyCache.MinWidth = 220;
+            _clearRedundancyCache.HorizontalAlignment = HorizontalAlignment.Left;
+            List<Control[]> rows = new List<Control[]>
             {
-                (24, true, new[] { Item(Text("Settings.Language"), 34, 26, 70, 32), Item(_language, 104, 24, 216, 32) }),
-                (64, true, new[] { Item(_showFilesInTree, 24, 64, 420, 24) }),
-                (100, windows, new[] { Item(Text("Settings.NtQueryDirectoryBufferSize"), 34, 102, 125, 28), Item(_bufferSize, 160, 100, 108, 32) }),
-                (144, true, new[] { Item(_skipReparsePoints, 24, 144, 420, 24) }),
-                (180, windows, new[] { Item(_startElevated, 24, 180, 420, 24) }),
-                (216, windows, new[] { Item(_showElevationPrompt, 24, 216, 420, 24) }),
-                (252, windows, new[] { Item(_shellContextMenu, 24, 252, 420, 24) }),
-                (288, windows, new[] { Item(_shellSearchContextMenu, 24, 288, 420, 24) }),
-                (324, true, new[] { Item(_autoCheckForUpdates, 24, 324, 420, 24) }),
-                (360, true, new[] { Item(Box(_redundancyCacheSize), 34, 360, 390, 28), Item(_clearRedundancyCache, 34, 392, 220, 32) }),
+                new Control[] { Text("Settings.Language"), _language },
+                new Control[] { _showFilesInTree },
             };
 
-            Canvas page = new Canvas { Width = 460, Height = 480, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
-            double shift = 0;
-
-            for (int index = 0; index < rows.Length; index++)
+            if (windows)
             {
-                if (!rows[index].Shown)
-                {
-                    shift += index + 1 < rows.Length ? rows[index + 1].Top - rows[index].Top : 0;
-                    continue;
-                }
-
-                foreach (var item in rows[index].Controls)
-                {
-                    Place(page, item.Control, item.X, item.Y - shift, item.Width, item.Height);
-                }
+                rows.Add(new Control[] { Text("Settings.NtQueryDirectoryBufferSize"), _bufferSize });
             }
 
-            page.Height -= shift;
-            return new ScrollViewer { Content = page, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
+            rows.Add(new Control[] { _skipReparsePoints });
+
+            if (windows)
+            {
+                rows.Add(new Control[] { _startElevated });
+                rows.Add(new Control[] { _showElevationPrompt });
+                rows.Add(new Control[] { _shellContextMenu });
+                rows.Add(new Control[] { _shellSearchContextMenu });
+            }
+
+            rows.Add(new Control[] { _autoCheckForUpdates });
+            rows.Add(new Control[] { _redundancyCacheSize });
+            rows.Add(new Control[] { _clearRedundancyCache });
+            return Rows(rows.ToArray());
         }
 
         private Control CreateLayoutPage()
         {
             _fillColor.Click += async (_, _) => await PickFillColorAsync();
-            Canvas page = new Canvas();
-            // One fill color per theme; the page shows the current one.
-            Place(page, Text(IsDark ? "Settings.PartitionFillDark" : "Settings.PartitionFillLight"), 34, 24, 120, 28);
-            Place(page, _fillColor, 150, 24, 140, 28);
-            Place(page, _fillPreview, 300, 24, 42, 28);
-            Place(page, Text("Settings.BarChartBarHeight"), 34, 62, 120, 28);
-            Place(page, _barChartBarHeight, 150, 60, 56, 34);
-            Place(page, Label(LocalizationService.Format("Settings.BarChartBarHeightDefault", 14)), 210, 62, 160, 28);
-            Place(page, Text("Settings.SunburstDepth"), 34, 98, 120, 28);
-            Place(page, _sunburstDepth, 150, 96, 56, 34);
-            Place(page, Text("Settings.SunburstDepthHint"), 210, 98, 220, 28);
-            Place(page, Text("Settings.SunburstMaxItems"), 34, 134, 120, 28);
-            Place(page, _sunburstMaxItems, 150, 132, 80, 34);
-            Place(page, _showPartitionPanel, 24, 172, 420, 24);
-            return page;
+            _fillColor.MinWidth = 140;
+            _fillPreview.Width = 42;
+            _fillPreview.Height = 28;
+            _barChartBarHeight.Width = 80;
+            _sunburstDepth.Width = 80;
+            _sunburstMaxItems.Width = 80;
+
+            return Rows(
+                // One fill color per theme; the page shows the current one.
+                new Control[] { Text(IsDark ? "Settings.PartitionFillDark" : "Settings.PartitionFillLight"), new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { _fillColor, _fillPreview } } },
+                new Control[] { Text("Settings.BarChartBarHeight"), _barChartBarHeight, Label(LocalizationService.Format("Settings.BarChartBarHeightDefault", 14)) },
+                new Control[] { Text("Settings.SunburstDepth"), _sunburstDepth, Text("Settings.SunburstDepthHint") },
+                new Control[] { Text("Settings.SunburstMaxItems"), _sunburstMaxItems },
+                new Control[] { _showPartitionPanel });
         }
 
         // The deprecated scan history settings (database path, scans per
@@ -246,76 +236,50 @@ namespace c2flux
             };
             _autoPurge.IsCheckedChanged += (_, _) => UpdateAutoPurgeControls();
 
-            // The checkbox is as wide as its text; the help button follows it.
-            double detailsWidth = 28 + Math.Ceiling(new FormattedText(
-                LocalizationService.GetText("Settings.StorageHistoryDetails"),
-                CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight,
-                new Typeface(FontFamily.Default),
-                12,
-                null).WidthIncludingTrailingWhitespace);
             Button help = RoundButton("?");
             help.Classes.Add("primary");
             help.Focusable = false;
-            ToolTip.SetTip(help, CreateDetailsHelp());
+            help.Width = 24;
+            help.Height = 22;
+            help.VerticalAlignment = VerticalAlignment.Center;
+            ToolTip.SetTip(help, LocalizationService.GetText("Settings.StorageHistoryDetailsHelp"));
             ToolTip.SetShowDelay(help, 0);
+            _maximumAge.Width = 60;
+            _maximumSnapshots.Width = 60;
 
-            Canvas page = new Canvas();
-            Place(page, _storageHistoryDetails, 24, 24, detailsWidth, 24);
-            Place(page, help, 24 + detailsWidth, 25, 24, 22);
-            Place(page, Box(_detailsDatabaseSize), 32, 60, 400, 24);
-            Place(page, Box(_detailsReusableSpace), 32, 88, 400, 24);
-            Place(page, _autoCompact, 24, 124, 250, 24);
-            Place(page, _autoPurge, 24, 160, 250, 24);
-            Place(page, Box(_maximumAgeLabel), 32, 196, 220, 32);
-            Place(page, _maximumAge, 261, 196, 60, 32);
-            Place(page, Box(_maximumSnapshotsLabel), 32, 232, 220, 32);
-            Place(page, _maximumSnapshots, 261, 232, 60, 32);
-            return page;
-        }
-
-        // The help tooltip: the text and a preview of the details view.
-        private static Control CreateDetailsHelp()
-        {
-            Bitmap preview = new Bitmap(AssetLoader.Open(new Uri("avares://c2flux.App/Assets/scan-history-details.png")));
-            double width = Math.Min(500, preview.Size.Width);
-
-            return new StackPanel
-            {
-                Spacing = 8,
-                Width = width,
-                Children =
-                {
-                    new TextBlock { Text = LocalizationService.GetText("Settings.StorageHistoryDetailsHelp"), TextWrapping = TextWrapping.Wrap },
-                    new Image { Source = preview, Width = width, Height = Math.Round(preview.Size.Height * width / preview.Size.Width) },
-                },
-            };
+            return Rows(
+                new Control[] { new StackPanel { Orientation = Orientation.Horizontal, Children = { _storageHistoryDetails, help } } },
+                new Control[] { _detailsDatabaseSize },
+                new Control[] { _detailsReusableSpace },
+                new Control[] { _autoCompact },
+                new Control[] { _autoPurge },
+                new Control[] { _maximumAgeLabel, _maximumAge },
+                new Control[] { _maximumSnapshotsLabel, _maximumSnapshots });
         }
 
         private Control CreateExportPage()
         {
             _exportMaxDepth.MaxLength = 0;
-            Canvas page = new Canvas();
-            Place(page, _exportPath, 24, 24, 420, 24);
-            Place(page, _exportSizeGb, 24, 60, 420, 24);
-            Place(page, _exportSizeMb, 24, 96, 420, 24);
-            Place(page, Text("Settings.ExportMaxDepth"), 34, 146, 160, 28);
-            Place(page, _exportMaxDepth, 194, 144, 56, 34);
-            return page;
+            _exportMaxDepth.Width = 56;
+
+            return Rows(
+                new Control[] { _exportPath },
+                new Control[] { _exportSizeGb },
+                new Control[] { _exportSizeMb },
+                new Control[] { Text("Settings.ExportMaxDepth"), _exportMaxDepth });
         }
 
         private Control CreateLoggingPage()
         {
             _logLevel.ItemsSource = new[] { AppLogLevel.Normal, AppLogLevel.Verbose };
             _autoSaveLog.IsCheckedChanged += (_, _) => UpdateLoggingControls();
-            Canvas page = new Canvas();
-            Place(page, Text("Settings.LogLevel"), 34, 24, 75, 28);
-            Place(page, _logLevel, 120, 22, 150, 32);
-            Place(page, _autoSaveLog, 26, 64, 420, 24);
-            Place(page, Box(_maximumLogSizeLabel), 34, 96, 96, 28);
-            Place(page, _maximumLogSize, 126, 94, 56, 34);
-            Place(page, Box(_maximumLogSizeUnit), 192, 96, 50, 28);
-            return page;
+            _logLevel.Width = 150;
+            _maximumLogSize.Width = 56;
+
+            return Rows(
+                new Control[] { Text("Settings.LogLevel"), _logLevel },
+                new Control[] { _autoSaveLog },
+                new Control[] { _maximumLogSizeLabel, _maximumLogSize, _maximumLogSizeUnit });
         }
 
         // ----- state ------------------------------------------------------
@@ -577,7 +541,33 @@ namespace c2flux
 
         // ----- controls ---------------------------------------------------
 
-        private static (Control, double, double, double, double) Item(Control control, double x, double y, double width, double height) => (control, x, y, width, height);
+        // Label, field and hint columns as wide as their widest text. A lone
+        // control has the whole row, and wraps if that is not enough.
+        private static Grid Rows(params Control[][] rows)
+        {
+            Grid grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*"), RowSpacing = 8, ColumnSpacing = 8, Margin = new Thickness(24, 22, 16, 16) };
+
+            for (int row = 0; row < rows.Length; row++)
+            {
+                grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+
+                for (int column = 0; column < rows[row].Length; column++)
+                {
+                    Control control = rows[row][column];
+                    Grid.SetRow(control, row);
+                    Grid.SetColumn(control, column);
+                    Grid.SetColumnSpan(control, column == rows[row].Length - 1 ? 3 - column : 1);
+                    control.MinHeight = control is TextBlock ? 0 : 28;
+                    control.VerticalAlignment = VerticalAlignment.Center;
+                    control.HorizontalAlignment = column == 0 && rows[row].Length == 1 ? control.HorizontalAlignment : HorizontalAlignment.Left;
+                    // In line with the box of a checkbox.
+                    control.Margin = control is TextBlock && column == 0 ? new Thickness(5, 0, 0, 0) : default;
+                    grid.Children.Add(control);
+                }
+            }
+
+            return grid;
+        }
 
         private static CheckBox Check(string textKey) => new CheckBox { Content = LocalizationService.GetText(textKey), Classes = { "ant" } };
 
@@ -585,7 +575,7 @@ namespace c2flux
 
         private static TextBlock Text(string textKey) => Label(LocalizationService.GetText(textKey));
 
-        private static TextBlock Label(string text = null) => new TextBlock { Text = text, Classes = { "ant", "antd" } };
+        private static TextBlock Label(string text = null) => new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Classes = { "ant", "antd" } };
 
         // AntdUI.Input with TextAlign = Right; no limit for 0.
         private static TextBox Number(int maxLength) => new TextBox { MaxLength = maxLength, TextAlignment = TextAlignment.Right, Classes = { "ant" } };
@@ -610,20 +600,8 @@ namespace c2flux
             };
         }
 
-        // A label box (AntdUI.Label, MiddleLeft): text centered vertically.
-        private static Border Box(TextBlock text)
-        {
-            text.VerticalAlignment = VerticalAlignment.Center;
-            return new Border { Child = text };
-        }
-
         private static void Place(Canvas canvas, Control control, double x, double y, double width, double height)
         {
-            if (control is TextBlock text)
-            {
-                control = Box(text);
-            }
-
             Canvas.SetLeft(control, x);
             Canvas.SetTop(control, y);
             control.Width = width;
