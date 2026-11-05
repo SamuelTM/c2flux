@@ -145,6 +145,38 @@ jobs:
       - name: Test
         run: dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --filter "FullyQualifiedName~Clones_on_real_volumes|FullyQualifiedName~Compressed_clones" --logger "console;verbosity=normal"
 
+  # ZFS shows no shared blocks, so its totals only carry a mark. Apart from
+  # clone-volumes: the module comes from the runner's kernel packages.
+  zfs-volume:
+    name: Clones on a real ZFS volume
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Create ZFS pool
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zfsutils-linux
+          sudo modprobe zfs
+          if [ -e /sys/module/zfs/parameters/zfs_bclone_enabled ]; then
+            echo 1 | sudo tee /sys/module/zfs/parameters/zfs_bclone_enabled
+          fi
+          truncate -s 1G "$RUNNER_TEMP/zfs.img"
+          sudo zpool create -f -m /mnt/zfs c2flux "$RUNNER_TEMP/zfs.img"
+          sudo chown "$(id -u):$(id -g)" /mnt/zfs
+          zfs version
+          echo "C2FLUX_ZFS_DIR=/mnt/zfs" >> "$GITHUB_ENV"
+
+      - name: Test
+        run: dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --filter "FullyQualifiedName~Clones_on_zfs" --logger "console;verbosity=normal"
+
   # Phase 6: the app packaged for every RID (package.yml).
   packages:
     name: Packages

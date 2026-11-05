@@ -239,6 +239,71 @@ namespace c2flux.Core.Tests
             }
         }
 
+        // ZFS clones blocks but shows no extents, so the total stays in full
+        // and carries the mark. This fails if ZFS ever gains FIEMAP: then the
+        // mark can go. C2FLUX_ZFS_DIR comes from CI.
+        [Fact]
+        public void Clones_on_zfs_mark_the_total_as_possibly_overstated()
+        {
+            string directory = Environment.GetEnvironmentVariable("C2FLUX_ZFS_DIR");
+
+            if (string.IsNullOrEmpty(directory))
+            {
+                return;
+            }
+
+            const int Size = 1024 * 1024;
+            byte[] content = new byte[Size];
+            new Random(29).NextBytes(content);
+            string original = Path.Combine(directory, "original.bin");
+            string clone = Path.Combine(directory, "clone.bin");
+            string copy = Path.Combine(directory, "copy.bin");
+            WriteToDisk(original, content, 0, Size);
+            WriteToDisk(copy, content, 0, Size);
+            FileIdentityReader previousReader = FileIdentities.Reader;
+            Func<string, bool> previousChecker = FileIdentities.HiddenCloneChecker;
+            FileIdentities.Reader = LinuxFileIdentity.TryRead;
+            FileIdentities.HiddenCloneChecker = LinuxFileExtents.MayHideClones;
+
+            try
+            {
+                Assert.True(LinuxFileExtents.MayHideClones(original));
+
+                RedundancyAnalysisGroup copies = AnalyzeWith(LinuxFileExtents.TryRead, Entries(Size, original, copy));
+                Assert.True(copies.TotalMayBeOverstated);
+                Assert.Equal(Size * 2L, copies.TotalSizeBytes);
+
+                // ZFS refuses to clone blocks until their transaction group
+                // reaches the disk, about 5 seconds at most.
+                using (FileStream from = new FileStream(original, FileMode.Open, FileAccess.Read))
+                using (FileStream to = new FileStream(clone, FileMode.CreateNew, FileAccess.ReadWrite))
+                {
+                    int result = -1;
+
+                    for (int attempt = 0; attempt < 30 && result != 0; attempt++)
+                    {
+                        result = ioctl((int)to.SafeFileHandle.DangerousGetHandle(), Ficlone, from.SafeFileHandle.DangerousGetHandle());
+
+                        if (result != 0)
+                        {
+                            Thread.Sleep(1000);
+                        }
+                    }
+
+                    Assert.True(result == 0, "FICLONE failed: errno " + System.Runtime.InteropServices.Marshal.GetLastPInvokeError());
+                }
+
+                RedundancyAnalysisGroup clones = AnalyzeWith(LinuxFileExtents.TryRead, Entries(Size, original, clone));
+                Assert.True(clones.TotalMayBeOverstated);
+                Assert.Equal(Size * 2L, clones.TotalSizeBytes);
+            }
+            finally
+            {
+                FileIdentities.Reader = previousReader;
+                FileIdentities.HiddenCloneChecker = previousChecker;
+            }
+        }
+
         // A compressed APFS file has no block map: its clone id stands in.
         [Fact]
         public void Compressed_clones_count_once_on_apfs()
