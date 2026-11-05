@@ -144,8 +144,8 @@
         <Border Name="Frame" Margin="4" CornerRadius="6" BorderThickness="2" ClipToBounds="True"
                 BorderBrush="{DynamicResource FieldBorderBrush}" Background="{DynamicResource ButtonBackgroundBrush}">
           <DockPanel>
-            <!-- Inside the frame, not on it: a gap and its own corners. -->
-            <Border DockPanel.Dock="Right" Width="20" Margin="2" CornerRadius="3" ClipToBounds="True">
+            <!-- Fits the inside of the frame: its radius less its thickness. -->
+            <Border DockPanel.Dock="Right" Width="22" CornerRadius="0,4,4,0" ClipToBounds="True">
               <Grid RowDefinitions="*,*">
                 <RepeatButton Name="PART_IncreaseButton" Classes="spin">
                   <Path Data="M 0,4 L 4,0 L 8,4" />
