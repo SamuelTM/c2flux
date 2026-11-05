@@ -742,6 +742,7 @@ namespace c2flux
 
             public FilterGlyph()
             {
+                ActualThemeVariantChanged += (_, _) => InvalidateVisual();
                 Width = 14;
                 Height = 14;
                 VerticalAlignment = VerticalAlignment.Center;
@@ -759,7 +760,6 @@ namespace c2flux
 
             public override void Render(DrawingContext context)
             {
-                context.DrawRectangle(null, new Pen(new SolidColorBrush(Color.FromRgb(20, 121, 192)), 1.5), new RoundedRect(new Rect(0.75, 0.75, 12.5, 12.5), 2.5));
                 StreamGeometry triangle = new StreamGeometry();
 
                 using (StreamGeometryContext path = triangle.Open())
@@ -780,7 +780,7 @@ namespace c2flux
                     path.EndFigure(true);
                 }
 
-                context.DrawGeometry(Brushes.White, null, triangle);
+                context.DrawGeometry(this.FindResource(ActualThemeVariant, "TextPrimaryBrush") as IBrush ?? Brushes.Gray, null, triangle);
             }
         }
     }
