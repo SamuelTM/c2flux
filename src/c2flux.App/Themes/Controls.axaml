@@ -144,14 +144,17 @@
         <Border Name="Frame" Margin="4" CornerRadius="6" BorderThickness="2" ClipToBounds="True"
                 BorderBrush="{DynamicResource FieldBorderBrush}" Background="{DynamicResource ButtonBackgroundBrush}">
           <DockPanel>
-            <Grid DockPanel.Dock="Right" Width="20" RowDefinitions="*,*">
-              <RepeatButton Name="PART_IncreaseButton" Classes="spin">
-                <Path Data="M 0,4 L 4,0 L 8,4" />
-              </RepeatButton>
-              <RepeatButton Name="PART_DecreaseButton" Classes="spin" Grid.Row="1">
-                <Path Data="M 0,0 L 4,4 L 8,0" />
-              </RepeatButton>
-            </Grid>
+            <!-- Inside the frame, not on it: a gap and its own corners. -->
+            <Border DockPanel.Dock="Right" Width="20" Margin="2" CornerRadius="3" ClipToBounds="True">
+              <Grid RowDefinitions="*,*">
+                <RepeatButton Name="PART_IncreaseButton" Classes="spin">
+                  <Path Data="M 0,4 L 4,0 L 8,4" />
+                </RepeatButton>
+                <RepeatButton Name="PART_DecreaseButton" Classes="spin" Grid.Row="1">
+                  <Path Data="M 0,0 L 4,4 L 8,0" />
+                </RepeatButton>
+              </Grid>
+            </Border>
             <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" />
           </DockPanel>
         </Border>
