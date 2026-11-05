@@ -315,6 +315,68 @@ namespace c2flux.Core.Tests
             }
         }
 
+        // ----- reading in disk order -----------------------------------------
+
+        // Each round reads in disk order, across all sets of files. Files with
+        // no known location go last.
+        [Fact]
+        public void Rounds_read_in_disk_order()
+        {
+            string[] small = WriteVariants("order-small", 5000, (content, index) => { }, 3);
+            string[] large = WriteVariants("order-large", 7000, (content, index) => { }, 3);
+            string[] all = small.Concat(large).ToArray();
+            Dictionary<string, ulong> locations = new Dictionary<string, ulong>
+            {
+                [small[0]] = 500, [large[0]] = 400, [small[1]] = 300, [large[1]] = 200, [small[2]] = 100,
+            };
+            FileLocationReader previous = FileIdentities.LocationReader;
+            FileIdentities.LocationReader = (string path, out ulong location) => locations.TryGetValue(path, out location);
+
+            try
+            {
+                List<(string Path, long Offset, int Count)> reads = Reads(() => Assert.Equal(2, Analyze(all).Count));
+                string[] expected = new[] { small[2], large[1], small[1], large[0], small[0], large[2] };
+
+                // First blocks, then the rest of each file, one sweep each.
+                Assert.Equal(expected, reads.Take(6).Select(read => read.Path));
+                Assert.Equal(expected, reads.Skip(6).Take(6).Select(read => read.Path));
+            }
+            finally
+            {
+                FileIdentities.LocationReader = previous;
+            }
+        }
+
+        // Each native reader answers for a plain file on the disk it runs on.
+        [Fact]
+        public void Native_location_readers_answer()
+        {
+            FileLocationReader native =
+                OperatingSystem.IsWindows() ? WindowsFileExtents.TryReadLocation :
+                OperatingSystem.IsMacOS() ? MacFileIdentity.TryReadLocation :
+                LinuxFileExtents.TryReadLocation;
+
+            string directory = TestEnvironment.CreateDirectory("order-native");
+            string first = Path.Combine(directory, "first.bin");
+            string second = Path.Combine(directory, "second.bin");
+            byte[] content = new byte[1024 * 1024];
+            new Random(37).NextBytes(content);
+            WriteToDisk(first, content, 0, content.Length);
+            WriteToDisk(second, content, 0, content.Length);
+
+            // tmpfs and the like have no extents, so nothing to compare there.
+            if (native(first, out ulong a) && native(second, out ulong b))
+            {
+                Assert.NotEqual(a, b);
+            }
+            else if (OperatingSystem.IsMacOS() || OperatingSystem.IsWindows())
+            {
+                Assert.Fail("No location on the system disk");
+            }
+
+            Assert.False(native(Path.Combine(directory, "missing.bin"), out _));
+        }
+
         // ----- work besides reading -----------------------------------------
 
         // Thousands of files: a few progress reports per second, one saved

@@ -105,6 +105,36 @@ namespace c2flux
             }
         }
 
+        // FileLocationReader: the first extent. A file without one (inline,
+        // or not yet on disk) has no location to go by.
+        public static unsafe bool TryReadLocation(string path, out ulong location)
+        {
+            location = 0;
+            byte* buffer = stackalloc byte[HeaderSize + ExtentSize];
+            new Span<byte>(buffer, HeaderSize + ExtentSize).Clear();
+            *(ulong*)(buffer + 8) = ulong.MaxValue;
+            *(uint*)(buffer + ExtentCountOffset) = 1;
+
+            try
+            {
+                using SafeFileHandle handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+
+                if (ioctl((int)handle.DangerousGetHandle(), FsIocFiemap, buffer) != 0 ||
+                    *(uint*)(buffer + MappedExtentsOffset) == 0 ||
+                    (*(uint*)(buffer + HeaderSize + FlagsOffset) & (ExtentUnknown | ExtentNotAligned)) != 0)
+                {
+                    return false;
+                }
+
+                location = *(ulong*)(buffer + HeaderSize + PhysicalOffset);
+                return true;
+            }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
         // For FileIdentities.HiddenCloneChecker: ZFS and the disks behind a
         // network share clone blocks without showing which.
         public static unsafe bool MayHideClones(string path)

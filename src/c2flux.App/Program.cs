@@ -96,6 +96,7 @@ namespace c2flux
                 FileManager.TrashMover = WindowsTrash.Move;
                 FileIdentities.ExtentReader = WindowsFileExtents.TryRead;
                 FileIdentities.HiddenCloneChecker = WindowsFileExtents.MayHideClones;
+                FileIdentities.LocationReader = WindowsFileExtents.TryReadLocation;
             }
             else if (OperatingSystem.IsMacOS())
             {
@@ -103,12 +104,14 @@ namespace c2flux
                 FileManager.TrashMover = MacTrash.Move;
                 FileIdentities.ExtentReader = MacFileIdentity.TryReadExtents;
                 FileIdentities.HiddenCloneChecker = MacFileIdentity.MayHideClones;
+                FileIdentities.LocationReader = MacFileIdentity.TryReadLocation;
             }
             else
             {
                 FileManager.TrashMover = LinuxTrash.Move;
                 FileIdentities.ExtentReader = LinuxFileExtents.TryRead;
                 FileIdentities.HiddenCloneChecker = LinuxFileExtents.MayHideClones;
+                FileIdentities.LocationReader = LinuxFileExtents.TryReadLocation;
             }
         }
 

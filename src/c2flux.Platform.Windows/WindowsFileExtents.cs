@@ -81,6 +81,40 @@ namespace c2flux
             }
         }
 
+        // FileLocationReader: the cluster of the file's first extent. A small
+        // file kept inside the file table has none to go by.
+        public static bool TryReadLocation(string path, out ulong location)
+        {
+            location = 0;
+            byte[] buffer = new byte[HeaderSize + ExtentSize];
+            long startingVcn = 0;
+
+            try
+            {
+                using SafeFileHandle handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+
+                if (!DeviceIoControl(handle, FsctlGetRetrievalPointers, ref startingVcn, sizeof(long), buffer, (uint)buffer.Length, out _, IntPtr.Zero) &&
+                    Marshal.GetLastPInvokeError() != ErrorMoreData)
+                {
+                    return false;
+                }
+
+                long lcn = BitConverter.ToInt64(buffer, HeaderSize + 8);
+
+                if (BitConverter.ToInt32(buffer, 0) == 0 || lcn == SparseLcn)
+                {
+                    return false;
+                }
+
+                location = (ulong)lcn;
+                return true;
+            }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
         // For FileIdentities.HiddenCloneChecker: ZFS and the disks behind a
         // network share clone blocks without showing which. path is a file.
         public static bool MayHideClones(string path)

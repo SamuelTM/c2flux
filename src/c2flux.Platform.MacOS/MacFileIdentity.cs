@@ -89,6 +89,40 @@ namespace c2flux
                 : null;
         }
 
+        // FileLocationReader: where the file's first byte lies. Files without
+        // a block map or starting with a hole have no location to go by.
+        public static bool TryReadLocation(string path, out ulong location)
+        {
+            location = 0;
+
+            try
+            {
+                using SafeFileHandle handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                Log2Phys query = new Log2Phys { ContigBytes = 1, DevOffset = 0 };
+
+                if (QueryBlocks((int)handle.DangerousGetHandle(), ref query) != 0 || query.DevOffset < 0)
+                {
+                    return false;
+                }
+
+                location = (ulong)query.DevOffset;
+                return true;
+            }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
+        // Apple's arm64 ABI passes variadic arguments on the stack: filler
+        // parameters use up the registers.
+        private static int QueryBlocks(int descriptor, ref Log2Phys query)
+        {
+            return RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+                ? fcntl(descriptor, FLog2PhysExt, 0, 0, 0, 0, 0, 0, ref query)
+                : fcntl(descriptor, FLog2PhysExt, ref query);
+        }
+
         private static bool TryReadBlocks(string path, out List<FileExtent> blocks)
         {
             blocks = new List<FileExtent>();
@@ -103,12 +137,7 @@ namespace c2flux
                 while (offset < length)
                 {
                     Log2Phys query = new Log2Phys { ContigBytes = length - offset, DevOffset = offset };
-
-                    // Apple's arm64 ABI passes variadic arguments on the stack:
-                    // filler parameters use up the registers.
-                    int result = RuntimeInformation.ProcessArchitecture == Architecture.Arm64
-                        ? fcntl(descriptor, FLog2PhysExt, 0, 0, 0, 0, 0, 0, ref query)
-                        : fcntl(descriptor, FLog2PhysExt, ref query);
+                    int result = QueryBlocks(descriptor, ref query);
 
                     if (result != 0 || query.ContigBytes <= 0)
                     {

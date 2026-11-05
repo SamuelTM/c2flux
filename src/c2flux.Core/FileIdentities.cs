@@ -56,6 +56,10 @@ namespace c2flux
     // subvolumes); 0 means the file's own volume.
     public delegate bool FileExtentReader(string path, out IReadOnlyList<FileExtent> extents, out ulong volume);
 
+    // Reads where a file's data starts on its volume, to read files in disk
+    // order. Returns false when unknown.
+    public delegate bool FileLocationReader(string path, out ulong location);
+
     // Where RedundancyAnalysisService gets file identities. Each platform
     // registers its reader at startup (the WinForms Program.Main registers the
     // Windows one). The default works everywhere but knows no file ids: it
@@ -66,6 +70,9 @@ namespace c2flux
 
         // Null until the platform registers its reader.
         public static FileExtentReader ExtentReader { get; set; }
+
+        // Null until the platform registers its reader.
+        public static FileLocationReader LocationReader { get; set; }
 
         // True for a file system that can share blocks without showing which
         // (ZFS, network shares): a total there may be too high. Null until

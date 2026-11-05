@@ -374,8 +374,11 @@ namespace c2flux
 
             private void ReadRound()
             {
+                // One sweep over each disk per round, whatever the sets are.
                 List<(ContentSet Set, PhysicalFile File)> work = _sets
                     .SelectMany(set => set.Files.Select(file => (set, file)))
+                    .OrderBy(item => item.file.Identity.VolumeSerialNumber)
+                    .ThenBy(item => item.file.GetLocation())
                     .ToList();
 
                 foreach ((ContentSet set, PhysicalFile file) in work)
@@ -702,6 +705,8 @@ namespace c2flux
                 new HashSet<string>(
                     StringComparer.OrdinalIgnoreCase);
 
+            private ulong? _location;
+
             public PhysicalFile(
                 FileIdentity identity,
                 string name,
@@ -731,6 +736,19 @@ namespace c2flux
             public long Offset { get; set; }
             public IncrementalHash Hash { get; set; }
             public string Key { get; set; }
+
+            // Read once, when first needed. Unknown ones go last, in scan order.
+            public ulong GetLocation()
+            {
+                if (_location == null)
+                {
+                    FileLocationReader reader = FileIdentities.LocationReader;
+                    _location = reader != null && reader(PrimaryPath, out ulong location) ? location : ulong.MaxValue;
+                }
+
+                return _location.Value;
+            }
+
             public IEnumerable<string> Locations =>
                 _locations;
 
