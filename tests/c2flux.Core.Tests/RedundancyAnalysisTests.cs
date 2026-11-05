@@ -191,6 +191,17 @@ namespace c2flux.Core.Tests
 
                 FileIdentities.HiddenCloneChecker = path => false;
                 Assert.False(AnalyzeWith(nothing, Entries(4096, a, b)).TotalMayBeOverstated);
+
+                // Extents answered there are not trusted (macOS answers on SMB).
+                FileExtentReader answers = FakeExtents(new Dictionary<string, FileExtent[]>
+                {
+                    [a] = new[] { new FileExtent(0, 100) },
+                    [b] = new[] { new FileExtent(0, 100) },
+                });
+                FileIdentities.HiddenCloneChecker = path => true;
+                RedundancyAnalysisGroup group = AnalyzeWith(answers, Entries(4096, a, b));
+                Assert.True(group.TotalMayBeOverstated);
+                Assert.Equal(8192, group.TotalSizeBytes);
             }
             finally
             {
@@ -240,9 +251,9 @@ namespace c2flux.Core.Tests
         }
 
         // ZFS clones blocks but shows no extents, so the total stays in full
-        // and carries the mark. This fails if ZFS ever exposes them: then the
-        // mark can go. C2FLUX_ZFS_DIR comes from CI, which also checks that the
-        // pool really saved space.
+        // and carries the mark. The reader check fails if ZFS ever exposes
+        // them: then the mark can go. C2FLUX_ZFS_DIR comes from CI, which also
+        // checks that the pool really saved space.
         [Fact]
         public void Clones_on_zfs_mark_the_total_as_possibly_overstated()
         {
@@ -293,6 +304,8 @@ namespace c2flux.Core.Tests
 
                     Assert.True(cloned, "Cloning failed: error " + System.Runtime.InteropServices.Marshal.GetLastPInvokeError());
                 }
+
+                Assert.False(NativeExtentReader()(clone, out _, out _));
 
                 RedundancyAnalysisGroup clones = AnalyzeWith(NativeExtentReader(), Entries(Size, original, clone));
                 Assert.True(clones.TotalMayBeOverstated);

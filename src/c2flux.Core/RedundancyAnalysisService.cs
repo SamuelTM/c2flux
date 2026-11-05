@@ -576,12 +576,20 @@ namespace c2flux
 
             foreach (PhysicalFile file in files)
             {
+                // Checked first: what a network share answers about blocks is
+                // not where they lie on the server's disk.
+                if (FileIdentities.HiddenCloneChecker?.Invoke(file.PrimaryPath) == true)
+                {
+                    total += file.OccupiedBytes;
+                    mayBeOverstated = true;
+                    continue;
+                }
+
                 if (extentReader == null ||
                     !extentReader(file.PrimaryPath, out IReadOnlyList<FileExtent> extents, out ulong volume) ||
                     extents.Count == 0)
                 {
                     total += file.OccupiedBytes;
-                    mayBeOverstated |= FileIdentities.HiddenCloneChecker?.Invoke(file.PrimaryPath) == true;
                     continue;
                 }
 
