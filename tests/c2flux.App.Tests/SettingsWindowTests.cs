@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
+using Avalonia.Input.Raw;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -53,6 +57,51 @@ namespace c2flux.AppTests
             }
 
             Assert.True(cut.Count == 0, string.Join(Environment.NewLine, cut));
+        }
+
+        // Empty is no limit; 0 to 100 otherwise, whatever was saved or typed.
+        [AvaloniaTheory]
+        [InlineData(null, null, null)]
+        [InlineData(5, null, 5)]
+        [InlineData(100000, null, 100)]
+        [InlineData(-3, null, 0)]
+        [InlineData(null, "-43", 43)]
+        [InlineData(null, "7a", 7)]
+        [InlineData(5, "", null)]
+        public async Task The_export_depth_stays_in_range(int? saved, string typed, int? expected)
+        {
+            AppSettings settings = new AppSettings { ExportMaxDepth = saved };
+            SettingsWindow window = new SettingsWindow(settings, windowsOptions: true);
+            window.Show();
+
+            try
+            {
+                window.ShowPage(3);
+                Dispatcher.UIThread.RunJobs();
+                NumericUpDown depth = window.GetVisualDescendants().OfType<NumericUpDown>().Single();
+                TextBox box = depth.GetVisualDescendants().OfType<TextBox>().Single();
+
+                if (typed != null)
+                {
+                    box.Focus();
+                    box.SelectAll();
+                    window.KeyPressQwerty(PhysicalKey.Delete, RawInputModifiers.None);
+
+                    foreach (char key in typed)
+                    {
+                        window.KeyTextInput(key.ToString());
+                    }
+
+                    Dispatcher.UIThread.RunJobs();
+                }
+
+                Assert.True(await window.TrySaveAsync());
+                Assert.Equal(expected, settings.ExportMaxDepth);
+            }
+            finally
+            {
+                window.Close();
+            }
         }
 
         [AvaloniaFact]

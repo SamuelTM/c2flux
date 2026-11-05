@@ -565,7 +565,7 @@ namespace c2flux
                 ["Settings.ExportSizeGb"] = "Export size (GB)",
                 ["Settings.ExportSizeMb"] = "Export size (MB)",
                 ["Settings.ExportMaxDepth"] = "Maximum levels/depth:",
-                ["Settings.ExportMaxDepthInvalid"] = "The maximum levels/depth must be empty or a number from 0 upward.",
+                ["Settings.ExportMaxDepthHint"] = "(empty = no limit)",
                 ["Settings.ShellContextMenuFailed"] = "The Explorer context menu entry could not be updated.",
                 ["AlertHistory.Title"] = "Short log",
                 ["AlertHistory.Type"] = "Type",

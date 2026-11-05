@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -67,7 +68,7 @@ namespace c2flux
         private readonly CheckBox _exportPath = Check("Settings.ExportPath");
         private readonly CheckBox _exportSizeGb = Check("Settings.ExportSizeGb");
         private readonly CheckBox _exportSizeMb = Check("Settings.ExportSizeMb");
-        private readonly TextBox _exportMaxDepth = Number(0);
+        private readonly NumericUpDown _exportMaxDepth = new NumericUpDown { Minimum = 0, Maximum = 100, ClipValueToMinMax = true, Increment = 1, FormatString = "0", ParsingNumberStyle = NumberStyles.None, Width = 130 };
 
         private readonly ComboBox _logLevel = Select();
         private readonly CheckBox _autoSaveLog = Check("Settings.AutoSaveLog");
@@ -259,14 +260,14 @@ namespace c2flux
 
         private Control CreateExportPage()
         {
-            _exportMaxDepth.MaxLength = 0;
-            _exportMaxDepth.Width = 56;
+            // Digits only: a typed minus sign would just be clipped to 0 later.
+            _exportMaxDepth.AddHandler(TextInputEvent, (_, e) => e.Handled = e.Text == null || !e.Text.All(char.IsAsciiDigit), Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
             return Rows(
                 new Control[] { _exportPath },
                 new Control[] { _exportSizeGb },
                 new Control[] { _exportSizeMb },
-                new Control[] { Text("Settings.ExportMaxDepth"), _exportMaxDepth });
+                new Control[] { Text("Settings.ExportMaxDepth"), _exportMaxDepth, Text("Settings.ExportMaxDepthHint") });
         }
 
         private Control CreateLoggingPage()
@@ -301,7 +302,7 @@ namespace c2flux
             _exportPath.IsChecked = _settings.ExportPath;
             _exportSizeGb.IsChecked = _settings.ExportSizeGb;
             _exportSizeMb.IsChecked = _settings.ExportSizeMb;
-            _exportMaxDepth.Text = _settings.ExportMaxDepth?.ToString() ?? string.Empty;
+            _exportMaxDepth.Value = _settings.ExportMaxDepth is int depth ? Math.Clamp(depth, 0, 100) : null;
             _barChartBarHeight.Text = _settings.BarChartBarHeight.ToString();
             _sunburstDepth.Text = _settings.SunburstDepth.ToString();
             _sunburstMaxItems.Text = _settings.SunburstMaxItems.ToString();
@@ -415,7 +416,7 @@ namespace c2flux
             return null;
         }
 
-        private async Task<bool> TrySaveAsync()
+        internal async Task<bool> TrySaveAsync()
         {
             int? maximumLogSize = await ReadNumberAsync(_maximumLogSize, 1, int.MaxValue, "Settings.MaximumLogFileSizeMbInvalid", 4);
 
@@ -456,18 +457,6 @@ namespace c2flux
                 return false;
             }
 
-            int? exportMaxDepth = null;
-
-            if (!string.IsNullOrWhiteSpace(_exportMaxDepth.Text))
-            {
-                exportMaxDepth = await ReadNumberAsync(_exportMaxDepth, 0, int.MaxValue, "Settings.ExportMaxDepthInvalid", 3);
-
-                if (exportMaxDepth == null)
-                {
-                    return false;
-                }
-            }
-
             _settings.ShowFilesInTree = _showFilesInTree.IsChecked == true;
             _settings.NtQueryDirectoryBufferSize = BufferSizes[Math.Max(0, _bufferSize.SelectedIndex)].Bytes;
             _settings.SkipReparsePoints = _skipReparsePoints.IsChecked == true;
@@ -480,7 +469,7 @@ namespace c2flux
             _settings.ExportPath = _exportPath.IsChecked == true;
             _settings.ExportSizeGb = _exportSizeGb.IsChecked == true;
             _settings.ExportSizeMb = _exportSizeMb.IsChecked == true;
-            _settings.ExportMaxDepth = exportMaxDepth;
+            _settings.ExportMaxDepth = (int?)_exportMaxDepth.Value;
 
             if (IsDark)
             {

@@ -314,7 +314,7 @@
   "Settings.ExportSizeGb": "Tamanho na exportação (GB)",
   "Settings.ExportSizeMb": "Tamanho na exportação (MB)",
   "Settings.ExportMaxDepth": "Máximo de níveis/profundidade:",
-  "Settings.ExportMaxDepthInvalid": "O máximo de níveis/profundidade deve estar vazio ou ser um número a partir de 0.",
+  "Settings.ExportMaxDepthHint": "(vazio = sem limite)",
   "Settings.ShellContextMenuFailed": "Não foi possível atualizar a entrada do menu de contexto do Explorador de Arquivos.",
   "AlertHistory.Title": "Log resumido",
   "AlertHistory.Type": "Tipo",
