@@ -46,6 +46,9 @@ namespace c2flux
         private static readonly TimeSpan ProgressInterval = TimeSpan.FromMilliseconds(100);
         private static readonly TimeSpan CacheSaveInterval = TimeSpan.FromSeconds(30);
 
+        // A write can stay in memory while the blocks still look shared.
+        private static readonly TimeSpan CloneSettleTime = TimeSpan.FromMinutes(1);
+
         // For tests: every read of file content (path, offset, bytes).
         internal static Action<string, long, int> ReadObserver { get; set; }
 
@@ -363,7 +366,7 @@ namespace c2flux
                 else if (known.Count > 0)
                 {
                     _bytesLeft += length * unknown.Count;
-                    _sets.Add(new ContentSet { Files = unknown, Length = length, Stage = ReadStage.Chunks, KnownHashes = known });
+                    _sets.Add(new ContentSet { Files = CollapseClones(unknown), Length = length, Stage = ReadStage.Chunks, KnownHashes = known });
                 }
                 else
                 {
@@ -504,8 +507,11 @@ namespace c2flux
                     {
                         foreach (PhysicalFile file in readable)
                         {
-                            RememberHash(file, file.Key);
-                            AddToHash(set.KnownHashes, file.Key, file);
+                            foreach (PhysicalFile copy in file.WithClones())
+                            {
+                                RememberHash(copy, file.Key);
+                                AddToHash(set.KnownHashes, file.Key, copy);
+                            }
                         }
 
                         EmitKnown(set.KnownHashes);
@@ -522,7 +528,12 @@ namespace c2flux
                 {
                     List<PhysicalFile> files = equal.ToList();
 
-                    if (files.Count < 2)
+                    if (files.Count < 2 && files[0].Clones.Count > 0)
+                    {
+                        // Alone among the rest, but its clones are its copies.
+                        Finish(files, files[0].Offset == set.Length ? equal.Key : null);
+                    }
+                    else if (files.Count < 2)
                     {
                         // The block of a small file already is its full hash.
                         if (set.Stage == ReadStage.FirstBlock && set.Length <= SampleBlockSize)
@@ -543,7 +554,17 @@ namespace c2flux
                     }
                     else if (set.Stage != ReadStage.Chunks)
                     {
-                        next.Add(new ContentSet { Files = files, Length = set.Length, Stage = ReadStage.Chunks });
+                        // About to read them whole: clones need just one read.
+                        List<PhysicalFile> distinct = CollapseClones(files);
+
+                        if (distinct.Count == 1)
+                        {
+                            Finish(distinct, null);
+                        }
+                        else
+                        {
+                            next.Add(new ContentSet { Files = distinct, Length = set.Length, Stage = ReadStage.Chunks });
+                        }
                     }
                     else if (files[0].Offset == set.Length)
                     {
@@ -556,22 +577,85 @@ namespace c2flux
                 }
             }
 
+            // Files with the same blocks in the same places hold the same data.
+            private List<PhysicalFile> CollapseClones(List<PhysicalFile> files)
+            {
+                FileExtentReader reader = FileIdentities.ExtentReader;
+
+                if (reader == null)
+                {
+                    return files;
+                }
+
+                Dictionary<string, PhysicalFile> byBlocks = new Dictionary<string, PhysicalFile>(StringComparer.Ordinal);
+                List<PhysicalFile> distinct = new List<PhysicalFile>();
+
+                foreach (PhysicalFile file in files)
+                {
+                    string blocks = GetBlocksKey(file, reader);
+
+                    if (blocks != null && byBlocks.TryGetValue(blocks, out PhysicalFile clone))
+                    {
+                        clone.Clones.Add(file);
+                        _bytesLeft -= file.Length - file.Offset;
+                        file.DisposeHash();
+                        continue;
+                    }
+
+                    if (blocks != null)
+                    {
+                        byBlocks[blocks] = file;
+                    }
+
+                    distinct.Add(file);
+                }
+
+                return distinct;
+            }
+
+            private static string GetBlocksKey(PhysicalFile file, FileExtentReader reader)
+            {
+                try
+                {
+                    if (FileIdentities.HiddenCloneChecker?.Invoke(file.PrimaryPath) == true ||
+                        !reader(file.PrimaryPath, out IReadOnlyList<FileExtent> extents, out ulong volume) ||
+                        extents.Count == 0 ||
+                        extents.Any(extent => !extent.Exact) ||
+                        DateTime.UtcNow - File.GetLastWriteTimeUtc(file.PrimaryPath) < CloneSettleTime)
+                    {
+                        return null;
+                    }
+
+                    return (volume != 0 ? volume : file.Identity.VolumeSerialNumber) + ":" +
+                        string.Join(";", extents.Select(extent => extent.Logical + "," + extent.Start + "," + extent.Length));
+                }
+                catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+                {
+                    return null;
+                }
+            }
+
             private void Drop(PhysicalFile file)
             {
                 _bytesLeft -= file.Length - file.Offset;
                 file.DisposeHash();
             }
 
+            // hash is null for clones that were never read: nothing to remember.
             private void Finish(List<PhysicalFile> files, string hash)
             {
                 foreach (PhysicalFile file in files)
                 {
                     _bytesLeft -= file.Length - file.Offset;
                     file.DisposeHash();
-                    RememberHash(file, hash);
+
+                    foreach (PhysicalFile copy in hash == null ? Array.Empty<PhysicalFile>() : file.WithClones())
+                    {
+                        RememberHash(copy, hash);
+                    }
                 }
 
-                Emit(files);
+                Emit(files.SelectMany(file => file.WithClones()).ToList());
             }
 
             private void RememberHash(PhysicalFile file, string hash)
@@ -736,6 +820,11 @@ namespace c2flux
             public long Offset { get; set; }
             public IncrementalHash Hash { get; set; }
             public string Key { get; set; }
+
+            // Files with the same blocks, read through this one.
+            public List<PhysicalFile> Clones { get; } = new List<PhysicalFile>();
+
+            public IEnumerable<PhysicalFile> WithClones() => Clones.Prepend(this);
 
             // Read once, when first needed. Unknown ones go last, in scan order.
             public ulong GetLocation()

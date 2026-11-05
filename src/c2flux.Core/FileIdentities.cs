@@ -47,8 +47,10 @@ namespace c2flux
     public delegate bool FileIdentityReader(string path, out FileIdentity identity, out long usn, out bool hasUsn);
 
     // Where a file's data lies on its volume. The unit only has to be the same
-    // for every file of a volume: equal ranges mean shared blocks.
-    public readonly record struct FileExtent(ulong Start, ulong Length);
+    // for every file of a volume: equal ranges mean shared blocks. Logical is
+    // the extent's place in the file. Exact is false when equal extents may
+    // still hold different data (compressed ones can be used in part).
+    public readonly record struct FileExtent(ulong Start, ulong Length, ulong Logical = 0, bool Exact = true);
 
     // Reads a file's extents. Returns false when they are unknown or when the
     // file shares nothing, so that it counts in full. volume names the space

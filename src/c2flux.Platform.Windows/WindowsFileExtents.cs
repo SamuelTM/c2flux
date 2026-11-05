@@ -60,7 +60,7 @@ namespace c2flux
 
                         if (lcn != SparseLcn)
                         {
-                            found.Add(new FileExtent((ulong)lcn, (ulong)(nextVcn - vcn)));
+                            found.Add(new FileExtent((ulong)lcn, (ulong)(nextVcn - vcn), (ulong)vcn));
                         }
 
                         vcn = nextVcn;

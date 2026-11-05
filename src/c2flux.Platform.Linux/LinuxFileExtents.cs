@@ -25,6 +25,7 @@ namespace c2flux
 
         private const uint ExtentLast = 0x00000001;
         private const uint ExtentUnknown = 0x00000002;
+        private const uint ExtentEncoded = 0x00000008;
         private const uint ExtentNotAligned = 0x00000100;
         private const uint ExtentShared = 0x00002000;
 
@@ -86,7 +87,7 @@ namespace c2flux
                             }
 
                             ulong length = *(ulong*)(extent + LengthOffset);
-                            found.Add(new FileExtent(*(ulong*)(extent + PhysicalOffset), length));
+                            found.Add(new FileExtent(*(ulong*)(extent + PhysicalOffset), length, *(ulong*)extent, (flags & ExtentEncoded) == 0));
                             shared |= (flags & ExtentShared) != 0;
                             start = *(ulong*)extent + length;
 

@@ -377,6 +377,98 @@ namespace c2flux.Core.Tests
             Assert.False(native(Path.Combine(directory, "missing.bin"), out _));
         }
 
+        // ----- clones ----------------------------------------------------------
+
+        // Same blocks in the same places: one read serves all. The answer
+        // still holds the plain copy as a duplicate of both.
+        [Fact]
+        public void Clones_are_read_through_one_of_them()
+        {
+            const int Size = 2 * 1024 * 1024;
+            string[] paths = WriteVariants("clones-read", Size, (content, index) => { }, 3);
+            MakeOld(paths);
+            FileExtentReader reader = FakeExtents(new Dictionary<string, FileExtent[]>
+            {
+                [paths[0]] = new[] { new FileExtent(0, 100) },
+                [paths[1]] = new[] { new FileExtent(0, 100) },
+                [paths[2]] = new[] { new FileExtent(100, 100) },
+            });
+
+            List<(string Path, long Offset, int Count)> reads = Reads(() => Assert.Equal(3, AnalyzeWith(reader, Entries(Size, paths)).PhysicalCopyCount));
+
+            Assert.Equal(2 * 4096, reads.Where(read => read.Path == paths[1]).Sum(read => read.Count));
+            Assert.Equal(2 * 4096 + Size, reads.Where(read => read.Path == paths[0]).Sum(read => read.Count));
+            Assert.Equal(2 * 4096 + Size, reads.Where(read => read.Path == paths[2]).Sum(read => read.Count));
+        }
+
+        // A group of nothing but clones needs no full read at all.
+        [Fact]
+        public void Clones_alone_are_only_sampled()
+        {
+            const int Size = 2 * 1024 * 1024;
+            string[] paths = WriteVariants("clones-alone", Size, (content, index) => { }, 2);
+            MakeOld(paths);
+            FileExtentReader reader = FakeExtents(paths.ToDictionary(path => path, path => new[] { new FileExtent(0, 100) }));
+
+            List<(string Path, long Offset, int Count)> reads = Reads(() => Assert.Equal(2, AnalyzeWith(reader, Entries(Size, paths)).PhysicalCopyCount));
+
+            Assert.Equal(2 * 2 * 4096, reads.Sum(read => read.Count));
+        }
+
+        // Cases where equal-looking blocks must not be believed: they are read.
+        [Theory]
+        [InlineData("recent")]
+        [InlineData("compressed")]
+        [InlineData("other place")]
+        public void Doubtful_clones_are_read(string doubt)
+        {
+            const int Size = 2 * 1024 * 1024;
+            string[] paths = WriteVariants("clones-doubt", Size, (content, index) => { }, 2);
+
+            if (doubt != "recent")
+            {
+                MakeOld(paths);
+            }
+
+            FileExtentReader reader = FakeExtents(new Dictionary<string, FileExtent[]>
+            {
+                [paths[0]] = new[] { new FileExtent(0, 100, 0, doubt != "compressed") },
+                [paths[1]] = new[] { new FileExtent(0, 100, doubt == "other place" ? 200UL : 0UL, doubt != "compressed") },
+            });
+
+            List<(string Path, long Offset, int Count)> reads = Reads(() => AnalyzeWith(reader, Entries(Size, paths)));
+
+            Assert.Equal(2 * (2 * 4096 + Size), reads.Sum(read => read.Count));
+        }
+
+        // A clone alone against other content keeps its clone as a group of two.
+        [Fact]
+        public void Clones_stay_a_group_when_the_other_copy_differs()
+        {
+            const int Size = 2 * 1024 * 1024;
+            string[] paths = WriteVariants("clones-split", Size, (content, index) => content[Size / 2] = index == 2 ? (byte)1 : (byte)2, 3);
+            MakeOld(paths);
+            FileExtentReader reader = FakeExtents(new Dictionary<string, FileExtent[]>
+            {
+                [paths[0]] = new[] { new FileExtent(0, 100) },
+                [paths[1]] = new[] { new FileExtent(0, 100) },
+                [paths[2]] = new[] { new FileExtent(100, 100) },
+            });
+
+            RedundancyAnalysisGroup group = AnalyzeWith(reader, Entries(Size, paths));
+
+            Assert.Equal(2, group.PhysicalCopyCount);
+            Assert.DoesNotContain(paths[2], group.Locations);
+        }
+
+        private static void MakeOld(params string[] paths)
+        {
+            foreach (string path in paths)
+            {
+                File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddHours(-1));
+            }
+        }
+
         // ----- work besides reading -----------------------------------------
 
         // Thousands of files: a few progress reports per second, one saved
@@ -866,6 +958,10 @@ namespace c2flux.Core.Tests
             try
             {
                 Assert.Equal(4096, AnalyzeWith(MacFileIdentity.TryReadExtents, Entries(4096, compressed, clone)).TotalSizeBytes);
+
+                MakeOld(compressed, clone);
+                long read = Reads(() => AnalyzeWith(MacFileIdentity.TryReadExtents, Entries(4096, compressed, clone))).Sum(item => item.Count);
+                Assert.Equal(2 * 2 * 4096, read);
             }
             finally
             {
@@ -910,6 +1006,14 @@ namespace c2flux.Core.Tests
 
                     Assert.Equal(Size, AnalyzeWith(NativeExtentReader(), Entries(Size, original, clone)).TotalSizeBytes);
                     Assert.Equal(Size * 2L, AnalyzeWith(NativeExtentReader(), Entries(Size, original, copy)).TotalSizeBytes);
+
+                    // Settled clones are not read to the end, only sampled.
+                    MakeOld(original, clone, copy);
+                    long read = Reads(() => Assert.Equal(2, AnalyzeWith(NativeExtentReader(), Entries(Size, original, clone)).PhysicalCopyCount)).Sum(item => item.Count);
+                    Assert.Equal(2 * 2 * 4096, read);
+
+                    // A plain copy still is.
+                    Assert.Equal(2 * (2 * 4096 + Size), Reads(() => AnalyzeWith(NativeExtentReader(), Entries(Size, original, copy))).Sum(item => item.Count));
 
                     WriteToDisk(clone, content, 0, Rewritten);
 

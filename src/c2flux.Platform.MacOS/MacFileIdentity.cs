@@ -147,7 +147,7 @@ namespace c2flux
                     // -1 is a hole.
                     if (query.DevOffset >= 0)
                     {
-                        blocks.Add(new FileExtent((ulong)query.DevOffset, (ulong)query.ContigBytes));
+                        blocks.Add(new FileExtent((ulong)query.DevOffset, (ulong)query.ContigBytes, (ulong)offset));
                     }
 
                     offset += query.ContigBytes;
