@@ -25,6 +25,7 @@
 		<!-- Plain net10.0. Pure code is tested on every OS; native calls only on their OS. -->
 		<ProjectReference Include="..\..\src\c2flux.Platform.Linux\c2flux.Platform.Linux.csproj" />
 		<ProjectReference Include="..\..\src\c2flux.Platform.MacOS\c2flux.Platform.MacOS.csproj" />
+		<ProjectReference Include="..\..\src\c2flux.Platform.Windows\c2flux.Platform.Windows.csproj" />
 	</ItemGroup>
 
 	<!-- Stand-ins for the languages shipped next to the executable. -->

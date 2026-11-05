@@ -83,6 +83,62 @@ jobs:
           path: ${{ runner.temp }}/captures
           retention-days: 7
 
+  # The extent readers on file systems with clones. macOS runners are APFS, so
+  # the regular tests already cover it.
+  clone-volumes:
+    name: Clones on real volumes (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Create XFS and Btrfs volumes
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xfsprogs btrfs-progs
+          for fs in xfs btrfs; do
+            truncate -s 1G "$RUNNER_TEMP/$fs.img"
+            sudo "mkfs.$fs" -q "$RUNNER_TEMP/$fs.img"
+            sudo mkdir -p "/mnt/$fs"
+            sudo mount -o loop "$RUNNER_TEMP/$fs.img" "/mnt/$fs"
+            sudo chown "$(id -u):$(id -g)" "/mnt/$fs"
+          done
+          echo "C2FLUX_CLONE_DIRS=/mnt/xfs:/mnt/btrfs" >> "$GITHUB_ENV"
+
+      - name: Create ReFS volume
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $script = @"
+          create vdisk file="$env:RUNNER_TEMP\refs.vhdx" maximum=4096 type=expandable
+          select vdisk file="$env:RUNNER_TEMP\refs.vhdx"
+          attach vdisk
+          create partition primary
+          format fs=refs quick
+          assign letter=R
+          "@
+          $script | Set-Content "$env:RUNNER_TEMP\refs.txt"
+          diskpart /s "$env:RUNNER_TEMP\refs.txt"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "C2FLUX_CLONE_DIRS=R:\" >> $env:GITHUB_ENV
+
+      - name: Test
+        run: dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --filter "FullyQualifiedName~Clones_on_real_volumes" --logger "console;verbosity=normal"
+
   # Phase 6: the app packaged for every RID (package.yml).
   packages:
     name: Packages

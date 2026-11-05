@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace c2flux
@@ -33,10 +35,19 @@ namespace c2flux
             return true;
         }
 
-        // FileCloneIdReader for APFS. Other file systems do not return the id.
+        // FileExtentReader for APFS, which has the clone id instead of a
+        // block map compressed files could use: one extent, shared whole or
+        // not at all. Other file systems do not return the id.
         // shortcut: a clone edited back to equal content gets its own id and
         // counts in full, use ATTR_CMNEXT_PRIVATESIZE if that ever matters.
-        public static unsafe bool TryReadCloneId(string path, out ulong cloneId)
+        public static bool TryReadExtents(string path, out IReadOnlyList<FileExtent> extents)
+        {
+            bool known = TryReadCloneId(path, out ulong cloneId);
+            extents = known ? new[] { new FileExtent(cloneId, 1) } : Array.Empty<FileExtent>();
+            return known;
+        }
+
+        private static unsafe bool TryReadCloneId(string path, out ulong cloneId)
         {
             cloneId = 0;
 

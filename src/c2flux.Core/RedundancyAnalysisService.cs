@@ -554,27 +554,79 @@ namespace c2flux
             }
         }
 
-        // Clones share their blocks, so a set of clones occupies one copy.
+        // Blocks shared between copies count once: each file pays only for
+        // the part of its extents no earlier copy holds. Proportional because
+        // compressed extents map more than they occupy.
         private static long GetOccupiedBytes(
             IReadOnlyList<PhysicalFile> files)
         {
-            HashSet<(ulong Volume, ulong CloneId)> seenClones =
-                new HashSet<(ulong Volume, ulong CloneId)>();
-            FileCloneIdReader cloneIdReader =
-                FileIdentities.CloneIdReader;
+            Dictionary<ulong, List<FileExtent>> seenByVolume =
+                new Dictionary<ulong, List<FileExtent>>();
+            FileExtentReader extentReader =
+                FileIdentities.ExtentReader;
             long total = 0;
 
             foreach (PhysicalFile file in files)
             {
-                if (cloneIdReader == null ||
-                    !cloneIdReader(file.PrimaryPath, out ulong cloneId) ||
-                    seenClones.Add((file.Identity.VolumeSerialNumber, cloneId)))
+                if (extentReader == null ||
+                    !extentReader(file.PrimaryPath, out IReadOnlyList<FileExtent> extents) ||
+                    extents.Count == 0)
                 {
                     total += file.OccupiedBytes;
+                    continue;
                 }
+
+                ulong volume = file.Identity.VolumeSerialNumber;
+                seenByVolume.TryGetValue(volume, out List<FileExtent> seen);
+                seen ??= new List<FileExtent>();
+
+                List<FileExtent> own = MergeExtents(extents);
+                List<FileExtent> union = MergeExtents(seen.Concat(own));
+                ulong mapped = GetExtentsLength(own);
+                ulong added = GetExtentsLength(union) - GetExtentsLength(seen);
+
+                total += added == mapped
+                    ? file.OccupiedBytes
+                    : (long)(file.OccupiedBytes * ((double)added / mapped));
+                seenByVolume[volume] = union;
             }
 
             return total;
+        }
+
+        private static List<FileExtent> MergeExtents(
+            IEnumerable<FileExtent> extents)
+        {
+            List<FileExtent> merged = new List<FileExtent>();
+
+            foreach (FileExtent extent in extents.OrderBy(extent => extent.Start))
+            {
+                FileExtent last = merged.Count > 0 ? merged[^1] : default;
+
+                if (merged.Count > 0 && extent.Start <= last.Start + last.Length)
+                {
+                    merged[^1] = last with { Length = Math.Max(last.Length, extent.Start + extent.Length - last.Start) };
+                }
+                else
+                {
+                    merged.Add(extent);
+                }
+            }
+
+            return merged;
+        }
+
+        private static ulong GetExtentsLength(
+            List<FileExtent> extents)
+        {
+            ulong length = 0;
+
+            foreach (FileExtent extent in extents)
+            {
+                length += extent.Length;
+            }
+
+            return length;
         }
 
         private static void AddPhysicalFileToHashGroup(

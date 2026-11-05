@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -44,9 +45,13 @@ namespace c2flux
     // hashes. Returns false when the file cannot be opened.
     public delegate bool FileIdentityReader(string path, out FileIdentity identity, out long usn, out bool hasUsn);
 
-    // Reads the id of the data stream behind a path: files on one volume with
-    // the same id are clones sharing their blocks. Returns false when unknown.
-    public delegate bool FileCloneIdReader(string path, out ulong cloneId);
+    // Where a file's data lies on its volume. The unit only has to be the same
+    // for every file of a volume: equal ranges mean shared blocks.
+    public readonly record struct FileExtent(ulong Start, ulong Length);
+
+    // Reads a file's extents. Returns false when they are unknown or when the
+    // file shares nothing, so that it counts in full.
+    public delegate bool FileExtentReader(string path, out IReadOnlyList<FileExtent> extents);
 
     // Where RedundancyAnalysisService gets file identities. Each platform
     // registers its reader at startup (the WinForms Program.Main registers the
@@ -56,8 +61,8 @@ namespace c2flux
     {
         public static FileIdentityReader Reader { get; set; } = ByPath;
 
-        // Null where the platform has no clone ids to read.
-        public static FileCloneIdReader CloneIdReader { get; set; }
+        // Null until the platform registers its reader.
+        public static FileExtentReader ExtentReader { get; set; }
 
         public static bool ByPath(string path, out FileIdentity identity, out long usn, out bool hasUsn)
         {

@@ -20,11 +20,6 @@ namespace c2flux
                 : OperatingSystem.IsMacOS() ? MacFileIdentity.TryRead
                 : LinuxFileIdentity.TryRead;
 
-            if (OperatingSystem.IsMacOS())
-            {
-                FileIdentities.CloneIdReader = MacFileIdentity.TryReadCloneId;
-            }
-
             RegisterPlatformServices();
 
             return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
@@ -99,15 +94,18 @@ namespace c2flux
                 Volumes.ClusterSizeReader = WindowsClusterSize.Read;
                 FileIcons.Reader = WindowsFileIcons.Read;
                 FileManager.TrashMover = WindowsTrash.Move;
+                FileIdentities.ExtentReader = WindowsFileExtents.TryRead;
             }
             else if (OperatingSystem.IsMacOS())
             {
                 FileIcons.Reader = MacFileIcons.Read;
                 FileManager.TrashMover = MacTrash.Move;
+                FileIdentities.ExtentReader = MacFileIdentity.TryReadExtents;
             }
             else
             {
                 FileManager.TrashMover = LinuxTrash.Move;
+                FileIdentities.ExtentReader = LinuxFileExtents.TryRead;
             }
         }
 
