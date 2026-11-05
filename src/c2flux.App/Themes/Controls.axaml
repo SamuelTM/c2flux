@@ -141,11 +141,12 @@
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Name="Frame" Margin="4" CornerRadius="6" BorderThickness="2" ClipToBounds="True"
-                BorderBrush="{DynamicResource FieldBorderBrush}" Background="{DynamicResource ButtonBackgroundBrush}">
+        <Panel Margin="4">
+          <Border Name="Frame" CornerRadius="6" BorderThickness="2"
+                  BorderBrush="{DynamicResource FieldBorderBrush}" Background="{DynamicResource ButtonBackgroundBrush}" />
           <DockPanel>
-            <!-- Fits the inside of the frame: its radius less its thickness. -->
-            <Border DockPanel.Dock="Right" Width="22" CornerRadius="0,4,4,0" ClipToBounds="True">
+            <!-- Over the frame's line, in the frame's shape. -->
+            <Border DockPanel.Dock="Right" Width="24" CornerRadius="0,6,6,0" ClipToBounds="True">
               <Grid RowDefinitions="*,*">
                 <RepeatButton Name="PART_IncreaseButton" Classes="spin">
                   <Path Data="M 0,4 L 4,0 L 8,4" />
@@ -155,9 +156,9 @@
                 </RepeatButton>
               </Grid>
             </Border>
-            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" />
+            <ContentPresenter Name="PART_ContentPresenter" Margin="2,2,0,2" Content="{TemplateBinding Content}" />
           </DockPanel>
-        </Border>
+        </Panel>
       </ControlTemplate>
     </Setter>
   </Style>
