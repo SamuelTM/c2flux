@@ -64,7 +64,7 @@ namespace c2flux
                         !file.IsDirectory &&
                         file.SizeBytes > 0 &&
                         !string.IsNullOrWhiteSpace(file.FullPath))
-                    .GroupBy(file => file.SizeBytes)
+                    .GroupBy(GetLength)
                     .Where(group => group.Count() > 1)
                     .ToList();
 
@@ -137,7 +137,8 @@ namespace c2flux
                             new PhysicalFile(
                                 identity,
                                 file.Name,
-                                file.FullPath);
+                                file.FullPath,
+                                file.SizeBytes);
 
                         physicalFiles.Add(
                             identity,
@@ -424,8 +425,7 @@ namespace c2flux
                     cancellationToken.ThrowIfCancellationRequested();
 
                     long totalSizeBytes =
-                        sizeGroup.Key *
-                        hashGroup.Count;
+                        hashGroup.Sum(file => file.OccupiedBytes);
 
                     WorkingGroup workingGroup =
                         new WorkingGroup(
@@ -532,6 +532,26 @@ namespace c2flux
                             group.GetLocations()
                     })
                 .ToList();
+        }
+
+        // SizeBytes can be what a file occupies, less than its length (sparse
+        // and compressed files on macOS and Linux). Occupied space comes in
+        // 512-byte units at least, so any other SizeBytes already is the length.
+        internal static long GetLength(FileSystemEntry file)
+        {
+            if (file.SizeBytes % 512 != 0)
+            {
+                return file.SizeBytes;
+            }
+
+            try
+            {
+                return new FileInfo(file.FullPath).Length;
+            }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+            {
+                return file.SizeBytes;
+            }
         }
 
         private static void AddPhysicalFileToHashGroup(
@@ -778,17 +798,20 @@ namespace c2flux
             public PhysicalFile(
                 FileIdentity identity,
                 string name,
-                string primaryPath)
+                string primaryPath,
+                long occupiedBytes)
             {
                 Identity = identity;
                 Name = name;
                 PrimaryPath = primaryPath;
+                OccupiedBytes = occupiedBytes;
                 _locations.Add(primaryPath);
             }
 
             public FileIdentity Identity { get; }
             public string Name { get; }
             public string PrimaryPath { get; }
+            public long OccupiedBytes { get; }
             public IEnumerable<string> Locations =>
                 _locations;
 
