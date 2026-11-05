@@ -134,6 +134,48 @@ namespace c2flux.AppTests
             }
         }
 
+        // From empty, up starts at the minimum and down at the maximum; the
+        // text has to show it too, not only the value.
+        [AvaloniaTheory]
+        [InlineData(null, "PART_IncreaseButton", 0)]
+        [InlineData(null, "PART_DecreaseButton", 100)]
+        [InlineData(100, "PART_IncreaseButton", 0)]
+        [InlineData(100, "PART_DecreaseButton", 100)]
+        [InlineData(0, "PART_IncreaseButton", 0)]
+        [InlineData(0, "PART_DecreaseButton", 100)]
+        [InlineData(5, "PART_IncreaseButton", 0)]
+        [InlineData(5, "PART_DecreaseButton", 100)]
+        public void The_export_depth_arrows_start_from_a_limit_when_empty(int? saved, string arrow, int expected)
+        {
+            SettingsWindow window = new SettingsWindow(new AppSettings { ExportMaxDepth = saved }, windowsOptions: true);
+            window.Show();
+
+            try
+            {
+                window.ShowPage(3);
+                Dispatcher.UIThread.RunJobs();
+                NumericUpDown depth = window.GetVisualDescendants().OfType<NumericUpDown>().Single();
+                Button button = depth.GetVisualDescendants().OfType<Button>().Single(item => item.Name == arrow);
+                TextBox box = depth.GetVisualDescendants().OfType<TextBox>().Single();
+                box.Focus();
+                box.SelectAll();
+                window.KeyPressQwerty(PhysicalKey.Delete, RawInputModifiers.None);
+                Dispatcher.UIThread.RunJobs();
+                Assert.Null(depth.Value);
+                Assert.True(button.IsEffectivelyEnabled, "the arrow is disabled while the field is empty");
+
+                button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Dispatcher.UIThread.RunJobs();
+
+                Assert.Equal(expected, depth.Value);
+                Assert.Equal(expected.ToString(), depth.GetVisualDescendants().OfType<TextBox>().Single().Text);
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
         [AvaloniaFact]
         public void The_history_help_is_only_text()
         {
