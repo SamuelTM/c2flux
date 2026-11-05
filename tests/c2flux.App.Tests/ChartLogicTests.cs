@@ -178,6 +178,31 @@ namespace c2flux.AppTests
             Assert.Null(EntryIndex.LargestFiles(root, File("/elsewhere", 1), 2));
         }
 
+        // The change since the last measurement follows the language.
+        [AvaloniaTheory]
+        [InlineData(2000, "Aumentou desde a última medição")]
+        [InlineData(500, "Diminuiu desde a última medição")]
+        [InlineData(1000, "Sem alteração desde a última medição")]
+        public void History_hint_says_the_change_in_the_current_language(long lastSize, string expected)
+        {
+            StorageHistoryChart chart = new StorageHistoryChart();
+            chart.SetRecords(new[]
+            {
+                new StorageHistoryRecord { RecordedAtUtc = new System.DateTime(2026, 1, 1, 0, 0, 0, System.DateTimeKind.Utc), SizeBytes = 1000 },
+                new StorageHistoryRecord { RecordedAtUtc = new System.DateTime(2026, 1, 2, 0, 0, 0, System.DateTimeKind.Utc), SizeBytes = lastSize },
+            }, StorageHistoryDisplayMode.UsedSpace);
+
+            try
+            {
+                LocalizationService.Load("pt");
+                Assert.Contains(expected, chart.FormatToolTip(1));
+            }
+            finally
+            {
+                LocalizationService.Load("en");
+            }
+        }
+
         // A scanned folder below a scanned drive: each entry belongs to the
         // tree holding it, though both trees have the folder's path.
         [AvaloniaFact]

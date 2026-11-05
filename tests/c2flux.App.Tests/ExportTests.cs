@@ -20,13 +20,13 @@ namespace c2flux.AppTests
         {
             Assert.Equal(
                 "root [3 MB]\n├─ sub [3 MB]\n│  └─ big.bin [3 MB]\n└─ a.txt [10 B]",
-                ExportActions.BuildTreeText(Tree(), null));
+                ExportActions.BuildTreeText(Tree(), null, null, Xunit.TestContext.Current.CancellationToken));
         }
 
         [Fact]
         public void Tree_text_stops_at_the_export_depth()
         {
-            Assert.Equal("root [3 MB]\n├─ sub [3 MB]\n└─ a.txt [10 B]", ExportActions.BuildTreeText(Tree(), 1));
+            Assert.Equal("root [3 MB]\n├─ sub [3 MB]\n└─ a.txt [10 B]", ExportActions.BuildTreeText(Tree(), 1, null, Xunit.TestContext.Current.CancellationToken));
         }
 
         // The progress dialog counts the rows first: as many as the tree
@@ -38,9 +38,9 @@ namespace c2flux.AppTests
             {
                 int rows = CsvExportService.CountRows(new[] { Tree() }, depth);
                 int written = 0;
-                Assert.Equal(rows, ExportActions.BuildTreeText(Tree(), depth, () => written++).Split('\n').Length);
+                Assert.Equal(rows, ExportActions.BuildTreeText(Tree(), depth, () => written++, Xunit.TestContext.Current.CancellationToken).Split('\n').Length);
                 Assert.Equal(rows, written);
-                string csv = new CsvExportService().ExportToString(new[] { Tree() }, new AppSettings { ExportMaxDepth = depth });
+                string csv = new CsvExportService().ExportToString(new[] { Tree() }, new AppSettings { ExportMaxDepth = depth }, null, Xunit.TestContext.Current.CancellationToken);
                 Assert.Equal(rows + 1, csv.TrimEnd().Split('\n').Length);
             }
         }

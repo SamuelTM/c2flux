@@ -114,7 +114,7 @@ namespace c2flux
             return nearestDistance > 144 ? -1 : nearestIndex;
         }
 
-        private string FormatToolTip(int index)
+        internal string FormatToolTip(int index)
         {
             StorageHistoryRecord record = _records[index];
             long value = GetDisplayValue(record);
@@ -131,8 +131,7 @@ namespace c2flux
             }
 
             long change = value - GetDisplayValue(_records[index - 1]);
-            // Not in the language files in WinForms either.
-            string description = change > 0 ? "Increased since last measurement" : change < 0 ? "Decreased since last measurement" : "Unchanged since last measurement";
+            string description = LocalizationService.GetText(change > 0 ? "StorageHistory.Increased" : change < 0 ? "StorageHistory.Decreased" : "StorageHistory.Unchanged");
 
             return hint + string.Format(CultureInfo.CurrentCulture, "\n- {0}: {1}", description, SizeFormatter.Format(Math.Abs(change)));
         }
