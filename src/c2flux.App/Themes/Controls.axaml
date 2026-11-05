@@ -202,6 +202,8 @@
   <Style Selector="RepeatButton.spin Path">
     <Setter Property="Stroke" Value="White" />
     <Setter Property="StrokeThickness" Value="2" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
   </Style>
   <!-- At a limit: the arrow fades, the block stays whole. -->
   <Style Selector="RepeatButton.spin:disabled Path">
