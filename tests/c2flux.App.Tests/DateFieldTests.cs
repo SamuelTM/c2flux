@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -108,6 +109,11 @@ namespace c2flux.AppTests
                 Assert.True(field.NextButton.IsVisible);
 
                 Click(field.YearButton);
+                Assert.Equal(new[] { "1900–1919", "1920–1939", "1940–1959", "1960–1979", "1980–1999", "2000–2019", "2020–2039", "2040–2059", "2060–2079", "2080–2099" }, field.Cells.Select(cell => (string)cell.Content));
+                Assert.Equal("2020–2039", Assert.Single(field.Cells, cell => cell.Classes.Contains("selected")).Content);
+                Click(field.Cells.Single(cell => Equals(cell.Content, "2020–2039")));
+                Assert.Equal(Enumerable.Range(2020, 20).Select(year => year.ToString()), field.Cells.Select(cell => (string)cell.Content));
+                Assert.Equal("2020", Assert.Single(field.Cells, cell => cell.Classes.Contains("selected")).Content);
                 Click(field.Cells.Single(cell => Equals(cell.Content, "2024")));
                 Assert.Equal("2024", Header(field.YearButton));
                 Assert.Equal(new DateTime(2024, 1, 29), field.Cells.First().Tag);
@@ -139,7 +145,7 @@ namespace c2flux.AppTests
                 field.ShowMonthOf(new DateTime(1900, 1, 1));
                 Assert.False(field.PreviousButton.IsEnabled);
                 Assert.True(field.NextButton.IsEnabled);
-                field.ShowMonthOf(new DateTime(2100, 12, 1));
+                field.ShowMonthOf(new DateTime(2099, 12, 1));
                 Assert.False(field.NextButton.IsEnabled);
             }
             finally
@@ -184,6 +190,30 @@ namespace c2flux.AppTests
                 box.Text = "";
                 window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
                 Assert.Null(field.SelectedDate);
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
+        // In the middle of its button, whatever its coordinates start at.
+        [AvaloniaFact]
+        public void The_calendar_icon_is_centered_in_its_button()
+        {
+            (Window window, DateField field, _) = Show(new DateTime(2020, 8, 20));
+
+            try
+            {
+                Button open = field.GetVisualDescendants().OfType<Button>().Single(button => button.Classes.Contains("calicon"));
+                Avalonia.Controls.Shapes.Path icon = open.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>().Single();
+                Avalonia.Rect drawn = icon.Data.Bounds;
+                Avalonia.Point center = icon.TranslatePoint(new Avalonia.Point(icon.Bounds.Width / 2, icon.Bounds.Height / 2), open).Value;
+
+                Assert.Equal(open.Bounds.Width / 2, center.X, 1);
+                Assert.Equal(open.Bounds.Height / 2, center.Y, 1);
+                Assert.Equal(0, drawn.X);
+                Assert.Equal(0, drawn.Y);
             }
             finally
             {

@@ -222,6 +222,14 @@
   <Style Selector="TextBlock.calname">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
   </Style>
+  <!-- Focus follows the shape of each button, not a rectangle around it. -->
+  <Style Selector="Button.calcell, Button.calhead, Button.calnav, Button.calicon">
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+  </Style>
+  <Style Selector="Button.calcell:focus-visible /template/ Border#Cell, Button.calhead:focus-visible /template/ Border#Cell, Button.calnav:focus-visible /template/ Border#Cell, Button.calicon:focus-visible /template/ Border#Cell">
+    <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
   <Style Selector="Button.calcell">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
@@ -266,6 +274,10 @@
   </Style>
   <Style Selector="Button.calcell.selected /template/ ContentPresenter#Text">
     <Setter Property="Opacity" Value="1" />
+  </Style>
+  <!-- After the selected style, or its border would hide the focus. -->
+  <Style Selector="Button.calcell.selected:focus-visible /template/ Border#Cell">
+    <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}" />
   </Style>
   <Style Selector="Button.calhead, Button.calnav, Button.calicon">
     <Setter Property="Background" Value="Transparent" />

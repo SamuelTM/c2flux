@@ -19,8 +19,9 @@ namespace c2flux
     {
         private const string DateFormat = "dd.MM.yyyy";
         private const int DaysInGrid = 42;
+        private const int YearsInGroup = 20;
         private static readonly DateTime FirstDate = new DateTime(1900, 1, 1);
-        private static readonly DateTime LastDate = new DateTime(2100, 12, 31);
+        private static readonly DateTime LastDate = new DateTime(2099, 12, 31);
 
         private readonly TextBox _box;
         private readonly Popup _popup;
@@ -42,7 +43,8 @@ namespace c2flux
             Button open = new Button
             {
                 Classes = { "calicon" },
-                Content = new Avalonia.Controls.Shapes.Path { Data = Geometry.Parse("M 1,3 H 13 V 13 H 1 Z M 1,6.5 H 13 M 4.5,1 V 4 M 9.5,1 V 4") },
+                // A fixed box: a bare path keeps the offset its coordinates start at.
+                Content = new Avalonia.Controls.Shapes.Path { Data = Geometry.Parse("M 0,2 H 12 V 12 H 0 Z M 0,5.5 H 12 M 3.5,0 V 3 M 8.5,0 V 3"), Width = 14, Height = 14, Stretch = Stretch.Uniform },
             };
             Avalonia.Automation.AutomationProperties.SetName(open, LocalizationService.GetText("StorageHistory.Calendar"));
             _box.InnerRightContent = open;
@@ -57,7 +59,7 @@ namespace c2flux
             open.Click += (_, _) => ToggleCalendar();
 
             _monthButton.Click += (_, _) => ShowMonths();
-            _yearButton.Click += (_, _) => ShowYears();
+            _yearButton.Click += (_, _) => ShowYearGroups();
             _previous.Click += (_, _) => ShowDays(_month.AddMonths(-1));
             _next.Click += (_, _) => ShowDays(_month.AddMonths(1));
             _body.AddHandler(KeyDownEvent, OnCalendarKeyDown, RoutingStrategies.Tunnel);
@@ -95,7 +97,8 @@ namespace c2flux
                 IsLightDismissEnabled = true,
                 Child = CalendarRoot,
             };
-            _popup.Opened += (_, _) => Dispatcher.UIThread.Post(() => FocusDay(_selected ?? DateTime.Today));
+            // Opened by pointer: focused, with no ring until a key moves it.
+            _popup.Opened += (_, _) => Dispatcher.UIThread.Post(() => FocusDay(_selected ?? DateTime.Today, NavigationMethod.Unspecified));
             _popup.Closed += (_, _) => _closedAt = Environment.TickCount64;
 
             Content = new Panel { Children = { _box, _popup } };
@@ -261,22 +264,33 @@ namespace c2flux
             _body.Content = months;
         }
 
-        private void ShowYears()
+        private void ShowYearGroups()
         {
-            UniformGrid years = new UniformGrid { Columns = 4 };
-            Button current = null;
+            UniformGrid groups = new UniformGrid { Columns = 2 };
 
-            for (int year = FirstDate.Year; year <= LastDate.Year; year++)
+            for (int first = FirstDate.Year; first <= LastDate.Year; first += YearsInGroup)
             {
-                int chosen = year;
-                Button item = Item(year.ToString(CultureInfo.InvariantCulture), year == _month.Year, () => ShowDays(new DateTime(chosen, _month.Month, 1)));
-                current = year == _month.Year ? item : current;
-                years.Children.Add(item);
+                int group = first;
+                int last = first + YearsInGroup - 1;
+                groups.Children.Add(Item(group + "–" + last, _month.Year >= group && _month.Year <= last, () => ShowYears(group)));
             }
 
             ShowNavigation(false);
-            _body.Content = new ScrollViewer { Content = years, Height = 260 };
-            Dispatcher.UIThread.Post(() => current?.BringIntoView(), DispatcherPriority.Background);
+            _body.Content = groups;
+        }
+
+        private void ShowYears(int first)
+        {
+            UniformGrid years = new UniformGrid { Columns = 4 };
+
+            for (int year = first; year < first + YearsInGroup; year++)
+            {
+                int chosen = year;
+                years.Children.Add(Item(year.ToString(CultureInfo.InvariantCulture), year == _month.Year, () => ShowDays(new DateTime(chosen, _month.Month, 1))));
+            }
+
+            ShowNavigation(false);
+            _body.Content = years;
         }
 
         private void ShowNavigation(bool shown)
@@ -322,10 +336,10 @@ namespace c2flux
                 ShowDays(FirstOfMonth(target));
             }
 
-            FocusDay(target);
+            FocusDay(target, NavigationMethod.Directional);
         }
 
-        private void FocusDay(DateTime date)
+        private void FocusDay(DateTime date, NavigationMethod method)
         {
             foreach (Button cell in _days.Children.OfType<Button>())
             {
@@ -333,7 +347,7 @@ namespace c2flux
 
                 if (cell.IsTabStop && _popup.IsOpen)
                 {
-                    cell.Focus(NavigationMethod.Directional);
+                    cell.Focus(method);
                 }
             }
         }
@@ -372,7 +386,6 @@ namespace c2flux
         {
             Button button => new[] { button },
             Panel panel => panel.Children.OfType<Control>().SelectMany(GetLogicalButtons),
-            ScrollViewer scroller when scroller.Content is Control content => content.GetLogicalButtons(),
             _ => Enumerable.Empty<Button>(),
         };
     }
