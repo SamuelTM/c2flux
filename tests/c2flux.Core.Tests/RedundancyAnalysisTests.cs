@@ -207,8 +207,8 @@ namespace c2flux.Core.Tests
 
         // ----- the hash cache ------------------------------------------------
 
-        // A second analysis of unchanged files reads nothing; a change reads
-        // that file again and finds out. Every OS, with stamps given here.
+        // A second analysis of unchanged files reads nothing; a change is found
+        // out by comparing that file again. Every OS, with stamps given here.
         [Fact]
         public void Cached_hashes_save_the_reading_until_a_file_changes()
         {
@@ -232,7 +232,53 @@ namespace c2flux.Core.Tests
                 stamps[paths[1]] = 2;
 
                 List<(string Path, long Offset, int Count)> third = Reads(() => Assert.Empty(Analyze(paths)));
-                Assert.Equal(new[] { paths[1] }, third.Select(read => read.Path).Distinct());
+                Assert.Equal(paths.OrderBy(path => path, StringComparer.Ordinal), third.Select(read => read.Path).OrderBy(path => path, StringComparer.Ordinal));
+                Assert.All(third, read => Assert.Equal(4096, read.Count));
+            }
+            finally
+            {
+                FileIdentities.Reader = previous;
+                RedundancyHashCacheService.Clear();
+            }
+        }
+
+        // New files next to known duplicates stop at their first difference:
+        // a repeated analysis never reads more than the first one did.
+        [Fact]
+        public void New_files_beside_known_hashes_stop_at_the_first_difference()
+        {
+            const int Size = 16 * 1024 * 1024;
+            RedundancyHashCacheService.Clear();
+            string[] paths = WriteVariants("cache-mixed", Size, (content, index) =>
+            {
+                if (index >= 2)
+                {
+                    content[Size / 2] ^= (byte)index;
+                }
+            }, 5);
+            FileIdentityReader previous = FileIdentities.Reader;
+            // The last two have no stamp yet, as if they were just written.
+            FileIdentities.Reader = (string path, out FileIdentity identity, out long stamp, out bool hasStamp) =>
+            {
+                bool found = StampedIdentities(_ => 1)(path, out identity, out stamp, out hasStamp);
+                hasStamp = Array.IndexOf(paths, path) < 2;
+                return found;
+            };
+
+            try
+            {
+                long first = Reads(() => Assert.Equal(2, Assert.Single(Analyze(paths)).PhysicalCopyCount)).Sum(read => (long)read.Count);
+                List<(string Path, long Offset, int Count)> second = Reads(() => Assert.Equal(2, Assert.Single(Analyze(paths)).PhysicalCopyCount));
+
+                Assert.True(second.Sum(read => (long)read.Count) <= first);
+                Assert.DoesNotContain(second, read => read.Path == paths[4] && read.Offset + read.Count > Size - 4096 && read.Count > 4096);
+                // Only one of the known pair was read.
+                Assert.DoesNotContain(second, read => read.Path == paths[1]);
+
+                // A new copy of known content joins them, all in one group.
+                File.Copy(paths[0], paths[4], true);
+                RedundancyAnalysisGroup group = Assert.Single(Analyze(paths));
+                Assert.Equal(3, group.PhysicalCopyCount);
             }
             finally
             {
@@ -1008,7 +1054,15 @@ namespace c2flux.Core.Tests
                     Assert.Equal(Size * 2L, AnalyzeWith(NativeExtentReader(), Entries(Size, original, copy)).TotalSizeBytes);
 
                     // Settled clones are not read to the end, only sampled.
+                    Assert.True(NativeIdentityReader()(original, out _, out long stampBefore, out bool hadStamp));
                     MakeOld(original, clone, copy);
+                    Assert.True(NativeIdentityReader()(original, out _, out long stampAfter, out bool hasStamp));
+
+                    if (hadStamp && hasStamp)
+                    {
+                        Assert.NotEqual(stampBefore, stampAfter);
+                    }
+
                     long read = Reads(() => Assert.Equal(2, AnalyzeWith(NativeExtentReader(), Entries(Size, original, clone)).PhysicalCopyCount)).Sum(item => item.Count);
                     Assert.Equal(2 * 2 * 4096, read);
 

@@ -47,11 +47,14 @@ namespace c2flux
                         fileIdInfo.FileId.Low,
                         fileIdInfo.FileId.High);
 
-                usn = 0L;
+                // Without a journal a volume answers 0 whatever changes; the
+                // attributes of a share can be stale. Neither can be trusted.
                 hasUsn =
                     TryGetFileUsn(
                         handle,
-                        out usn);
+                        out usn) &&
+                    usn > 0L &&
+                    !WindowsFileExtents.IsNetworkShare(path);
 
                 return true;
             }

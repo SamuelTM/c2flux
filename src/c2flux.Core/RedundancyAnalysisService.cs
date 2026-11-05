@@ -208,7 +208,6 @@ namespace c2flux
             // Full hashes of files of this length known from the cache. An
             // uncached file must be read to the end to compare with them, so
             // such a set is never split along the way.
-            public Dictionary<string, List<PhysicalFile>> KnownHashes { get; init; }
         }
 
         // One pass over the candidates: every round reads a little of each
@@ -363,13 +362,17 @@ namespace c2flux
                 {
                     EmitKnown(known);
                 }
-                else if (known.Count > 0)
-                {
-                    _bytesLeft += length * unknown.Count;
-                    _sets.Add(new ContentSet { Files = CollapseClones(unknown), Length = length, Stage = ReadStage.Chunks, KnownHashes = known });
-                }
                 else
                 {
+                    // A full hash to compare with would mean reading each new
+                    // file to its end. One of each known content is compared
+                    // like any other file, and the rest of it follows that one.
+                    foreach (List<PhysicalFile> same in known.Values)
+                    {
+                        same[0].Clones.AddRange(same.Skip(1));
+                        unknown.Add(same[0]);
+                    }
+
                     _bytesLeft += length * unknown.Count;
                     _sets.Add(new ContentSet { Files = unknown, Length = length, Stage = ReadStage.FirstBlock });
                 }
@@ -501,29 +504,6 @@ namespace c2flux
 
                 List<PhysicalFile> readable = set.Files.Where(file => file.Key != null).ToList();
 
-                if (set.KnownHashes != null)
-                {
-                    if (readable.Count == 0 || readable[0].Offset == set.Length)
-                    {
-                        foreach (PhysicalFile file in readable)
-                        {
-                            foreach (PhysicalFile copy in file.WithClones())
-                            {
-                                RememberHash(copy, file.Key);
-                                AddToHash(set.KnownHashes, file.Key, copy);
-                            }
-                        }
-
-                        EmitKnown(set.KnownHashes);
-                    }
-                    else
-                    {
-                        next.Add(new ContentSet { Files = readable, Length = set.Length, Stage = ReadStage.Chunks, ChunkSize = set.ChunkSize * ChunkGrowth, KnownHashes = set.KnownHashes });
-                    }
-
-                    return;
-                }
-
                 foreach (IGrouping<string, PhysicalFile> equal in readable.GroupBy(file => file.Key, StringComparer.Ordinal))
                 {
                     List<PhysicalFile> files = equal.ToList();
@@ -596,7 +576,7 @@ namespace c2flux
 
                     if (blocks != null && byBlocks.TryGetValue(blocks, out PhysicalFile clone))
                     {
-                        clone.Clones.Add(file);
+                        clone.Clones.AddRange(file.WithClones());
                         _bytesLeft -= file.Length - file.Offset;
                         file.DisposeHash();
                         continue;

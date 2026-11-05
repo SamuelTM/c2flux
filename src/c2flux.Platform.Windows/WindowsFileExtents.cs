@@ -121,9 +121,7 @@ namespace c2flux
         {
             try
             {
-                string root = Path.GetPathRoot(Path.GetFullPath(path));
-
-                if (!string.IsNullOrEmpty(root) && GetDriveType(Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar) == DriveRemote)
+                if (IsNetworkShare(path))
                 {
                     return true;
                 }
@@ -135,6 +133,12 @@ namespace c2flux
             {
                 return false;
             }
+        }
+
+        internal static bool IsNetworkShare(string path)
+        {
+            string root = Path.GetPathRoot(Path.GetFullPath(path));
+            return !string.IsNullOrEmpty(root) && GetDriveType(Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar) == DriveRemote;
         }
 
         private static string ReadFileSystemName(SafeFileHandle handle)
