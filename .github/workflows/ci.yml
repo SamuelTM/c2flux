@@ -83,8 +83,10 @@ jobs:
           path: ${{ runner.temp }}/captures
           retention-days: 7
 
-  # The extent readers on file systems with clones. macOS runners are APFS, so
-  # the regular tests already cover it.
+  # The extent readers on file systems with clones. Regular tests cover APFS on
+  # arm64 (macos-latest); Intel calls fcntl differently, so it runs here. A
+  # failing fcntl falls back to the clone id, which the partly rewritten clone
+  # in the test catches.
   clone-volumes:
     name: Clones on real volumes (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -95,6 +97,7 @@ jobs:
         os:
           - windows-latest
           - ubuntu-latest
+          - macos-15-intel
 
     steps:
       - name: Checkout
@@ -140,7 +143,7 @@ jobs:
           "C2FLUX_CLONE_DIRS=R:\" >> $env:GITHUB_ENV
 
       - name: Test
-        run: dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --filter "FullyQualifiedName~Clones_on_real_volumes" --logger "console;verbosity=normal"
+        run: dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --filter "FullyQualifiedName~Clones_on_real_volumes|FullyQualifiedName~Compressed_clones" --logger "console;verbosity=normal"
 
   # Phase 6: the app packaged for every RID (package.yml).
   packages:
