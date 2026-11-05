@@ -15,6 +15,7 @@ namespace c2flux
     {
         private const uint FsctlGetRetrievalPointers = 0x00090073;
         private const int ErrorMoreData = 234;
+        private const uint DriveRemote = 4;
         private const long SparseLcn = -1;
         private const int HeaderSize = 16;
         private const int ExtentSize = 16;
@@ -26,14 +27,12 @@ namespace c2flux
             volume = 0;
             List<FileExtent> found = new List<FileExtent>();
             byte[] buffer = new byte[HeaderSize + ExtentsPerCall * ExtentSize];
-            char[] fileSystem = new char[32];
 
             try
             {
                 using SafeFileHandle handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
 
-                if (!GetVolumeInformationByHandleW(handle, null, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, fileSystem, (uint)fileSystem.Length) ||
-                    new string(fileSystem).TrimEnd('\0') != "ReFS")
+                if (ReadFileSystemName(handle) != "ReFS")
                 {
                     return false;
                 }
@@ -81,6 +80,40 @@ namespace c2flux
                 return false;
             }
         }
+
+        // For FileIdentities.HiddenCloneChecker: ZFS and the disks behind a
+        // network share clone blocks without showing which. path is a file.
+        public static bool MayHideClones(string path)
+        {
+            try
+            {
+                string root = Path.GetPathRoot(Path.GetFullPath(path));
+
+                if (!string.IsNullOrEmpty(root) && GetDriveType(Path.EndsInDirectorySeparator(root) ? root : root + Path.DirectorySeparatorChar) == DriveRemote)
+                {
+                    return true;
+                }
+
+                using SafeFileHandle handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                return ReadFileSystemName(handle) == "ZFS";
+            }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
+        private static string ReadFileSystemName(SafeFileHandle handle)
+        {
+            char[] fileSystem = new char[32];
+
+            return GetVolumeInformationByHandleW(handle, null, 0, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, fileSystem, (uint)fileSystem.Length)
+                ? new string(fileSystem).TrimEnd('\0')
+                : null;
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+        private static extern uint GetDriveType(string rootPath);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]

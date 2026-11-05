@@ -146,10 +146,18 @@ jobs:
         run: dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --filter "FullyQualifiedName~Clones_on_real_volumes|FullyQualifiedName~Compressed_clones|FullyQualifiedName~Reads_the_file_system_type" --logger "console;verbosity=normal"
 
   # ZFS shows no shared blocks, so its totals only carry a mark. Apart from
-  # clone-volumes: the module comes from the runner's kernel packages.
+  # clone-volumes: the driver comes from outside the runner image. macOS has no
+  # job: its runners cannot load the kext.
   zfs-volume:
-    name: Clones on a real ZFS volume
-    runs-on: ubuntu-latest
+    name: Clones on a real ZFS volume (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
 
     steps:
       - name: Checkout
@@ -161,6 +169,7 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Create ZFS pool
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y zfsutils-linux
@@ -174,8 +183,121 @@ jobs:
           sudo zfs version
           echo "C2FLUX_ZFS_DIR=/mnt/zfs" >> "$GITHUB_ENV"
 
+      - name: Create ZFS pool
+        if: runner.os == 'Windows'
+        timeout-minutes: 8
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://github.com/openzfsonwindows/openzfs/releases/download/zfswin-2.4.4rc8/OpenZFSOnWindows-2.4.4rc8.exe -OutFile "$env:RUNNER_TEMP\zfs.exe"
+          $installer = Start-Process "$env:RUNNER_TEMP\zfs.exe" -ArgumentList "/SP- /NORESTART /ALLUSERS /VERYSILENT /SUPPRESSMSGBOXES" -PassThru
+          if (-not $installer.WaitForExit(300000)) { throw "Installer timed out" }
+          if ($installer.ExitCode -ne 0) { throw "Installer failed: $($installer.ExitCode)" }
+          $env:Path += ";C:\Program Files\OpenZFS On Windows"
+          fsutil file createnew C:\zfs.img 1073741824
+          zpool create -f -O driveletter=Z c2flux "\\?\C:\zfs.img"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          zfs version
+          "C2FLUX_ZFS_DIR=Z:\" >> $env:GITHUB_ENV
+
       - name: Test
         run: dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --filter "FullyQualifiedName~Clones_on_zfs" --logger "console;verbosity=normal"
+
+      - name: The clone really shared blocks
+        if: runner.os == 'Linux'
+        run: |
+          sudo zpool sync c2flux
+          sleep 6
+          saved=$(sudo zpool get -Hp -o value bclonesaved c2flux)
+          echo "bclonesaved: $saved"
+          test "$saved" -gt 0
+
+      - name: The clone really shared blocks
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:Path += ";C:\Program Files\OpenZFS On Windows"
+          zpool sync c2flux
+          Start-Sleep -Seconds 6
+          $saved = [long](zpool get -Hp -o value bclonesaved c2flux)
+          Write-Host "bclonesaved: $saved"
+          if ($saved -le 0) { throw "The pool saved nothing" }
+
+  # Real network shares, in loopback. Apart from the other jobs: each OS sets up
+  # its own servers.
+  network-shares:
+    name: Network shares (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+          - macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Mount NFS and SMB
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nfs-kernel-server samba cifs-utils
+          sudo mkdir -p /srv/c2flux-nfs /srv/c2flux-smb /mnt/nfs /mnt/smb
+          sudo chown "$(id -u):$(id -g)" /srv/c2flux-nfs /srv/c2flux-smb
+          echo "/srv/c2flux-nfs localhost(rw,sync,no_subtree_check,insecure)" | sudo tee -a /etc/exports
+          sudo systemctl restart nfs-kernel-server
+          sudo exportfs -ra
+          sudo mount -t nfs localhost:/srv/c2flux-nfs /mnt/nfs
+          printf '[c2flux]\n  path = /srv/c2flux-smb\n  read only = no\n' | sudo tee -a /etc/samba/smb.conf
+          (echo c2flux-ci; echo c2flux-ci) | sudo smbpasswd -s -a "$(id -un)"
+          sudo systemctl restart smbd
+          sudo mount -t cifs //localhost/c2flux /mnt/smb -o "username=$(id -un),password=c2flux-ci,uid=$(id -u),gid=$(id -g)"
+          mount | grep -E '/mnt/(nfs|smb)'
+          echo "C2FLUX_NETWORK_DIRS=/mnt/nfs:/mnt/smb" >> "$GITHUB_ENV"
+
+      - name: Share a folder over SMB
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory C:\c2flux-share | Out-Null
+          New-SmbShare -Name c2flux -Path C:\c2flux-share -FullAccess Everyone
+          icacls C:\c2flux-share /grant "Everyone:(OI)(CI)F"
+          Get-ChildItem \\localhost\c2flux
+          "C2FLUX_NETWORK_DIRS=\\localhost\c2flux" >> $env:GITHUB_ENV
+
+      - name: Mount NFS and SMB
+        if: runner.os == 'macOS'
+        run: |
+          sudo mkdir -p /private/tmp/c2flux-nfs /private/tmp/c2flux-smb
+          sudo chown "$(id -u)" /private/tmp/c2flux-nfs /private/tmp/c2flux-smb
+          chmod 777 /private/tmp/c2flux-smb
+          mkdir "$RUNNER_TEMP/nfs" "$RUNNER_TEMP/smb"
+          echo "/private/tmp/c2flux-nfs -alldirs localhost" | sudo tee /etc/exports
+          sudo nfsd enable || true
+          sudo nfsd start || sudo nfsd restart
+          sleep 3
+          showmount -e localhost
+          sudo mount -t nfs -o resvport,nolocks,vers=3 localhost:/private/tmp/c2flux-nfs "$RUNNER_TEMP/nfs"
+          sudo sysadminctl -addUser c2fluxci -password c2flux-ci
+          sudo pwpolicy -u c2fluxci -sethashtypes SMB-NT on
+          sudo dscl . -passwd /Users/c2fluxci c2flux-ci
+          sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.smbd.plist
+          sudo sharing -a /private/tmp/c2flux-smb -S c2flux -s 001
+          sleep 3
+          mount_smbfs "//c2fluxci:c2flux-ci@localhost/c2flux" "$RUNNER_TEMP/smb"
+          mount | grep -E 'nfs|smbfs'
+          echo "C2FLUX_NETWORK_DIRS=$RUNNER_TEMP/nfs:$RUNNER_TEMP/smb" >> "$GITHUB_ENV"
+
+      - name: Test
+        run: dotnet test tests/c2flux.Core.Tests/c2flux.Core.Tests.csproj --configuration Release --filter "FullyQualifiedName~Network_shares" --logger "console;verbosity=normal"
 
   # Phase 6: the app packaged for every RID (package.yml).
   packages:

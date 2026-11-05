@@ -95,6 +95,7 @@ namespace c2flux
                 FileIcons.Reader = WindowsFileIcons.Read;
                 FileManager.TrashMover = WindowsTrash.Move;
                 FileIdentities.ExtentReader = WindowsFileExtents.TryRead;
+                FileIdentities.HiddenCloneChecker = WindowsFileExtents.MayHideClones;
             }
             else if (OperatingSystem.IsMacOS())
             {

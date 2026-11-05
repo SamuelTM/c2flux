@@ -67,7 +67,8 @@ namespace c2flux
         public static FileExtentReader ExtentReader { get; set; }
 
         // True for a file system that can share blocks without showing which
-        // (ZFS): a total there may be too high. Null until registered.
+        // (ZFS, network shares): a total there may be too high. Null until
+        // registered.
         public static Func<string, bool> HiddenCloneChecker { get; set; }
 
         public static bool ByPath(string path, out FileIdentity identity, out long usn, out bool hasUsn)

@@ -31,7 +31,10 @@ namespace c2flux
         private const ulong BtrfsIocFsInfo = 0x8400941F;
         private const int BtrfsFsInfoSize = 1024;
         private const int BtrfsFsIdOffset = 16;
-        private const long ZfsMagic = 0x2FC12FC1;
+        private const uint ZfsMagic = 0x2FC12FC1;
+        private const uint NfsMagic = 0x00006969;
+        private const uint Smb2Magic = 0xFE534D42;
+        private const uint CifsMagic = 0xFF534D42;
         private const int StatfsSize = 256;
 
         public static unsafe bool TryRead(string path, out IReadOnlyList<FileExtent> extents, out ulong volume)
@@ -102,12 +105,12 @@ namespace c2flux
             }
         }
 
-        // For FileIdentities.HiddenCloneChecker: ZFS clones blocks but shows
-        // no extents, and no per-file count of what it shares.
+        // For FileIdentities.HiddenCloneChecker: ZFS and the disks behind a
+        // network share clone blocks without showing which.
         public static unsafe bool MayHideClones(string path)
         {
             byte* buffer = stackalloc byte[StatfsSize];
-            return statfs(path, buffer) == 0 && *(long*)buffer == ZfsMagic;
+            return statfs(path, buffer) == 0 && *(uint*)buffer is ZfsMagic or NfsMagic or Smb2Magic or CifsMagic;
         }
 
         // 0 on other file systems, which reject the ioctl.

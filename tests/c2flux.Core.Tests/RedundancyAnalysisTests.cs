@@ -240,8 +240,9 @@ namespace c2flux.Core.Tests
         }
 
         // ZFS clones blocks but shows no extents, so the total stays in full
-        // and carries the mark. This fails if ZFS ever gains FIEMAP: then the
-        // mark can go. C2FLUX_ZFS_DIR comes from CI.
+        // and carries the mark. This fails if ZFS ever exposes them: then the
+        // mark can go. C2FLUX_ZFS_DIR comes from CI, which also checks that the
+        // pool really saved space.
         [Fact]
         public void Clones_on_zfs_mark_the_total_as_possibly_overstated()
         {
@@ -262,38 +263,38 @@ namespace c2flux.Core.Tests
             WriteToDisk(copy, content, 0, Size);
             FileIdentityReader previousReader = FileIdentities.Reader;
             Func<string, bool> previousChecker = FileIdentities.HiddenCloneChecker;
-            FileIdentities.Reader = LinuxFileIdentity.TryRead;
-            FileIdentities.HiddenCloneChecker = LinuxFileExtents.MayHideClones;
+            FileIdentities.Reader = NativeIdentityReader();
+            FileIdentities.HiddenCloneChecker = NativeHiddenCloneChecker();
 
             try
             {
-                Assert.True(LinuxFileExtents.MayHideClones(original));
+                Assert.True(NativeHiddenCloneChecker()(original));
 
-                RedundancyAnalysisGroup copies = AnalyzeWith(LinuxFileExtents.TryRead, Entries(Size, original, copy));
+                RedundancyAnalysisGroup copies = AnalyzeWith(NativeExtentReader(), Entries(Size, original, copy));
                 Assert.True(copies.TotalMayBeOverstated);
                 Assert.Equal(Size * 2L, copies.TotalSizeBytes);
 
-                // ZFS refuses to clone blocks until their transaction group
+                // ZFS may refuse to clone blocks until their transaction group
                 // reaches the disk, about 5 seconds at most.
                 using (FileStream from = new FileStream(original, FileMode.Open, FileAccess.Read))
                 using (FileStream to = new FileStream(clone, FileMode.CreateNew, FileAccess.ReadWrite))
                 {
-                    int result = -1;
+                    bool cloned = false;
 
-                    for (int attempt = 0; attempt < 30 && result != 0; attempt++)
+                    for (int attempt = 0; attempt < 30 && !cloned; attempt++)
                     {
-                        result = ioctl((int)to.SafeFileHandle.DangerousGetHandle(), Ficlone, from.SafeFileHandle.DangerousGetHandle());
+                        cloned = TryCloneOpened(from, to, Size);
 
-                        if (result != 0)
+                        if (!cloned)
                         {
                             Thread.Sleep(1000);
                         }
                     }
 
-                    Assert.True(result == 0, "FICLONE failed: errno " + System.Runtime.InteropServices.Marshal.GetLastPInvokeError());
+                    Assert.True(cloned, "Cloning failed: error " + System.Runtime.InteropServices.Marshal.GetLastPInvokeError());
                 }
 
-                RedundancyAnalysisGroup clones = AnalyzeWith(LinuxFileExtents.TryRead, Entries(Size, original, clone));
+                RedundancyAnalysisGroup clones = AnalyzeWith(NativeExtentReader(), Entries(Size, original, clone));
                 Assert.True(clones.TotalMayBeOverstated);
                 Assert.Equal(Size * 2L, clones.TotalSizeBytes);
             }
@@ -302,6 +303,59 @@ namespace c2flux.Core.Tests
                 FileIdentities.Reader = previousReader;
                 FileIdentities.HiddenCloneChecker = previousChecker;
             }
+        }
+
+        // The disk behind a network share is out of sight, so totals carry the
+        // mark. C2FLUX_NETWORK_DIRS comes from CI (NFS, SMB in loopback).
+        [Fact]
+        public void Network_shares_mark_the_total_as_possibly_overstated()
+        {
+            string directories = Environment.GetEnvironmentVariable("C2FLUX_NETWORK_DIRS");
+
+            if (string.IsNullOrEmpty(directories))
+            {
+                return;
+            }
+
+            const int Size = 64 * 1024;
+            byte[] content = new byte[Size];
+            new Random(31).NextBytes(content);
+            FileIdentityReader previousReader = FileIdentities.Reader;
+            Func<string, bool> previousChecker = FileIdentities.HiddenCloneChecker;
+            FileIdentities.Reader = NativeIdentityReader();
+            FileIdentities.HiddenCloneChecker = NativeHiddenCloneChecker();
+
+            try
+            {
+                foreach (string directory in directories.Split(Path.PathSeparator))
+                {
+                    string a = Path.Combine(directory, Guid.NewGuid().ToString("N") + ".bin");
+                    string b = Path.Combine(directory, Guid.NewGuid().ToString("N") + ".bin");
+                    WriteToDisk(a, content, 0, Size);
+                    WriteToDisk(b, content, 0, Size);
+
+                    Assert.True(NativeHiddenCloneChecker()(a), directory + " was not recognized");
+
+                    RedundancyAnalysisGroup group = AnalyzeWith(NativeExtentReader(), Entries(Size, a, b));
+                    Assert.True(group.TotalMayBeOverstated, directory);
+                    Assert.Equal(Size * 2L, group.TotalSizeBytes);
+                }
+            }
+            finally
+            {
+                FileIdentities.Reader = previousReader;
+                FileIdentities.HiddenCloneChecker = previousChecker;
+            }
+        }
+
+        // A local disk is what most totals are on: no mark.
+        [Fact]
+        public void Local_disks_do_not_mark_the_total()
+        {
+            string path = Path.Combine(TestEnvironment.CreateDirectory("redundancy-local"), "local.bin");
+            File.WriteAllBytes(path, new byte[] { 1 });
+
+            Assert.False(NativeHiddenCloneChecker()(path));
         }
 
         // No runner can mount ZFS on macOS (the kext needs approval and a
@@ -463,6 +517,9 @@ namespace c2flux.Core.Tests
         private static FileIdentityReader NativeIdentityReader() =>
             OperatingSystem.IsWindows() ? WindowsFileIdentity.TryRead : OperatingSystem.IsMacOS() ? MacFileIdentity.TryRead : LinuxFileIdentity.TryRead;
 
+        private static Func<string, bool> NativeHiddenCloneChecker() =>
+            OperatingSystem.IsWindows() ? WindowsFileExtents.MayHideClones : OperatingSystem.IsMacOS() ? MacFileIdentity.MayHideClones : LinuxFileExtents.MayHideClones;
+
         private static FileSystemEntry[] Entries(long occupied, params string[] paths) =>
             paths.Select(path => new FileSystemEntry { Name = Path.GetFileName(path), FullPath = path, SizeBytes = occupied }).ToArray();
 
@@ -499,17 +556,19 @@ namespace c2flux.Core.Tests
 
             using FileStream from = new FileStream(source, FileMode.Open, FileAccess.Read);
             using FileStream to = new FileStream(destination, FileMode.CreateNew, FileAccess.ReadWrite);
+            Assert.True(TryCloneOpened(from, to, length), "Cloning failed: error " + System.Runtime.InteropServices.Marshal.GetLastPInvokeError());
+        }
 
+        private static bool TryCloneOpened(FileStream from, FileStream to, long length)
+        {
             if (OperatingSystem.IsWindows())
             {
                 to.SetLength(length);
                 DuplicateExtentsData data = new DuplicateExtentsData { Source = from.SafeFileHandle.DangerousGetHandle(), ByteCount = length };
-                Assert.True(DeviceIoControl(to.SafeFileHandle, FsctlDuplicateExtentsToFile, ref data, System.Runtime.InteropServices.Marshal.SizeOf<DuplicateExtentsData>(), IntPtr.Zero, 0, out _, IntPtr.Zero), "FSCTL_DUPLICATE_EXTENTS_TO_FILE failed");
+                return DeviceIoControl(to.SafeFileHandle, FsctlDuplicateExtentsToFile, ref data, System.Runtime.InteropServices.Marshal.SizeOf<DuplicateExtentsData>(), IntPtr.Zero, 0, out _, IntPtr.Zero);
             }
-            else
-            {
-                Assert.Equal(0, ioctl((int)to.SafeFileHandle.DangerousGetHandle(), Ficlone, from.SafeFileHandle.DangerousGetHandle()));
-            }
+
+            return ioctl((int)to.SafeFileHandle.DangerousGetHandle(), Ficlone, from.SafeFileHandle.DangerousGetHandle()) == 0;
         }
 
         private const uint FsctlDuplicateExtentsToFile = 0x00098344;

@@ -60,10 +60,11 @@ namespace c2flux
             return known;
         }
 
-        // For FileIdentities.HiddenCloneChecker: ZFS clones blocks but shows no
-        // extents. shortcut: a dataset mimicking hfs or apfs reports that name
-        // and gets no mark, until the port offers a way to tell them apart.
-        public static bool MayHideClones(string path) => ReadFileSystemType(path) == "zfs";
+        // For FileIdentities.HiddenCloneChecker: ZFS and the disks behind a
+        // network share clone blocks without showing which. shortcut: a ZFS
+        // dataset mimicking hfs or apfs reports that name and gets no mark,
+        // until the port offers a way to tell them apart.
+        public static bool MayHideClones(string path) => ReadFileSystemType(path) is "zfs" or "nfs" or "smbfs";
 
         // f_fstypename from statfs(2), null when it cannot be read. Intel Macs
         // need the $INODE64 entry point for this struct layout.
