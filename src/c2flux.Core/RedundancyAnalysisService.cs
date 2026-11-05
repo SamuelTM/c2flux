@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
+using Microsoft.Win32.SafeHandles;
 
 namespace c2flux
 {
@@ -38,7 +40,17 @@ namespace c2flux
     internal static class RedundancyAnalysisService
     {
         private const int SampleBlockSize = 4 * 1024;
-        private const int CompareBufferSize = 1024 * 1024;
+        private const int FirstChunkSize = 1024 * 1024;
+        private const int ChunkGrowth = 8;
+        private const int BufferSize = 1024 * 1024;
+        private static readonly TimeSpan ProgressInterval = TimeSpan.FromMilliseconds(100);
+        private static readonly TimeSpan CacheSaveInterval = TimeSpan.FromSeconds(30);
+
+        // For tests: every read of file content (path, offset, bytes).
+        internal static Action<string, long, int> ReadObserver { get; set; }
+
+        // For tests: every time the hash cache is written.
+        internal static Action CacheSaveObserver { get; set; }
 
         public static IReadOnlyList<RedundancyAnalysisGroup> Analyze(
             IReadOnlyList<FileSystemEntry> files,
@@ -49,495 +61,7 @@ namespace c2flux
             if (files == null)
                 throw new ArgumentNullException(nameof(files));
 
-            List<WorkingGroup> workingGroups =
-                new List<WorkingGroup>();
-            List<FileSystemEntry> reparseFiles =
-                new List<FileSystemEntry>();
-            RedundancyHashCache hashCache =
-                RedundancyHashCacheService.Load();
-            bool hashCacheChanged = false;
-            int pendingCacheEntries = 0;
-
-            List<IGrouping<long, FileSystemEntry>> sizeGroups =
-                files
-                    .Where(file =>
-                        file != null &&
-                        !file.IsDirectory &&
-                        file.SizeBytes > 0 &&
-                        !string.IsNullOrWhiteSpace(file.FullPath))
-                    .GroupBy(GetLength)
-                    .Where(group => group.Count() > 1)
-                    .ToList();
-
-            int totalCandidateFiles =
-                sizeGroups.Sum(group => group.Count());
-            int completedCandidateFiles = 0;
-
-            ReportAnalysisProgress(
-                analysisProgress,
-                totalCandidateFiles == 0
-                    ? 100
-                    : 0,
-                RedundancyAnalysisPhase.SizeGrouping);
-
-            foreach (IGrouping<long, FileSystemEntry> sizeGroup in
-                sizeGroups)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                ReportAnalysisProgress(
-                    analysisProgress,
-                    GetAnalysisPercentage(
-                        completedCandidateFiles,
-                        totalCandidateFiles),
-                    RedundancyAnalysisPhase.FileIdentity);
-
-                Dictionary<FileIdentity, PhysicalFile>
-                    physicalFiles =
-                        new Dictionary<FileIdentity, PhysicalFile>();
-                Dictionary<FileIdentity, long>
-                    usnByIdentity =
-                        new Dictionary<FileIdentity, long>();
-
-                foreach (FileSystemEntry file in sizeGroup)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if (!TryGetFileAttributes(
-                            file.FullPath,
-                            out FileAttributes attributes))
-                    {
-                        continue;
-                    }
-
-                    if ((attributes & FileAttributes.Offline) != 0)
-                    {
-                        continue;
-                    }
-
-                    if ((attributes & FileAttributes.ReparsePoint) != 0)
-                    {
-                        reparseFiles.Add(file);
-                        continue;
-                    }
-
-                    if (!FileIdentities.Reader(
-                            file.FullPath,
-                            out FileIdentity identity,
-                            out long usn,
-                            out bool hasUsn))
-                    {
-                        continue;
-                    }
-
-                    if (!physicalFiles.TryGetValue(
-                            identity,
-                            out PhysicalFile physicalFile))
-                    {
-                        physicalFile =
-                            new PhysicalFile(
-                                identity,
-                                file.Name,
-                                file.FullPath,
-                                file.SizeBytes);
-
-                        physicalFiles.Add(
-                            identity,
-                            physicalFile);
-                    }
-                    else
-                    {
-                        physicalFile.AddLocation(
-                            file.FullPath);
-                    }
-
-                    if (hasUsn)
-                    {
-                        usnByIdentity[identity] =
-                            usn;
-                    }
-                }
-
-                if (physicalFiles.Count < 2)
-                {
-                    completedCandidateFiles +=
-                        sizeGroup.Count();
-
-                    continue;
-                }
-
-                Dictionary<string, List<PhysicalFile>>
-                    fullHashGroups =
-                        new Dictionary<string, List<PhysicalFile>>(
-                            StringComparer.Ordinal);
-                List<PhysicalFile> uncachedFiles =
-                    new List<PhysicalFile>();
-
-                foreach (PhysicalFile physicalFile in
-                    physicalFiles.Values)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if (usnByIdentity.TryGetValue(
-                            physicalFile.Identity,
-                            out long usn) &&
-                        hashCache.TryGet(
-                            physicalFile.Identity.VolumeSerialNumber,
-                            physicalFile.Identity.FileIdLow,
-                            physicalFile.Identity.FileIdHigh,
-                            sizeGroup.Key,
-                            usn,
-                            out string cachedHash))
-                    {
-                        ReportAnalysisProgress(
-                            analysisProgress,
-                            GetAnalysisPercentage(
-                                completedCandidateFiles,
-                                totalCandidateFiles),
-                            RedundancyAnalysisPhase.FullHashCache);
-
-                        AddPhysicalFileToHashGroup(
-                            fullHashGroups,
-                            cachedHash,
-                            physicalFile);
-                    }
-                    else
-                    {
-                        uncachedFiles.Add(
-                            physicalFile);
-                    }
-                }
-
-                if (uncachedFiles.Count > 0)
-                {
-                    if (fullHashGroups.Count > 0)
-                    {
-                        foreach (PhysicalFile physicalFile in
-                            uncachedFiles)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-
-                            ReportAnalysisProgress(
-                                analysisProgress,
-                                GetAnalysisPercentage(
-                                    completedCandidateFiles,
-                                    totalCandidateFiles),
-                                RedundancyAnalysisPhase.FullHashLive);
-
-                            string fullHash =
-                                ComputeFullHash(
-                                    physicalFile.PrimaryPath,
-                                    sizeGroup.Key,
-                                    cancellationToken);
-
-                            if (fullHash == null)
-                                continue;
-
-                            AddPhysicalFileToHashGroup(
-                                fullHashGroups,
-                                fullHash,
-                                physicalFile);
-
-                            if (usnByIdentity.TryGetValue(
-                                    physicalFile.Identity,
-                                    out long usn))
-                            {
-                                hashCache.Set(
-                                    physicalFile.Identity.VolumeSerialNumber,
-                                    physicalFile.Identity.FileIdLow,
-                                    physicalFile.Identity.FileIdHigh,
-                                    sizeGroup.Key,
-                                    usn,
-                                    fullHash);
-
-                                hashCacheChanged = true;
-                                pendingCacheEntries++;
-
-                                if (pendingCacheEntries >= 100)
-                                {
-                                    ReportAnalysisProgress(
-                                        analysisProgress,
-                                        GetAnalysisPercentage(
-                                            completedCandidateFiles,
-                                            totalCandidateFiles),
-                                        RedundancyAnalysisPhase.Cache);
-
-                                    RedundancyHashCacheService.Save(
-                                        hashCache);
-
-                                    hashCacheChanged = false;
-                                    pendingCacheEntries = 0;
-                                }
-                            }
-                        }
-                    }
-                    else if (uncachedFiles.Count > 1)
-                    {
-                        ReportAnalysisProgress(
-                            analysisProgress,
-                            GetAnalysisPercentage(
-                                completedCandidateFiles,
-                                totalCandidateFiles),
-                            RedundancyAnalysisPhase.FirstBlock);
-
-                        Dictionary<string, List<PhysicalFile>>
-                            firstBlockHashGroups =
-                                new Dictionary<string, List<PhysicalFile>>(
-                                    StringComparer.Ordinal);
-
-                        foreach (PhysicalFile physicalFile in
-                            uncachedFiles)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-
-                            string firstBlockHash =
-                                ComputeBlockHash(
-                                    physicalFile.PrimaryPath,
-                                    sizeGroup.Key,
-                                    0L,
-                                    cancellationToken);
-
-                            if (firstBlockHash == null)
-                                continue;
-
-                            AddPhysicalFileToHashGroup(
-                                firstBlockHashGroups,
-                                firstBlockHash,
-                                physicalFile);
-                        }
-
-                        foreach (List<PhysicalFile> firstBlockGroup in
-                            firstBlockHashGroups.Values
-                                .Where(group => group.Count > 1))
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-
-                            ReportAnalysisProgress(
-                                analysisProgress,
-                                GetAnalysisPercentage(
-                                    completedCandidateFiles,
-                                    totalCandidateFiles),
-                                RedundancyAnalysisPhase.LastBlock);
-
-                            Dictionary<string, List<PhysicalFile>>
-                                lastBlockHashGroups =
-                                    new Dictionary<string, List<PhysicalFile>>(
-                                        StringComparer.Ordinal);
-
-                            long lastBlockOffset =
-                                Math.Max(
-                                    0L,
-                                    sizeGroup.Key - SampleBlockSize);
-
-                            foreach (PhysicalFile physicalFile in
-                                firstBlockGroup)
-                            {
-                                cancellationToken.ThrowIfCancellationRequested();
-
-                                string lastBlockHash =
-                                    ComputeBlockHash(
-                                        physicalFile.PrimaryPath,
-                                        sizeGroup.Key,
-                                        lastBlockOffset,
-                                        cancellationToken);
-
-                                if (lastBlockHash == null)
-                                    continue;
-
-                                AddPhysicalFileToHashGroup(
-                                    lastBlockHashGroups,
-                                    lastBlockHash,
-                                    physicalFile);
-                            }
-
-                            foreach (List<PhysicalFile> lastBlockGroup in
-                                lastBlockHashGroups.Values
-                                    .Where(group => group.Count > 1))
-                            {
-                                cancellationToken.ThrowIfCancellationRequested();
-
-                                foreach (PhysicalFile physicalFile in
-                                    lastBlockGroup)
-                                {
-                                    cancellationToken.ThrowIfCancellationRequested();
-
-                                    ReportAnalysisProgress(
-                                        analysisProgress,
-                                        GetAnalysisPercentage(
-                                            completedCandidateFiles,
-                                            totalCandidateFiles),
-                                        RedundancyAnalysisPhase.FullHashLive);
-
-                                    string fullHash =
-                                        ComputeFullHash(
-                                            physicalFile.PrimaryPath,
-                                            sizeGroup.Key,
-                                            cancellationToken);
-
-                                    if (fullHash == null)
-                                        continue;
-
-                                    AddPhysicalFileToHashGroup(
-                                        fullHashGroups,
-                                        fullHash,
-                                        physicalFile);
-
-                                    if (usnByIdentity.TryGetValue(
-                                            physicalFile.Identity,
-                                            out long usn))
-                                    {
-                                        hashCache.Set(
-                                            physicalFile.Identity.VolumeSerialNumber,
-                                            physicalFile.Identity.FileIdLow,
-                                            physicalFile.Identity.FileIdHigh,
-                                            sizeGroup.Key,
-                                            usn,
-                                            fullHash);
-
-                                        hashCacheChanged = true;
-                                        pendingCacheEntries++;
-
-                                        if (pendingCacheEntries >= 100)
-                                        {
-                                            ReportAnalysisProgress(
-                                                analysisProgress,
-                                                GetAnalysisPercentage(
-                                                    completedCandidateFiles,
-                                                    totalCandidateFiles),
-                                                RedundancyAnalysisPhase.Cache);
-
-                                            RedundancyHashCacheService.Save(
-                                                hashCache);
-
-                                            hashCacheChanged = false;
-                                            pendingCacheEntries = 0;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                foreach (List<PhysicalFile> hashGroup in
-                    fullHashGroups.Values
-                        .Where(group => group.Count > 1))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    long totalSizeBytes =
-                        GetOccupiedBytes(hashGroup, out bool totalMayBeOverstated);
-
-                    WorkingGroup workingGroup =
-                        new WorkingGroup(
-                            hashGroup[0].Name,
-                            sizeGroup.Key,
-                            totalSizeBytes,
-                            totalMayBeOverstated,
-                            hashGroup);
-
-                    workingGroups.Add(
-                        workingGroup);
-
-                    progress?.Report(
-                        new RedundancyAnalysisGroup
-                        {
-                            Name = workingGroup.Name,
-                            SizeBytes = workingGroup.SizeBytes,
-                            PhysicalCopyCount =
-                                workingGroup.PhysicalFiles.Count,
-                            TotalSizeBytes =
-                                workingGroup.TotalSizeBytes,
-                            TotalMayBeOverstated =
-                                workingGroup.TotalMayBeOverstated,
-                            Locations =
-                                workingGroup.GetLocations()
-                        });
-                }
-
-                completedCandidateFiles +=
-                    sizeGroup.Count();
-            }
-
-            if (hashCacheChanged)
-            {
-                ReportAnalysisProgress(
-                    analysisProgress,
-                    GetAnalysisPercentage(
-                        completedCandidateFiles,
-                        totalCandidateFiles),
-                    RedundancyAnalysisPhase.Cache);
-
-                RedundancyHashCacheService.Save(
-                    hashCache);
-            }
-
-            ReportAnalysisProgress(
-                analysisProgress,
-                100,
-                RedundancyAnalysisPhase.Completed);
-
-            if (workingGroups.Count == 0)
-            {
-                return Array.Empty<RedundancyAnalysisGroup>();
-            }
-
-            if (reparseFiles.Count > 0)
-            {
-                Dictionary<FileIdentity, WorkingGroup> groupByIdentity =
-                    new Dictionary<FileIdentity, WorkingGroup>();
-
-                foreach (WorkingGroup workingGroup in workingGroups)
-                {
-                    foreach (PhysicalFile physicalFile in
-                        workingGroup.PhysicalFiles)
-                    {
-                        groupByIdentity[physicalFile.Identity] =
-                            workingGroup;
-                    }
-                }
-
-                foreach (FileSystemEntry reparseFile in reparseFiles)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if (!FileIdentities.Reader(
-                            reparseFile.FullPath,
-                            out FileIdentity identity,
-                            out _,
-                            out _) ||
-                        !groupByIdentity.TryGetValue(
-                            identity,
-                            out WorkingGroup workingGroup))
-                    {
-                        continue;
-                    }
-
-                    workingGroup.AddReference(
-                        reparseFile.FullPath);
-                }
-            }
-
-            return workingGroups
-                .OrderByDescending(group => group.TotalSizeBytes)
-                .ThenBy(
-                    group => group.Name,
-                    StringComparer.OrdinalIgnoreCase)
-                .Select(group =>
-                    new RedundancyAnalysisGroup
-                    {
-                        Name = group.Name,
-                        SizeBytes = group.SizeBytes,
-                        PhysicalCopyCount =
-                            group.PhysicalFiles.Count,
-                        TotalSizeBytes =
-                            group.TotalSizeBytes,
-                        TotalMayBeOverstated =
-                            group.TotalMayBeOverstated,
-                        Locations =
-                            group.GetLocations()
-                    })
-                .ToList();
+            return new AnalysisRun(cancellationToken, progress, analysisProgress).Execute(files);
         }
 
         // SizeBytes can be what a file occupies, less than its length (sparse
@@ -646,224 +170,6 @@ namespace c2flux
             return length;
         }
 
-        private static void AddPhysicalFileToHashGroup(
-            Dictionary<string, List<PhysicalFile>> hashGroups,
-            string hash,
-            PhysicalFile physicalFile)
-        {
-            if (!hashGroups.TryGetValue(
-                    hash,
-                    out List<PhysicalFile> hashFiles))
-            {
-                hashFiles =
-                    new List<PhysicalFile>();
-                hashGroups.Add(
-                    hash,
-                    hashFiles);
-            }
-
-            hashFiles.Add(
-                physicalFile);
-        }
-
-        private static int GetAnalysisPercentage(
-            int completedCandidateFiles,
-            int totalCandidateFiles)
-        {
-            if (totalCandidateFiles <= 0)
-                return 100;
-
-            return (int)Math.Min(
-                100L,
-                completedCandidateFiles *
-                    100L /
-                    totalCandidateFiles);
-        }
-
-        private static void ReportAnalysisProgress(
-            IProgress<RedundancyAnalysisProgressInfo> analysisProgress,
-            int percentage,
-            RedundancyAnalysisPhase phase)
-        {
-            analysisProgress?.Report(
-                new RedundancyAnalysisProgressInfo
-                {
-                    Percentage =
-                        Math.Clamp(
-                            percentage,
-                            0,
-                            100),
-                    Phase = phase
-                });
-        }
-
-        private static string ComputeBlockHash(
-            string path,
-            long expectedLength,
-            long offset,
-            CancellationToken cancellationToken)
-        {
-            try
-            {
-                using FileStream stream =
-                    new FileStream(
-                        path,
-                        FileMode.Open,
-                        FileAccess.Read,
-                        FileShare.ReadWrite |
-                            FileShare.Delete,
-                        SampleBlockSize,
-                        FileOptions.RandomAccess);
-
-                if (stream.Length != expectedLength)
-                    return null;
-
-                long safeOffset =
-                    Math.Clamp(
-                        offset,
-                        0L,
-                        Math.Max(
-                            0L,
-                            stream.Length - 1L));
-
-                stream.Seek(
-                    safeOffset,
-                    SeekOrigin.Begin);
-
-                int requestedBytes =
-                    (int)Math.Min(
-                        SampleBlockSize,
-                        stream.Length - safeOffset);
-
-                byte[] buffer =
-                    new byte[requestedBytes];
-
-                int read =
-                    ReadBlock(
-                        stream,
-                        buffer,
-                        requestedBytes);
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                return Convert.ToHexString(
-                    SHA256.HashData(
-                        buffer.AsSpan(
-                            0,
-                            read)));
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private static string ComputeFullHash(
-            string path,
-            long expectedLength,
-            CancellationToken cancellationToken)
-        {
-            try
-            {
-                using FileStream stream =
-                    OpenRead(path);
-
-                if (stream.Length != expectedLength)
-                    return null;
-
-                using IncrementalHash hash =
-                    IncrementalHash.CreateHash(
-                        HashAlgorithmName.SHA256);
-
-                byte[] buffer =
-                    new byte[CompareBufferSize];
-
-                AppendStream(
-                    stream,
-                    hash,
-                    buffer,
-                    cancellationToken);
-
-                return Convert.ToHexString(
-                    hash.GetHashAndReset());
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private static void AppendStream(
-            FileStream stream,
-            IncrementalHash hash,
-            byte[] buffer,
-            CancellationToken cancellationToken)
-        {
-            while (true)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                int read =
-                    ReadBlock(
-                        stream,
-                        buffer,
-                        buffer.Length);
-
-                if (read == 0)
-                    return;
-
-                hash.AppendData(
-                    buffer,
-                    0,
-                    read);
-            }
-        }
-
-        private static int ReadBlock(
-            FileStream stream,
-            byte[] buffer,
-            int count)
-        {
-            int totalRead = 0;
-
-            while (totalRead < count)
-            {
-                int read =
-                    stream.Read(
-                        buffer,
-                        totalRead,
-                        count - totalRead);
-
-                if (read == 0)
-                    break;
-
-                totalRead += read;
-            }
-
-            return totalRead;
-        }
-
-        private static FileStream OpenRead(
-            string path)
-        {
-            return new FileStream(
-                path,
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.ReadWrite |
-                    FileShare.Delete,
-                CompareBufferSize,
-                FileOptions.SequentialScan);
-        }
-
         private static bool TryGetFileAttributes(
             string path,
             out FileAttributes attributes)
@@ -881,6 +187,509 @@ namespace c2flux
             }
         }
 
+        private enum ReadStage
+        {
+            FirstBlock,
+            LastBlock,
+            Chunks,
+        }
+
+        // Files of one length that are still equal in all that was read.
+        private sealed class ContentSet
+        {
+            public List<PhysicalFile> Files { get; init; }
+            public long Length { get; init; }
+            public ReadStage Stage { get; init; }
+            public int ChunkSize { get; init; } = FirstChunkSize;
+
+            // Full hashes of files of this length known from the cache. An
+            // uncached file must be read to the end to compare with them, so
+            // such a set is never split along the way.
+            public Dictionary<string, List<PhysicalFile>> KnownHashes { get; init; }
+        }
+
+        // One pass over the candidates: every round reads a little of each
+        // file still in doubt, so differing files leave after their first
+        // difference and only real duplicates are read to the end.
+        private sealed class AnalysisRun
+        {
+            private readonly CancellationToken _cancellation;
+            private readonly IProgress<RedundancyAnalysisGroup> _progress;
+            private readonly IProgress<RedundancyAnalysisProgressInfo> _analysisProgress;
+            private readonly List<WorkingGroup> _groups = new List<WorkingGroup>();
+            private readonly List<FileSystemEntry> _reparseFiles = new List<FileSystemEntry>();
+            private readonly RedundancyHashCache _hashCache = RedundancyHashCacheService.Load();
+            private readonly byte[] _buffer = new byte[BufferSize];
+            private readonly Stopwatch _sinceProgress = Stopwatch.StartNew();
+            private readonly Stopwatch _sinceCacheSave = Stopwatch.StartNew();
+            private List<ContentSet> _sets = new List<ContentSet>();
+            private RedundancyAnalysisPhase _lastPhase = RedundancyAnalysisPhase.Completed;
+            private bool _hashCacheChanged;
+            private long _bytesRead;
+            private long _bytesLeft;
+
+            public AnalysisRun(CancellationToken cancellation, IProgress<RedundancyAnalysisGroup> progress, IProgress<RedundancyAnalysisProgressInfo> analysisProgress)
+            {
+                _cancellation = cancellation;
+                _progress = progress;
+                _analysisProgress = analysisProgress;
+            }
+
+            public IReadOnlyList<RedundancyAnalysisGroup> Execute(IReadOnlyList<FileSystemEntry> files)
+            {
+                Report(0, RedundancyAnalysisPhase.SizeGrouping);
+
+                try
+                {
+                    FindCandidates(files);
+
+                    while (_sets.Count > 0)
+                    {
+                        ReadRound();
+                    }
+                }
+                finally
+                {
+                    // Also when cancelled: the hashes cost reads.
+                    SaveCacheIfChanged();
+                    DisposeHashes();
+                }
+
+                Report(100, RedundancyAnalysisPhase.Completed);
+
+                if (_groups.Count == 0)
+                {
+                    return Array.Empty<RedundancyAnalysisGroup>();
+                }
+
+                AddReparseFiles();
+
+                return _groups
+                    .OrderByDescending(group => group.TotalSizeBytes)
+                    .ThenBy(group => group.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(ToResult)
+                    .ToList();
+            }
+
+            // In the scan's order, so the metadata is read directory by directory.
+            private void FindCandidates(IReadOnlyList<FileSystemEntry> files)
+            {
+                List<(FileSystemEntry File, long Length)> sized = files
+                    .Where(file => file != null && !file.IsDirectory && file.SizeBytes > 0 && !string.IsNullOrWhiteSpace(file.FullPath))
+                    .Select(file => (file, GetLength(file)))
+                    .ToList();
+                Dictionary<long, int> counts = new Dictionary<long, int>();
+
+                foreach ((_, long length) in sized)
+                {
+                    counts[length] = counts.GetValueOrDefault(length) + 1;
+                }
+
+                List<(FileSystemEntry File, long Length)> candidates = sized.Where(item => counts[item.Length] > 1).ToList();
+                Dictionary<long, Dictionary<FileIdentity, PhysicalFile>> byLength = new Dictionary<long, Dictionary<FileIdentity, PhysicalFile>>();
+
+                for (int index = 0; index < candidates.Count; index++)
+                {
+                    _cancellation.ThrowIfCancellationRequested();
+                    Report(index * 10 / candidates.Count, RedundancyAnalysisPhase.FileIdentity);
+                    (FileSystemEntry file, long length) = candidates[index];
+
+                    if (!TryGetFileAttributes(file.FullPath, out FileAttributes attributes) || (attributes & FileAttributes.Offline) != 0)
+                    {
+                        continue;
+                    }
+
+                    if ((attributes & FileAttributes.ReparsePoint) != 0)
+                    {
+                        _reparseFiles.Add(file);
+                        continue;
+                    }
+
+                    if (!FileIdentities.Reader(file.FullPath, out FileIdentity identity, out long usn, out bool hasUsn))
+                    {
+                        continue;
+                    }
+
+                    if (!byLength.TryGetValue(length, out Dictionary<FileIdentity, PhysicalFile> physicalFiles))
+                    {
+                        byLength[length] = physicalFiles = new Dictionary<FileIdentity, PhysicalFile>();
+                    }
+
+                    if (physicalFiles.TryGetValue(identity, out PhysicalFile physicalFile))
+                    {
+                        physicalFile.AddLocation(file.FullPath);
+                    }
+                    else
+                    {
+                        physicalFiles.Add(identity, new PhysicalFile(identity, file.Name, file.FullPath, file.SizeBytes, length, usn, hasUsn));
+                    }
+                }
+
+                foreach ((long length, Dictionary<FileIdentity, PhysicalFile> physicalFiles) in byLength)
+                {
+                    if (physicalFiles.Count > 1)
+                    {
+                        AddSet(length, physicalFiles.Values);
+                    }
+                }
+            }
+
+            private void AddSet(long length, IEnumerable<PhysicalFile> files)
+            {
+                Dictionary<string, List<PhysicalFile>> known = new Dictionary<string, List<PhysicalFile>>(StringComparer.Ordinal);
+                List<PhysicalFile> unknown = new List<PhysicalFile>();
+
+                foreach (PhysicalFile file in files)
+                {
+                    if (file.HasUsn && _hashCache.TryGet(file.Identity.VolumeSerialNumber, file.Identity.FileIdLow, file.Identity.FileIdHigh, length, file.Usn, out string hash))
+                    {
+                        AddToHash(known, hash, file);
+                    }
+                    else
+                    {
+                        unknown.Add(file);
+                    }
+                }
+
+                if (known.Count > 0)
+                {
+                    Report(ReadPercent(), RedundancyAnalysisPhase.FullHashCache);
+                }
+
+                if (unknown.Count == 0)
+                {
+                    EmitKnown(known);
+                }
+                else if (known.Count > 0)
+                {
+                    _bytesLeft += length * unknown.Count;
+                    _sets.Add(new ContentSet { Files = unknown, Length = length, Stage = ReadStage.Chunks, KnownHashes = known });
+                }
+                else
+                {
+                    _bytesLeft += length * unknown.Count;
+                    _sets.Add(new ContentSet { Files = unknown, Length = length, Stage = ReadStage.FirstBlock });
+                }
+            }
+
+            private void ReadRound()
+            {
+                List<(ContentSet Set, PhysicalFile File)> work = _sets
+                    .SelectMany(set => set.Files.Select(file => (set, file)))
+                    .ToList();
+
+                foreach ((ContentSet set, PhysicalFile file) in work)
+                {
+                    _cancellation.ThrowIfCancellationRequested();
+                    Report(ReadPercent(), set.Stage switch
+                    {
+                        ReadStage.FirstBlock => RedundancyAnalysisPhase.FirstBlock,
+                        ReadStage.LastBlock => RedundancyAnalysisPhase.LastBlock,
+                        _ => RedundancyAnalysisPhase.FullHashLive,
+                    });
+                    ReadStep(set, file);
+                }
+
+                List<ContentSet> next = new List<ContentSet>();
+
+                foreach (ContentSet set in _sets)
+                {
+                    Settle(set, next);
+                }
+
+                _sets = next;
+
+                if (_sinceCacheSave.Elapsed >= CacheSaveInterval)
+                {
+                    SaveCacheIfChanged();
+                }
+            }
+
+            private void ReadStep(ContentSet set, PhysicalFile file)
+            {
+                try
+                {
+                    file.Key = set.Stage switch
+                    {
+                        ReadStage.FirstBlock => HashBlock(file, 0, (int)Math.Min(SampleBlockSize, file.Length)),
+                        ReadStage.LastBlock => HashBlock(file, file.Length - SampleBlockSize, SampleBlockSize),
+                        _ => HashChunk(file, set.ChunkSize),
+                    };
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception)
+                {
+                    // Gone, locked or changed: it cannot be called a duplicate.
+                    file.Key = null;
+                }
+            }
+
+            private string HashBlock(PhysicalFile file, long offset, int count)
+            {
+                using SafeFileHandle handle = Open(file, FileOptions.RandomAccess);
+                ReadExactly(handle, file, offset, count);
+                _bytesRead += count;
+                return Convert.ToHexString(SHA256.HashData(_buffer.AsSpan(0, count)));
+            }
+
+            private string HashChunk(PhysicalFile file, int chunkSize)
+            {
+                using SafeFileHandle handle = Open(file, FileOptions.SequentialScan);
+                file.Hash ??= IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+                long end = Math.Min(file.Length, file.Offset + chunkSize);
+
+                while (file.Offset < end)
+                {
+                    _cancellation.ThrowIfCancellationRequested();
+                    int count = (int)Math.Min(_buffer.Length, end - file.Offset);
+                    ReadExactly(handle, file, file.Offset, count);
+                    file.Hash.AppendData(_buffer, 0, count);
+                    file.Offset += count;
+                    _bytesRead += count;
+                    _bytesLeft -= count;
+                }
+
+                return Convert.ToHexString(file.Hash.GetCurrentHash());
+            }
+
+            private static SafeFileHandle Open(PhysicalFile file, FileOptions options)
+            {
+                SafeFileHandle handle = File.OpenHandle(file.PrimaryPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, options);
+
+                if (RandomAccess.GetLength(handle) != file.Length)
+                {
+                    handle.Dispose();
+                    throw new IOException("The file changed");
+                }
+
+                return handle;
+            }
+
+            private void ReadExactly(SafeFileHandle handle, PhysicalFile file, long offset, int count)
+            {
+                ReadObserver?.Invoke(file.PrimaryPath, offset, count);
+                int total = 0;
+
+                while (total < count)
+                {
+                    int read = RandomAccess.Read(handle, _buffer.AsSpan(total, count - total), offset + total);
+
+                    if (read == 0)
+                    {
+                        throw new IOException("The file changed");
+                    }
+
+                    total += read;
+                }
+            }
+
+            private void Settle(ContentSet set, List<ContentSet> next)
+            {
+                foreach (PhysicalFile file in set.Files.Where(file => file.Key == null))
+                {
+                    Drop(file);
+                }
+
+                List<PhysicalFile> readable = set.Files.Where(file => file.Key != null).ToList();
+
+                if (set.KnownHashes != null)
+                {
+                    if (readable.Count == 0 || readable[0].Offset == set.Length)
+                    {
+                        foreach (PhysicalFile file in readable)
+                        {
+                            RememberHash(file, file.Key);
+                            AddToHash(set.KnownHashes, file.Key, file);
+                        }
+
+                        EmitKnown(set.KnownHashes);
+                    }
+                    else
+                    {
+                        next.Add(new ContentSet { Files = readable, Length = set.Length, Stage = ReadStage.Chunks, ChunkSize = set.ChunkSize * ChunkGrowth, KnownHashes = set.KnownHashes });
+                    }
+
+                    return;
+                }
+
+                foreach (IGrouping<string, PhysicalFile> equal in readable.GroupBy(file => file.Key, StringComparer.Ordinal))
+                {
+                    List<PhysicalFile> files = equal.ToList();
+
+                    if (files.Count < 2)
+                    {
+                        Drop(files[0]);
+                    }
+                    else if (set.Stage == ReadStage.FirstBlock && set.Length <= SampleBlockSize)
+                    {
+                        // The block was the whole file: its hash is the file's.
+                        Finish(files, equal.Key);
+                    }
+                    else if (set.Stage == ReadStage.FirstBlock && set.Length > 2L * SampleBlockSize)
+                    {
+                        next.Add(new ContentSet { Files = files, Length = set.Length, Stage = ReadStage.LastBlock });
+                    }
+                    else if (set.Stage != ReadStage.Chunks)
+                    {
+                        next.Add(new ContentSet { Files = files, Length = set.Length, Stage = ReadStage.Chunks });
+                    }
+                    else if (files[0].Offset == set.Length)
+                    {
+                        Finish(files, equal.Key);
+                    }
+                    else
+                    {
+                        next.Add(new ContentSet { Files = files, Length = set.Length, Stage = ReadStage.Chunks, ChunkSize = set.ChunkSize * ChunkGrowth });
+                    }
+                }
+            }
+
+            private void Drop(PhysicalFile file)
+            {
+                _bytesLeft -= file.Length - file.Offset;
+                file.DisposeHash();
+            }
+
+            private void Finish(List<PhysicalFile> files, string hash)
+            {
+                foreach (PhysicalFile file in files)
+                {
+                    _bytesLeft -= file.Length - file.Offset;
+                    file.DisposeHash();
+                    RememberHash(file, hash);
+                }
+
+                Emit(files);
+            }
+
+            private void RememberHash(PhysicalFile file, string hash)
+            {
+                file.DisposeHash();
+
+                if (file.HasUsn)
+                {
+                    _hashCache.Set(file.Identity.VolumeSerialNumber, file.Identity.FileIdLow, file.Identity.FileIdHigh, file.Length, file.Usn, hash);
+                    _hashCacheChanged = true;
+                }
+            }
+
+            private void EmitKnown(Dictionary<string, List<PhysicalFile>> known)
+            {
+                foreach (List<PhysicalFile> files in known.Values.Where(files => files.Count > 1))
+                {
+                    Emit(files);
+                }
+            }
+
+            private void Emit(List<PhysicalFile> files)
+            {
+                _cancellation.ThrowIfCancellationRequested();
+                long total = GetOccupiedBytes(files, out bool mayBeOverstated);
+                WorkingGroup group = new WorkingGroup(files[0].Name, files[0].Length, total, mayBeOverstated, files);
+                _groups.Add(group);
+                _progress?.Report(ToResult(group));
+            }
+
+            private static RedundancyAnalysisGroup ToResult(WorkingGroup group)
+            {
+                return new RedundancyAnalysisGroup
+                {
+                    Name = group.Name,
+                    SizeBytes = group.SizeBytes,
+                    PhysicalCopyCount = group.PhysicalFiles.Count,
+                    TotalSizeBytes = group.TotalSizeBytes,
+                    TotalMayBeOverstated = group.TotalMayBeOverstated,
+                    Locations = group.GetLocations(),
+                };
+            }
+
+            private void AddReparseFiles()
+            {
+                if (_reparseFiles.Count == 0)
+                {
+                    return;
+                }
+
+                Dictionary<FileIdentity, WorkingGroup> groupByIdentity = new Dictionary<FileIdentity, WorkingGroup>();
+
+                foreach (WorkingGroup group in _groups)
+                {
+                    foreach (PhysicalFile file in group.PhysicalFiles)
+                    {
+                        groupByIdentity[file.Identity] = group;
+                    }
+                }
+
+                foreach (FileSystemEntry reparseFile in _reparseFiles)
+                {
+                    _cancellation.ThrowIfCancellationRequested();
+
+                    if (FileIdentities.Reader(reparseFile.FullPath, out FileIdentity identity, out _, out _) &&
+                        groupByIdentity.TryGetValue(identity, out WorkingGroup group))
+                    {
+                        group.AddReference(reparseFile.FullPath);
+                    }
+                }
+            }
+
+            private void SaveCacheIfChanged()
+            {
+                if (_hashCacheChanged)
+                {
+                    Report(ReadPercent(), RedundancyAnalysisPhase.Cache);
+                    RedundancyHashCacheService.Save(_hashCache);
+                    CacheSaveObserver?.Invoke();
+                    _hashCacheChanged = false;
+                }
+
+                _sinceCacheSave.Restart();
+            }
+
+            private void DisposeHashes()
+            {
+                foreach (ContentSet set in _sets)
+                {
+                    foreach (PhysicalFile file in set.Files)
+                    {
+                        file.DisposeHash();
+                    }
+                }
+            }
+
+            // Reading is what takes time: 10 to 100 %, by bytes.
+            private int ReadPercent()
+            {
+                long all = _bytesRead + _bytesLeft;
+                return all <= 0 ? 10 : (int)(10 + _bytesRead * 90L / all);
+            }
+
+            // A new phase always shows; otherwise a few times per second.
+            private void Report(int percentage, RedundancyAnalysisPhase phase)
+            {
+                if (_analysisProgress == null || (phase == _lastPhase && _sinceProgress.Elapsed < ProgressInterval))
+                {
+                    return;
+                }
+
+                _lastPhase = phase;
+                _sinceProgress.Restart();
+                _analysisProgress.Report(new RedundancyAnalysisProgressInfo { Percentage = Math.Clamp(percentage, 0, 100), Phase = phase });
+            }
+
+            private static void AddToHash(Dictionary<string, List<PhysicalFile>> hashes, string hash, PhysicalFile file)
+            {
+                if (!hashes.TryGetValue(hash, out List<PhysicalFile> files))
+                {
+                    hashes[hash] = files = new List<PhysicalFile>();
+                }
+
+                files.Add(file);
+            }
+        }
+
         private sealed class PhysicalFile
         {
             private readonly HashSet<string> _locations =
@@ -891,12 +700,18 @@ namespace c2flux
                 FileIdentity identity,
                 string name,
                 string primaryPath,
-                long occupiedBytes)
+                long occupiedBytes,
+                long length,
+                long usn,
+                bool hasUsn)
             {
                 Identity = identity;
                 Name = name;
                 PrimaryPath = primaryPath;
                 OccupiedBytes = occupiedBytes;
+                Length = length;
+                Usn = usn;
+                HasUsn = hasUsn;
                 _locations.Add(primaryPath);
             }
 
@@ -904,6 +719,12 @@ namespace c2flux
             public string Name { get; }
             public string PrimaryPath { get; }
             public long OccupiedBytes { get; }
+            public long Length { get; }
+            public long Usn { get; }
+            public bool HasUsn { get; }
+            public long Offset { get; set; }
+            public IncrementalHash Hash { get; set; }
+            public string Key { get; set; }
             public IEnumerable<string> Locations =>
                 _locations;
 
@@ -914,6 +735,12 @@ namespace c2flux
                 {
                     _locations.Add(path);
                 }
+            }
+
+            public void DisposeHash()
+            {
+                Hash?.Dispose();
+                Hash = null;
             }
         }
 

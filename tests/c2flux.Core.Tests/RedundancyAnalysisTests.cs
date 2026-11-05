@@ -107,6 +107,241 @@ namespace c2flux.Core.Tests
             Assert.Equal(1024, RedundancyAnalysisService.GetLength(new FileSystemEntry { FullPath = missing, SizeBytes = 1024 }));
         }
 
+        // ----- how much is read ---------------------------------------------
+
+        // Files differing near the start leave after one small block.
+        [Fact]
+        public void Files_differing_at_the_start_read_one_block()
+        {
+            string[] paths = WriteVariants("reads-start", 4 * 1024 * 1024, (content, index) => content[0] = (byte)index, 3);
+
+            List<(string Path, long Offset, int Count)> reads = Reads(() => Assert.Empty(Analyze(paths)));
+
+            Assert.Equal(3 * 4096, reads.Sum(read => read.Count));
+        }
+
+        // Files differing only at the end leave after two small blocks.
+        [Fact]
+        public void Files_differing_at_the_end_read_two_blocks()
+        {
+            const int Size = 4 * 1024 * 1024;
+            string[] paths = WriteVariants("reads-end", Size, (content, index) => content[Size - 1] = (byte)index, 2);
+
+            List<(string Path, long Offset, int Count)> reads = Reads(() => Assert.Empty(Analyze(paths)));
+
+            Assert.Equal(2 * 2 * 4096, reads.Sum(read => read.Count));
+        }
+
+        // A difference in the middle stops the reading in the chunk that has it.
+        [Fact]
+        public void Files_differing_in_the_middle_are_not_read_to_the_end()
+        {
+            const int Size = 32 * 1024 * 1024;
+            string[] paths = WriteVariants("reads-middle", Size, (content, index) => content[2 * 1024 * 1024] = (byte)index, 2);
+
+            List<(string Path, long Offset, int Count)> reads = Reads(() => Assert.Empty(Analyze(paths)));
+
+            Assert.Equal(2 * (2 * 4096 + 1024 * 1024 + 8 * 1024 * 1024), reads.Sum(read => read.Count));
+        }
+
+        // A small file is read once, duplicates included.
+        [Theory]
+        [InlineData(1)]
+        [InlineData(4096)]
+        public void Small_files_are_read_once(int size)
+        {
+            string[] paths = WriteVariants("reads-small", size, (content, index) => { }, 2);
+
+            List<(string Path, long Offset, int Count)> reads = Reads(() => Assert.Equal(2, Assert.Single(Analyze(paths)).PhysicalCopyCount));
+
+            Assert.Equal(2, reads.Count);
+            Assert.Equal(2 * size, reads.Sum(read => read.Count));
+        }
+
+        // Whatever is skipped, the groups must be the ones a full comparison
+        // finds: one difference at each edge of the blocks and chunks.
+        [Theory]
+        [InlineData(5000)]
+        [InlineData(8192)]
+        [InlineData(8193)]
+        [InlineData(1024 * 1024)]
+        [InlineData(1024 * 1024 + 1)]
+        [InlineData(9 * 1024 * 1024 + 7)]
+        public void Groups_equal_a_full_comparison(int size)
+        {
+            int[] offsets = new[] { 0, 4095, 4096, 4097, size / 2, 1024 * 1024 - 1, 1024 * 1024, 9 * 1024 * 1024 - 1, size - 4097, size - 4096, size - 1 }
+                .Where(offset => offset >= 0 && offset < size).Distinct().ToArray();
+            string directory = TestEnvironment.CreateDirectory("reads-edges");
+            byte[] content = new byte[size];
+            new Random(size).NextBytes(content);
+            List<string> paths = new List<string>();
+
+            void Write(string name, byte[] bytes)
+            {
+                string path = Path.Combine(directory, name);
+                File.WriteAllBytes(path, bytes);
+                paths.Add(path);
+            }
+
+            Write("same-1.bin", content);
+            Write("same-2.bin", content);
+
+            foreach (int offset in offsets)
+            {
+                byte[] changed = (byte[])content.Clone();
+                changed[offset] ^= 0xFF;
+                Write("one-" + offset + ".bin", changed);
+                Write("two-" + offset + ".bin", changed);
+            }
+
+            string[] Expected(IEnumerable<string> group) => group.Select(Path.GetFileName).OrderBy(name => name, StringComparer.Ordinal).ToArray();
+
+            IEnumerable<string> full = paths
+                .GroupBy(path => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path))))
+                .Select(group => string.Join(",", Expected(group)));
+
+            IEnumerable<string> found = Analyze(paths.ToArray()).Select(group => string.Join(",", Expected(group.Locations)));
+
+            Assert.Equal(full.OrderBy(group => group, StringComparer.Ordinal), found.OrderBy(group => group, StringComparer.Ordinal));
+        }
+
+        // ----- work besides reading -----------------------------------------
+
+        // Thousands of files: a few progress reports per second, one saved
+        // cache, and not one big buffer for each file.
+        [Fact]
+        public void Many_files_cost_little_besides_reading()
+        {
+            const int Count = 2000;
+            string directory = TestEnvironment.CreateDirectory("work");
+            string[] paths = new string[Count];
+
+            for (int index = 0; index < Count; index++)
+            {
+                paths[index] = Path.Combine(directory, index + ".bin");
+                File.WriteAllBytes(paths[index], new byte[] { (byte)index, (byte)(index >> 8), 3 });
+            }
+
+            CountingProgress reports = new CountingProgress();
+            int saves = 0;
+            FileIdentityReader previous = FileIdentities.Reader;
+            FileIdentities.Reader = StampedIdentities(path => 1);
+            RedundancyAnalysisService.CacheSaveObserver = () => saves++;
+            System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+            long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+
+            try
+            {
+                RedundancyAnalysisService.Analyze(Entries(3, paths), CancellationToken.None, null, reports);
+                long allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+
+                Assert.InRange(reports.Count, 2, 20 + (int)(watch.ElapsedMilliseconds / 100));
+                Assert.InRange(saves, 0, 1);
+                Assert.InRange(allocated, 0, 64L * 1024 * 1024);
+            }
+            finally
+            {
+                RedundancyAnalysisService.CacheSaveObserver = null;
+                FileIdentities.Reader = previous;
+            }
+        }
+
+        // A cancelled analysis keeps the hashes it already paid for.
+        [Fact]
+        public void Cancelling_saves_the_hashes_already_read()
+        {
+            RedundancyHashCacheService.Clear();
+            string[] small = WriteVariants("cancel-small", 100, (content, index) => { }, 2);
+            string[] large = WriteVariants("cancel-large", 2 * 1024 * 1024, (content, index) => { }, 2);
+            CancellationTokenSource cancellation = new CancellationTokenSource();
+            FileIdentityReader previous = FileIdentities.Reader;
+            FileIdentities.Reader = StampedIdentities(path => 1);
+            RedundancyAnalysisService.ReadObserver = (path, offset, count) =>
+            {
+                if (offset > 0)
+                {
+                    cancellation.Cancel();
+                }
+            };
+
+            try
+            {
+                Assert.ThrowsAny<OperationCanceledException>(() => Analyze(cancellation.Token, small.Concat(large).ToArray()));
+                Assert.NotEmpty(RedundancyHashCacheService.Load().Entries);
+            }
+            finally
+            {
+                RedundancyAnalysisService.ReadObserver = null;
+                FileIdentities.Reader = previous;
+                RedundancyHashCacheService.Clear();
+            }
+        }
+
+        private sealed class CountingProgress : IProgress<RedundancyAnalysisProgressInfo>
+        {
+            public int Count { get; private set; }
+
+            public void Report(RedundancyAnalysisProgressInfo value) => Count++;
+        }
+
+        // Identities by path with a change stamp, as native readers give.
+        private static FileIdentityReader StampedIdentities(Func<string, long> stamp)
+        {
+            return (string path, out FileIdentity identity, out long usn, out bool hasUsn) =>
+            {
+                bool found = FileIdentities.ByPath(path, out identity, out usn, out hasUsn);
+                usn = stamp(path);
+                hasUsn = found;
+                return found;
+            };
+        }
+
+        private static string[] WriteVariants(string name, int size, Action<byte[], int> change, int count)
+        {
+            string directory = TestEnvironment.CreateDirectory(name);
+            string[] paths = new string[count];
+            byte[] seed = new byte[size];
+            new Random(size).NextBytes(seed);
+
+            for (int index = 0; index < count; index++)
+            {
+                byte[] content = (byte[])seed.Clone();
+                change(content, index);
+                paths[index] = Path.Combine(directory, index + ".bin");
+                File.WriteAllBytes(paths[index], content);
+            }
+
+            return paths;
+        }
+
+        private static IReadOnlyList<RedundancyAnalysisGroup> Analyze(params string[] paths) => Analyze(CancellationToken.None, paths);
+
+        private static IReadOnlyList<RedundancyAnalysisGroup> Analyze(CancellationToken cancellation, params string[] paths)
+        {
+            return RedundancyAnalysisService.Analyze(
+                paths.Select(path => new FileSystemEntry { Name = Path.GetFileName(path), FullPath = path, SizeBytes = new FileInfo(path).Length }).ToArray(),
+                cancellation,
+                null,
+                null);
+        }
+
+        private static List<(string Path, long Offset, int Count)> Reads(Action analyze)
+        {
+            List<(string Path, long Offset, int Count)> reads = new List<(string Path, long Offset, int Count)>();
+            RedundancyAnalysisService.ReadObserver = (path, offset, count) => reads.Add((path, offset, count));
+
+            try
+            {
+                analyze();
+            }
+            finally
+            {
+                RedundancyAnalysisService.ReadObserver = null;
+            }
+
+            return reads;
+        }
+
         // Clones are still copies to list, but their blocks count once.
         [Fact]
         public void Clones_count_once_in_the_total()
