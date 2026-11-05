@@ -42,6 +42,51 @@ namespace c2flux.AppTests
             Assert.Equal(IconPixels(startEnabled: true), IconPixels(startEnabled: false));
         }
 
+        // The system's mode can arrive after the first frame (Linux): what is
+        // drawn by hand ends up like a window that started in that mode.
+        [AvaloniaFact]
+        public void Hand_drawn_controls_follow_a_theme_change()
+        {
+            byte[] Pixels(Avalonia.Controls.Control control, bool switchAfterShown)
+            {
+                App.ApplyLayout(switchAfterShown ? AppLayout.WindowsDarkMode : AppLayout.WindowsLightMode);
+                Window window = new Window { Width = 300, Height = 200, Content = control };
+                window.Show();
+                Dispatcher.UIThread.RunJobs();
+                Avalonia.Headless.HeadlessWindowExtensions.CaptureRenderedFrame(window).Dispose();
+                App.ApplyLayout(AppLayout.WindowsLightMode);
+                Dispatcher.UIThread.RunJobs();
+
+                using Avalonia.Media.Imaging.WriteableBitmap frame = Avalonia.Headless.HeadlessWindowExtensions.CaptureRenderedFrame(window);
+                using Avalonia.Platform.ILockedFramebuffer buffer = frame.Lock();
+                byte[] pixels = new byte[buffer.RowBytes * frame.PixelSize.Height];
+                System.Runtime.InteropServices.Marshal.Copy(buffer.Address, pixels, 0, pixels.Length);
+                window.Close();
+                return pixels;
+            }
+
+            FileSystemEntry root = ChartCaptures.LoadFixture();
+            System.Func<Avalonia.Controls.Control>[] controls =
+            {
+                () => { EntryTree tree = new EntryTree(); tree.SetRootEntry(root); return tree; },
+                () => { Treemap map = new Treemap(); map.SetRootEntry(root); map.SetEntry(root); return map; },
+                () => { EntryTable table = new EntryTable(); table.SetEntry(root); return table; },
+                () => new ToolbarIcon { Kind = ToolbarIconKind.Analysis },
+            };
+
+            try
+            {
+                foreach (System.Func<Avalonia.Controls.Control> control in controls)
+                {
+                    Assert.Equal(Pixels(control(), false), Pixels(control(), true));
+                }
+            }
+            finally
+            {
+                App.ApplyLayout(AppLayout.WindowsDarkMode);
+            }
+        }
+
         // An exception in an async event handler (export, save...) is
         // logged and shown, not a crash.
         [AvaloniaFact]

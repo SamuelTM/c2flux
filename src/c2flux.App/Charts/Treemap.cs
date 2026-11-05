@@ -48,6 +48,7 @@ namespace c2flux
         public Treemap()
         {
             ClipToBounds = true;
+            ActualThemeVariantChanged += (_, _) => _renderCacheDirty = true;
 
             // Like WinForms: while resizing, the old image is stretched; the
             // map is laid out again 90 ms after the size stops changing.

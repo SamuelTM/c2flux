@@ -50,6 +50,7 @@ namespace c2flux
 
         public ToolbarIcon()
         {
+            ActualThemeVariantChanged += (_, _) => InvalidateVisual();
             Width = 16 * Scale;
             Height = 16 * Scale;
         }

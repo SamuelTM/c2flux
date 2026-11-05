@@ -475,6 +475,7 @@ namespace c2flux
         {
             public CalendarGlyph()
             {
+                ActualThemeVariantChanged += (_, _) => InvalidateVisual();
                 Width = 14;
                 Height = 14;
             }

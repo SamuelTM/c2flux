@@ -178,6 +178,36 @@ namespace c2flux.AppTests
             Assert.Null(EntryIndex.LargestFiles(root, File("/elsewhere", 1), 2));
         }
 
+        // A scanned folder below a scanned drive: each entry belongs to the
+        // tree holding it, though both trees have the folder's path.
+        [AvaloniaFact]
+        public void A_folder_scanned_below_a_drive_is_its_own_root()
+        {
+            FileSystemEntry Folder(string path, params FileSystemEntry[] children)
+            {
+                FileSystemEntry folder = new FileSystemEntry { Name = System.IO.Path.GetFileName(path), FullPath = path, IsDirectory = true };
+                folder.Children.AddRange(children);
+                return folder;
+            }
+
+            string Path(string name) => System.IO.Path.Combine(System.IO.Path.GetTempPath(), "drive", name);
+            FileSystemEntry insideDrive = Folder(Path("docs"));
+            FileSystemEntry drive = Folder(System.IO.Path.GetDirectoryName(Path("docs")), insideDrive);
+            FileSystemEntry scanned = Folder(Path("docs"));
+            EntryTree tree = new EntryTree();
+            tree.SetRootEntry(drive);
+            tree.SetRootEntry(scanned);
+
+            Assert.Same(scanned, tree.GetRootEntry(scanned));
+            Assert.Same(drive, tree.GetRootEntry(insideDrive));
+            Assert.Same(scanned, tree.GetRootEntry(new FileSystemEntry { FullPath = Path("docs") }));
+
+            // Only the folder leaves the tree.
+            Assert.True(tree.RemoveRootEntry(scanned));
+            Assert.Same(drive, tree.GetRootEntry(insideDrive));
+            Assert.Same(drive, tree.GetRootEntry(scanned));
+        }
+
         // Files in AllFiles but not in a folder's Children (a scan in
         // progress, or "Show files in tree" off) go under their folder by
         // path; the index is built again when AllFiles grows.

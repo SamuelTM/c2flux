@@ -148,7 +148,10 @@ namespace c2flux
 
             if (!forceSelectionToRoot && !string.IsNullOrWhiteSpace(previousSelectedKey))
             {
-                newSelectedNode = _visibleNodes.FirstOrDefault(node => string.Equals(node.Key, previousSelectedKey, StringComparison.OrdinalIgnoreCase));
+                // The same node first: another root's tree can have the same path.
+                newSelectedNode = _visibleNodes.Contains(_selectedNode)
+                    ? _selectedNode
+                    : _visibleNodes.FirstOrDefault(node => string.Equals(node.Key, previousSelectedKey, StringComparison.OrdinalIgnoreCase));
             }
 
             newSelectedNode ??= rootNode;
@@ -217,7 +220,14 @@ namespace c2flux
                 return false;
             }
 
-            bool selectedNodeRemoved = _selectedNode != null && IsSameOrDescendantPath(_selectedNode.Entry?.FullPath, rootNode.Entry?.FullPath);
+            Node selectedRoot = _selectedNode;
+
+            while (selectedRoot?.Parent != null)
+            {
+                selectedRoot = selectedRoot.Parent;
+            }
+
+            bool selectedNodeRemoved = selectedRoot == rootNode;
             int rootIndex = _rootNodes.IndexOf(rootNode);
 
             RemoveExpandedKeys(rootNode);
@@ -251,9 +261,16 @@ namespace c2flux
                 return null;
             }
 
-            return _rootNodes.FirstOrDefault(rootNode =>
+            List<Node> candidates = _rootNodes.Where(rootNode =>
                 !string.IsNullOrWhiteSpace(rootNode.Entry?.FullPath) &&
-                IsSameOrDescendantPath(entry.FullPath, rootNode.Entry.FullPath));
+                IsSameOrDescendantPath(entry.FullPath, rootNode.Entry.FullPath)).ToList();
+
+            // A scanned folder can sit below a scanned drive, with the path in
+            // both trees: the tree holding this entry wins, else the closest root.
+            return candidates.Count < 2
+                ? candidates.FirstOrDefault()
+                : candidates.FirstOrDefault(rootNode => ScanTree.Contains(rootNode.Entry, entry)) ??
+                    candidates.OrderByDescending(rootNode => rootNode.Entry.FullPath.Length).First();
         }
 
         // ----- layout and drawing ---------------------------------------

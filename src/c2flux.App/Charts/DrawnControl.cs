@@ -11,6 +11,13 @@ namespace c2flux
     // laid out with the metrics of Segoe UI and TextRenderer.
     public abstract class DrawnControl : Control
     {
+        // The system's mode can arrive after the first frame (Linux) or change
+        // later; brushes are looked up while drawing.
+        protected DrawnControl()
+        {
+            ActualThemeVariantChanged += (_, _) => InvalidateVisual();
+        }
+
         protected void ShowRevealMenu(FileSystemEntry entry) => RevealMenu.Show(this, entry);
 
         protected IBrush Resource(string key) =>

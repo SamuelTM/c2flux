@@ -108,6 +108,10 @@ namespace c2flux
 
         private static StringComparison PathComparison => OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
+        // Whether this very entry (not one with its path) is in root's tree.
+        public static bool Contains(FileSystemEntry root, FileSystemEntry entry) =>
+            ReferenceEquals(root, entry) || FindAncestors(root, entry).Count > 0;
+
         // The folders from root down to entry's folder, going down by path.
         private static List<FileSystemEntry> FindAncestors(FileSystemEntry root, FileSystemEntry entry)
         {
