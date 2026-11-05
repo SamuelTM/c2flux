@@ -320,6 +320,55 @@ jobs:
             cat "$file"
           done
 
+  # The duplicate analysis, before and after, on what a hard disk would see:
+  # runners have no such disk. See tests/disk-model.
+  disk-model:
+    name: Duplicates on a modelled hard disk
+    runs-on: ubuntu-latest
+    env:
+      BASELINE: e79a332
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build both versions
+        run: |
+          dotnet publish tests/disk-model/c2flux.DiskModel.csproj --configuration Release --output "$RUNNER_TEMP/current"
+          git worktree add "$RUNNER_TEMP/baseline-source" "$BASELINE"
+          mkdir "$RUNNER_TEMP/baseline-source/tests/disk-model"
+          cp tests/disk-model/c2flux.DiskModel.csproj tests/disk-model/Program.cs "$RUNNER_TEMP/baseline-source/tests/disk-model/"
+          dotnet publish "$RUNNER_TEMP/baseline-source/tests/disk-model/c2flux.DiskModel.csproj" --configuration Release --output "$RUNNER_TEMP/baseline" "-p:DefineConstants=BASELINE"
+
+      - name: Create the disk
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blktrace
+          sudo modprobe dm-delay || (sudo apt-get install -y "linux-modules-extra-$(uname -r)" && sudo modprobe dm-delay)
+          sudo mount -t debugfs debugfs /sys/kernel/debug || true
+          truncate -s 4G "$RUNNER_TEMP/disk.img"
+          loop=$(sudo losetup --find --show "$RUNNER_TEMP/disk.img")
+          sudo dmsetup create c2flux-disk --table "0 $(sudo blockdev --getsz "$loop") delay $loop 0 0"
+          sudo mkfs.ext4 -q /dev/mapper/c2flux-disk
+          sudo mkdir -p /mnt/disk
+          sudo mount /dev/mapper/c2flux-disk /mnt/disk
+          sudo chown "$(id -u):$(id -g)" /mnt/disk
+          python3 tests/disk-model/generate.py /mnt/disk/tree
+          sync
+
+      - name: Compare
+        run: |
+          mkdir -p "$RUNNER_TEMP/work"
+          sudo env "DOTNET_ROOT=$DOTNET_ROOT" python3 tests/disk-model/run.py /dev/mapper/c2flux-disk /mnt/disk/tree "$RUNNER_TEMP/baseline/c2flux.Core.Tests" "$RUNNER_TEMP/current/c2flux.Core.Tests" "$RUNNER_TEMP/work" | tee "$RUNNER_TEMP/table.md"
+          cat "$RUNNER_TEMP/table.md" >> "$GITHUB_STEP_SUMMARY"
+
   # Phase 6: the app packaged for every RID (package.yml).
   packages:
     name: Packages
