@@ -521,6 +521,12 @@ namespace c2flux
 
                     if (files.Count < 2)
                     {
+                        // The block of a small file already is its full hash.
+                        if (set.Stage == ReadStage.FirstBlock && set.Length <= SampleBlockSize)
+                        {
+                            RememberHash(files[0], equal.Key);
+                        }
+
                         Drop(files[0]);
                     }
                     else if (set.Stage == ReadStage.FirstBlock && set.Length <= SampleBlockSize)

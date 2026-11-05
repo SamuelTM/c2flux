@@ -205,6 +205,116 @@ namespace c2flux.Core.Tests
             Assert.Equal(full.OrderBy(group => group, StringComparer.Ordinal), found.OrderBy(group => group, StringComparer.Ordinal));
         }
 
+        // ----- the hash cache ------------------------------------------------
+
+        // A second analysis of unchanged files reads nothing; a change reads
+        // that file again and finds out. Every OS, with stamps given here.
+        [Fact]
+        public void Cached_hashes_save_the_reading_until_a_file_changes()
+        {
+            RedundancyHashCacheService.Clear();
+            string[] paths = WriteVariants("cache-stamps", 64 * 1024, (content, index) => { }, 2);
+            Dictionary<string, long> stamps = paths.ToDictionary(path => path, path => 1L);
+            FileIdentityReader previous = FileIdentities.Reader;
+            FileIdentities.Reader = StampedIdentities(path => stamps[path]);
+
+            try
+            {
+                Assert.Equal(2, Assert.Single(Analyze(paths)).PhysicalCopyCount);
+
+                List<(string Path, long Offset, int Count)> second = Reads(() => Assert.Equal(2, Assert.Single(Analyze(paths)).PhysicalCopyCount));
+                Assert.Empty(second);
+
+                // Same length, new content: the old hash must not be believed.
+                byte[] changed = File.ReadAllBytes(paths[1]);
+                changed[100] ^= 0xFF;
+                File.WriteAllBytes(paths[1], changed);
+                stamps[paths[1]] = 2;
+
+                List<(string Path, long Offset, int Count)> third = Reads(() => Assert.Empty(Analyze(paths)));
+                Assert.Equal(new[] { paths[1] }, third.Select(read => read.Path).Distinct());
+            }
+            finally
+            {
+                FileIdentities.Reader = previous;
+                RedundancyHashCacheService.Clear();
+            }
+        }
+
+        // A small file with no twin has its hash read too: nothing to read
+        // again until it changes.
+        [Fact]
+        public void Small_files_without_a_twin_are_remembered()
+        {
+            RedundancyHashCacheService.Clear();
+            string[] paths = WriteVariants("cache-small", 100, (content, index) => content[0] = (byte)index, 2);
+            FileIdentityReader previous = FileIdentities.Reader;
+            FileIdentities.Reader = StampedIdentities(path => 1);
+
+            try
+            {
+                Assert.Empty(Analyze(paths));
+                Assert.Empty(Reads(() => Assert.Empty(Analyze(paths))));
+            }
+            finally
+            {
+                FileIdentities.Reader = previous;
+                RedundancyHashCacheService.Clear();
+            }
+        }
+
+        // The native stamps: settled files are remembered, and a write is
+        // noticed even when the modification time is put back.
+        [Fact]
+        public void Native_change_stamps_notice_every_write()
+        {
+            FileIdentityReader native =
+                OperatingSystem.IsMacOS() ? MacFileIdentity.TryRead :
+                OperatingSystem.IsLinux() ? LinuxFileIdentity.TryRead :
+                null;
+
+            if (native == null)
+            {
+                return;
+            }
+
+            RedundancyHashCacheService.Clear();
+            string[] paths = WriteVariants("cache-native", 64 * 1024, (content, index) => { }, 2);
+            FileIdentityReader previous = FileIdentities.Reader;
+            FileIdentities.Reader = native;
+
+            try
+            {
+                // Just written: too recent to trust, so it is read every time.
+                Assert.False(native(paths[0], out _, out _, out bool recent) && recent);
+                Assert.NotEmpty(Reads(() => Analyze(paths)));
+                Assert.NotEmpty(Reads(() => Analyze(paths)));
+
+                Thread.Sleep(2100);
+                Assert.True(native(paths[0], out _, out long stamp, out bool settled));
+                Assert.True(settled);
+
+                Assert.NotEmpty(Reads(() => Analyze(paths)));
+                Assert.Empty(Reads(() => Assert.Single(Analyze(paths))));
+
+                DateTime modified = File.GetLastWriteTimeUtc(paths[1]);
+                byte[] changed = File.ReadAllBytes(paths[1]);
+                changed[100] ^= 0xFF;
+                File.WriteAllBytes(paths[1], changed);
+                File.SetLastWriteTimeUtc(paths[1], modified);
+                Thread.Sleep(2100);
+
+                Assert.True(native(paths[1], out _, out long newStamp, out _));
+                Assert.NotEqual(stamp, newStamp);
+                Assert.NotEmpty(Reads(() => Assert.Empty(Analyze(paths))));
+            }
+            finally
+            {
+                FileIdentities.Reader = previous;
+                RedundancyHashCacheService.Clear();
+            }
+        }
+
         // ----- work besides reading -----------------------------------------
 
         // Thousands of files: a few progress reports per second, one saved
@@ -592,6 +702,11 @@ namespace c2flux.Core.Tests
                     long analyze = watch.ElapsedMilliseconds;
                     Assert.True(group.TotalMayBeOverstated, directory);
                     Assert.Equal(Size * 2L, group.TotalSizeBytes);
+
+                    // Attributes of a share can be stale: no stamp to trust.
+                    Thread.Sleep(2100);
+                    Assert.True(NativeIdentityReader()(a, out _, out _, out bool hasStamp));
+                    Assert.False(hasStamp, directory);
 
                     // Where the time goes on a share: CI prints this file.
                     string timings = Environment.GetEnvironmentVariable("C2FLUX_TIMINGS");

@@ -6,11 +6,13 @@ using Microsoft.Win32.SafeHandles;
 
 namespace c2flux
 {
-    // FileIdentityReader for macOS: device and file id from getattrlist(2),
-    // following links. No change journal number.
+    // FileIdentityReader for macOS: device, file id and change stamp from
+    // getattrlist(2), following links.
     public static class MacFileIdentity
     {
         private const uint AttrCmnDevId = 0x00000002;
+        private const uint AttrCmnModTime = 0x00000400;
+        private const uint AttrCmnChgTime = 0x00000800;
         private const uint AttrCmnFileId = 0x02000000;
         private const uint AttrCmnReturnedAttrs = 0x80000000;
         private const uint AttrCmnExtCloneId = 0x00000100;
@@ -27,20 +29,27 @@ namespace c2flux
             hasUsn = false;
             identity = default;
 
-            AttrList request = new AttrList { BitmapCount = 5, CommonAttr = AttrCmnDevId | AttrCmnFileId };
-            byte* buffer = stackalloc byte[32];
+            AttrList request = new AttrList { BitmapCount = 5, CommonAttr = AttrCmnDevId | AttrCmnModTime | AttrCmnChgTime | AttrCmnFileId };
+            byte* buffer = stackalloc byte[48];
 
-            if (getattrlist(path, ref request, buffer, 32, 0) != 0)
+            if (getattrlist(path, ref request, buffer, 48, 0) != 0)
             {
                 return false;
             }
 
-            // u32 length, dev_t (int32), u64 file id (attributes are 4-byte aligned).
+            // u32 length, dev_t (int32), two timespecs (i64 seconds, i64
+            // nanoseconds), u64 file id. Attributes are 4-byte aligned.
             uint device = *(uint*)(buffer + 4);
-            ulong fileId = *(ulong*)(buffer + 8);
+            ulong fileId = *(ulong*)(buffer + 40);
             identity = new FileIdentity(device, fileId, 0);
+            hasUsn = FileIdentities.ChangeStamp(*(long*)(buffer + 8), (uint)*(long*)(buffer + 16), *(long*)(buffer + 24), (uint)*(long*)(buffer + 32), out usn) &&
+                !IsNetworkShare(path);
             return true;
         }
+
+        // The attributes of a share can be out of date for a while, so they
+        // cannot tell that a file is unchanged.
+        private static bool IsNetworkShare(string path) => ReadFileSystemType(path) is "nfs" or "smbfs";
 
         // FileExtentReader for APFS: the file's blocks. Compressed files have
         // no block map, so their clone id is one extent, shared whole or not

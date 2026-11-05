@@ -113,6 +113,14 @@ namespace c2flux
             return statfs(path, buffer) == 0 && *(uint*)buffer is ZfsMagic or NfsMagic or Smb2Magic or CifsMagic;
         }
 
+        // The attributes of a share can be out of date for a while, so they
+        // cannot tell that a file is unchanged.
+        public static unsafe bool IsNetworkShare(string path)
+        {
+            byte* buffer = stackalloc byte[StatfsSize];
+            return statfs(path, buffer) == 0 && *(uint*)buffer is NfsMagic or Smb2Magic or CifsMagic;
+        }
+
         // 0 on other file systems, which reject the ioctl.
         private static unsafe ulong ReadBtrfsId(int descriptor)
         {

@@ -40,9 +40,10 @@ namespace c2flux
         }
     }
 
-    // Reads a file's identity, following links. usn is the NTFS change journal
-    // number (Windows only; hasUsn false elsewhere), used to reuse cached
-    // hashes. Returns false when the file cannot be opened.
+    // Reads a file's identity, following links. usn tells whether the file
+    // changed, to reuse cached hashes: the change journal number on Windows,
+    // FileIdentities.ChangeStamp elsewhere. hasUsn is false when there is none
+    // to trust. Returns false when the file cannot be opened.
     public delegate bool FileIdentityReader(string path, out FileIdentity identity, out long usn, out bool hasUsn);
 
     // Where a file's data lies on its volume. The unit only has to be the same
@@ -70,6 +71,16 @@ namespace c2flux
         // (ZFS, network shares): a total there may be too high. Null until
         // registered.
         public static Func<string, bool> HiddenCloneChecker { get; set; }
+
+        // Every write moves ctime, which unlike mtime cannot be set back. The
+        // clock of a file system is coarse: a file changed just now could
+        // change again under the same stamp, so it gets none (git does the same).
+        public static bool ChangeStamp(long modifiedSeconds, uint modifiedNanoseconds, long changedSeconds, uint changedNanoseconds, out long stamp)
+        {
+            stamp = unchecked(((modifiedSeconds * 1000000007L) ^ modifiedNanoseconds) * 1000000009L ^ (changedSeconds * 998244353L) ^ changedNanoseconds);
+            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            return now - Math.Max(modifiedSeconds, changedSeconds) >= 2;
+        }
 
         public static bool ByPath(string path, out FileIdentity identity, out long usn, out bool hasUsn)
         {

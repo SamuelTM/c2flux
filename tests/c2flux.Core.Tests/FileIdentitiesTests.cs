@@ -33,11 +33,10 @@ namespace c2flux.Core.Tests
             File.Copy(original, copy);
             Assert.Equal(0, link_(original, link));
 
-            Assert.True(reader(original, out FileIdentity originalIdentity, out _, out bool hasUsn));
+            Assert.True(reader(original, out FileIdentity originalIdentity, out _, out _));
             Assert.True(reader(link, out FileIdentity linkIdentity, out _, out _));
             Assert.True(reader(copy, out FileIdentity copyIdentity, out _, out _));
 
-            Assert.False(hasUsn);
             Assert.Equal(originalIdentity, linkIdentity);
             Assert.NotEqual(originalIdentity, copyIdentity);
             Assert.False(reader(Path.Combine(directory, "missing.bin"), out _, out _, out _));
