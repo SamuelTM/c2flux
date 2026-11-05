@@ -59,9 +59,9 @@ namespace c2flux
         private readonly CheckBox _maximumSize = Check("Search.MaximumSize");
         private readonly NumericUpDown _maximumSizeValue = SizeInput();
         private readonly CheckBox _modifiedAfter = Check("Search.ModifiedAfter");
-        private readonly CalendarDatePicker _modifiedAfterValue = DateInput();
+        private readonly DateField _modifiedAfterValue = DateInput();
         private readonly CheckBox _modifiedBefore = Check("Search.ModifiedBefore");
-        private readonly CalendarDatePicker _modifiedBeforeValue = DateInput();
+        private readonly DateField _modifiedBeforeValue = DateInput();
         private readonly TextBox _fileTypes = new TextBox { Classes = { "ant" } };
         private readonly DrawnTable<SearchResult> _table = new DrawnTable<SearchResult> { Style = TableStyle.Classic, Responsive = true };
         private readonly ProgressBar _progress = new ProgressBar { IsIndeterminate = true, Height = 4, MinHeight = 4, IsVisible = false };
@@ -712,7 +712,7 @@ namespace c2flux
         // AntdUI.InputNumber: MB with two decimals and spin buttons.
         private static NumericUpDown SizeInput() => new NumericUpDown { Minimum = 0, Maximum = 1048576, Increment = 1, FormatString = "N2", Value = 0, Classes = { "ant" } };
 
-        private static CalendarDatePicker DateInput() => new CalendarDatePicker { SelectedDateFormat = CalendarDatePickerFormat.Custom, CustomDateFormatString = "dd.MM.yyyy", SelectedDate = DateTime.Today };
+        private static DateField DateInput() => new DateField { SelectedDate = DateTime.Today };
 
         private static Button FooterButton(string textKey, bool primary)
         {

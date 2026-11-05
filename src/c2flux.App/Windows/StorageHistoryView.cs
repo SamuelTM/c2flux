@@ -366,8 +366,8 @@ namespace c2flux
 
             DateTime from = _settings.StorageHistoryCustomFromDate.Date;
             DateTime to = _settings.StorageHistoryCustomToDate.Date;
-            CalendarDatePicker fromPicker = new CalendarDatePicker { SelectedDate = from <= to ? from : to, Width = 140, Height = 32, HorizontalAlignment = HorizontalAlignment.Left };
-            CalendarDatePicker toPicker = new CalendarDatePicker { SelectedDate = from <= to ? to : from, Width = 140, Height = 32, HorizontalAlignment = HorizontalAlignment.Left };
+            DateField fromPicker = new DateField { SelectedDate = from <= to ? from : to, Width = 140, Height = 32, HorizontalAlignment = HorizontalAlignment.Left };
+            DateField toPicker = new DateField { SelectedDate = from <= to ? to : from, Width = 140, Height = 32, HorizontalAlignment = HorizontalAlignment.Left };
             bool accepted = false;
             Window dialog = new Window
             {

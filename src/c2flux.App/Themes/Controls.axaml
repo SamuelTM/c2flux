@@ -210,6 +210,107 @@
     <Setter Property="Opacity" Value="0.4" />
   </Style>
 
+  <!-- DateField: the calendar under the field, days in circles. -->
+  <Style Selector="Border.calpanel">
+    <Setter Property="Background" Value="{DynamicResource BackgroundPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="14" />
+    <Setter Property="Margin" Value="0,4,0,0" />
+  </Style>
+  <Style Selector="TextBlock.calname">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="Button.calcell">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Cell" BorderThickness="1" BorderBrush="Transparent" Background="{TemplateBinding Background}">
+          <ContentPresenter Name="Text" Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.calcell.day /template/ Border#Cell">
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="CornerRadius" Value="18" />
+  </Style>
+  <Style Selector="Button.calcell.item">
+    <Setter Property="Margin" Value="3" />
+  </Style>
+  <Style Selector="Button.calcell.item /template/ Border#Cell">
+    <Setter Property="Height" Value="36" />
+    <Setter Property="CornerRadius" Value="18" />
+  </Style>
+  <Style Selector="Button.calcell:pointerover /template/ Border#Cell">
+    <Setter Property="Background" Value="{DynamicResource HoverBackgroundBrush}" />
+  </Style>
+  <Style Selector="Button.calcell.other /template/ ContentPresenter#Text">
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
+  <Style Selector="Button.calcell.today /template/ Border#Cell">
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="Background" Value="{DynamicResource HoverBackgroundBrush}" />
+  </Style>
+  <Style Selector="Button.calcell.selected">
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.calcell.selected /template/ Border#Cell, Button.calcell.selected:pointerover /template/ Border#Cell">
+    <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource InputFocusShadow}" />
+  </Style>
+  <Style Selector="Button.calcell.selected /template/ ContentPresenter#Text">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Button.calhead, Button.calnav, Button.calicon">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Cell" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.calhead">
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="6,4" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.calnav">
+    <Setter Property="Width" Value="32" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Background" Value="{DynamicResource BackgroundSecondaryBrush}" />
+  </Style>
+  <Style Selector="Button.calnav:disabled">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+  <Style Selector="Button.calicon">
+    <Setter Property="Width" Value="24" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Margin" Value="0,0,4,0" />
+  </Style>
+  <Style Selector="Button.calhead:pointerover, Button.calnav:pointerover, Button.calicon:pointerover">
+    <Setter Property="Background" Value="{DynamicResource HoverBackgroundBrush}" />
+  </Style>
+  <Style Selector="Button.calhead Path, Button.calnav Path, Button.calicon Path">
+    <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="StrokeThickness" Value="1.5" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+  </Style>
+
   <!-- AntdUI.Button with a border (the Filters button of the search). -->
   <Style Selector="Button.ant.dialog.bordered">
     <Setter Property="BorderThickness" Value="2" />
