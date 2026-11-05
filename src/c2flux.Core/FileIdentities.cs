@@ -44,6 +44,10 @@ namespace c2flux
     // hashes. Returns false when the file cannot be opened.
     public delegate bool FileIdentityReader(string path, out FileIdentity identity, out long usn, out bool hasUsn);
 
+    // Reads the id of the data stream behind a path: files on one volume with
+    // the same id are clones sharing their blocks. Returns false when unknown.
+    public delegate bool FileCloneIdReader(string path, out ulong cloneId);
+
     // Where RedundancyAnalysisService gets file identities. Each platform
     // registers its reader at startup (the WinForms Program.Main registers the
     // Windows one). The default works everywhere but knows no file ids: it
@@ -51,6 +55,9 @@ namespace c2flux
     public static class FileIdentities
     {
         public static FileIdentityReader Reader { get; set; } = ByPath;
+
+        // Null where the platform has no clone ids to read.
+        public static FileCloneIdReader CloneIdReader { get; set; }
 
         public static bool ByPath(string path, out FileIdentity identity, out long usn, out bool hasUsn)
         {

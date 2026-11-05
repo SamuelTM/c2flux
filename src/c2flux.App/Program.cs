@@ -20,6 +20,11 @@ namespace c2flux
                 : OperatingSystem.IsMacOS() ? MacFileIdentity.TryRead
                 : LinuxFileIdentity.TryRead;
 
+            if (OperatingSystem.IsMacOS())
+            {
+                FileIdentities.CloneIdReader = MacFileIdentity.TryReadCloneId;
+            }
+
             RegisterPlatformServices();
 
             return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);

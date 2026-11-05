@@ -425,7 +425,7 @@ namespace c2flux
                     cancellationToken.ThrowIfCancellationRequested();
 
                     long totalSizeBytes =
-                        hashGroup.Sum(file => file.OccupiedBytes);
+                        GetOccupiedBytes(hashGroup);
 
                     WorkingGroup workingGroup =
                         new WorkingGroup(
@@ -552,6 +552,29 @@ namespace c2flux
             {
                 return file.SizeBytes;
             }
+        }
+
+        // Clones share their blocks, so a set of clones occupies one copy.
+        private static long GetOccupiedBytes(
+            IReadOnlyList<PhysicalFile> files)
+        {
+            HashSet<(ulong Volume, ulong CloneId)> seenClones =
+                new HashSet<(ulong Volume, ulong CloneId)>();
+            FileCloneIdReader cloneIdReader =
+                FileIdentities.CloneIdReader;
+            long total = 0;
+
+            foreach (PhysicalFile file in files)
+            {
+                if (cloneIdReader == null ||
+                    !cloneIdReader(file.PrimaryPath, out ulong cloneId) ||
+                    seenClones.Add((file.Identity.VolumeSerialNumber, cloneId)))
+                {
+                    total += file.OccupiedBytes;
+                }
+            }
+
+            return total;
         }
 
         private static void AddPhysicalFileToHashGroup(

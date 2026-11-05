@@ -107,6 +107,57 @@ namespace c2flux.Core.Tests
             Assert.Equal(1024, RedundancyAnalysisService.GetLength(new FileSystemEntry { FullPath = missing, SizeBytes = 1024 }));
         }
 
+        // Clones are still copies to list, but their blocks count once.
+        [Fact]
+        public void Clones_count_once_in_the_total()
+        {
+            string directory = TestEnvironment.CreateDirectory("redundancy-clones");
+            byte[] content = new byte[64 * 1024];
+            new Random(13).NextBytes(content);
+            string original = Path.Combine(directory, "original.bin");
+            string clone = Path.Combine(directory, "clone.bin");
+            string copy = Path.Combine(directory, "copy.bin");
+            File.WriteAllBytes(original, content);
+            File.WriteAllBytes(copy, content);
+
+            FileCloneIdReader previous = FileIdentities.CloneIdReader;
+
+            if (OperatingSystem.IsMacOS() && clonefile(original, clone, 0) == 0)
+            {
+                FileIdentities.CloneIdReader = MacFileIdentity.TryReadCloneId;
+            }
+            else
+            {
+                File.WriteAllBytes(clone, content);
+                FileIdentities.CloneIdReader = (string path, out ulong cloneId) =>
+                {
+                    cloneId = path == copy ? 2UL : 1UL;
+                    return true;
+                };
+            }
+
+            try
+            {
+                FileSystemEntry Entry(string path) => new FileSystemEntry { Name = Path.GetFileName(path), FullPath = path, SizeBytes = content.Length };
+
+                RedundancyAnalysisGroup group = Assert.Single(RedundancyAnalysisService.Analyze(
+                    new[] { Entry(original), Entry(clone), Entry(copy) },
+                    CancellationToken.None,
+                    null,
+                    null));
+
+                Assert.Equal(3, group.PhysicalCopyCount);
+                Assert.Equal(content.Length * 2L, group.TotalSizeBytes);
+            }
+            finally
+            {
+                FileIdentities.CloneIdReader = previous;
+            }
+        }
+
+        [System.Runtime.InteropServices.DllImport("libc", SetLastError = true)]
+        private static extern int clonefile(string source, string destination, uint flags);
+
         [System.Runtime.InteropServices.DllImport("libc", EntryPoint = "link", SetLastError = true)]
         private static extern int link_(string existing, string created);
     }
