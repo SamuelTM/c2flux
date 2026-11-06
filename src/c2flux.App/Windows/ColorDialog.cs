@@ -247,6 +247,7 @@ namespace c2flux
         private const double Step = 0.01;
         private const int ImageSize = 256;
         private readonly ColorEditor _editor;
+        private readonly int[] _pixels = new int[ImageSize * ImageSize];
         private WriteableBitmap _colors;
         private double _colorsHue;
 
@@ -322,7 +323,6 @@ namespace c2flux
             }
 
             Color hue = HsvColor.FromHsv(_editor.HueDegrees, 1, 1).ToRgb();
-            int[] pixels = new int[ImageSize * ImageSize];
 
             for (int y = 0; y < ImageSize; y++)
             {
@@ -331,7 +331,7 @@ namespace c2flux
                 for (int x = 0; x < ImageSize; x++)
                 {
                     double saturation = x / (double)(ImageSize - 1);
-                    pixels[(y * ImageSize) + x] = unchecked((int)0xFF000000) |
+                    _pixels[(y * ImageSize) + x] = unchecked((int)0xFF000000) |
                         (Channel(hue.R, saturation, value) << 16) |
                         (Channel(hue.G, saturation, value) << 8) |
                         Channel(hue.B, saturation, value);
@@ -346,7 +346,7 @@ namespace c2flux
             {
                 for (int y = 0; y < ImageSize; y++)
                 {
-                    Marshal.Copy(pixels, y * ImageSize, buffer.Address + (y * buffer.RowBytes), ImageSize);
+                    Marshal.Copy(_pixels, y * ImageSize, buffer.Address + (y * buffer.RowBytes), ImageSize);
                 }
             }
 
