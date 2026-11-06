@@ -315,6 +315,8 @@
   "Settings.ExportSizeMb": "Tamanho na exportação (MB)",
   "Settings.ExportMaxDepth": "Máximo de níveis/profundidade:",
   "Settings.ExportMaxDepthHint": "(vazio = sem limite)",
+  "Color.SaturationBrightness": "Saturação e brilho",
+  "Color.Hue": "Matiz",
   "Settings.ShellContextMenuFailed": "Não foi possível atualizar a entrada do menu de contexto do Explorador de Arquivos.",
   "AlertHistory.Title": "Log resumido",
   "AlertHistory.Type": "Tipo",

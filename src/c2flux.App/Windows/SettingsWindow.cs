@@ -598,34 +598,4 @@ namespace c2flux
             canvas.Children.Add(control);
         }
     }
-
-    // WinForms ColorDialog (FullOpen): a color view with OK and Cancel.
-    public static class ColorDialog
-    {
-        public static async Task<Color?> ShowAsync(Window owner, Color color)
-        {
-            ColorView view = new ColorView { Color = color, IsAlphaVisible = false, IsAlphaEnabled = false };
-            Color? result = null;
-            Window dialog = new Window
-            {
-                Title = owner.Title,
-                Width = 560,
-                Height = 420,
-                CanResize = false,
-                CanMinimize = false,
-                CanMaximize = false,
-                ShowInTaskbar = false,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            };
-            Button ok = new Button { Content = LocalizationService.GetText("Common.OK"), Width = 90, Height = 32, IsDefault = true, HorizontalContentAlignment = HorizontalAlignment.Center, Classes = { "ant", "dialog", "primary" } };
-            Button cancel = new Button { Content = LocalizationService.GetText("Common.Cancel"), Width = 90, Height = 32, IsCancel = true, HorizontalContentAlignment = HorizontalAlignment.Center, Classes = { "ant", "dialog" } };
-            ok.Click += (_, _) => { result = view.Color; dialog.Close(); };
-            cancel.Click += (_, _) => dialog.Close();
-            StackPanel buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 10, Margin = new Thickness(0, 10, 0, 0), Children = { ok, cancel } };
-            DockPanel.SetDock(buttons, Dock.Bottom);
-            dialog.Content = new DockPanel { Margin = new Thickness(18, 16), Children = { buttons, view } };
-            await dialog.ShowDialog(owner);
-            return result;
-        }
-    }
 }
