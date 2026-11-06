@@ -566,8 +566,9 @@ namespace c2flux
 
         private static TextBlock Label(string text = null) => new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Classes = { "ant", "antd" } };
 
-        // AntdUI.Input with TextAlign = Right; no limit for 0.
-        private static TextBox Number(int maxLength) => new TextBox { MaxLength = maxLength, TextAlignment = TextAlignment.Right, Classes = { "ant" } };
+        // AntdUI.Input with TextAlign = Right; no limit for 0. Not TextAlignment:
+        // with it Avalonia puts the caret away from the text (TextCaretTests).
+        private static TextBox Number(int maxLength) => new TextBox { MaxLength = maxLength, HorizontalContentAlignment = HorizontalAlignment.Right, Classes = { "ant" } };
 
         private static Button Button(string textKey)
         {

@@ -143,7 +143,9 @@ namespace c2flux
 
         private static TextBox Field(string name, int maxLength)
         {
-            TextBox box = new TextBox { MaxLength = maxLength, Height = 36, TextAlignment = TextAlignment.Center, Classes = { "ant" } };
+            // Not TextAlignment: with it Avalonia puts the caret away from the
+            // text (TextCaretTests).
+            TextBox box = new TextBox { MaxLength = maxLength, Height = 36, HorizontalContentAlignment = HorizontalAlignment.Center, Classes = { "ant" } };
             AutomationProperties.SetName(box, name);
             return box;
         }
