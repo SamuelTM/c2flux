@@ -39,7 +39,7 @@ namespace c2flux.AppTests
         [AvaloniaFact]
         public void The_caret_follows_the_text_in_the_color_fields()
         {
-            ColorDialogWindow window = new ColorDialogWindow("t", Color.FromRgb(0x07, 0xBD, 0x47));
+            ColorDialogWindow window = new ColorDialogWindow(Color.FromRgb(0x07, 0xBD, 0x47));
             window.Show();
             Dispatcher.UIThread.RunJobs();
 

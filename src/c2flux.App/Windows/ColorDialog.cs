@@ -21,7 +21,7 @@ namespace c2flux
     {
         public static async Task<Color?> ShowAsync(Window owner, Color color)
         {
-            ColorDialogWindow dialog = new ColorDialogWindow(owner.Title, color);
+            ColorDialogWindow dialog = new ColorDialogWindow(color);
             await dialog.ShowDialog(owner);
             return dialog.Result;
         }
@@ -29,9 +29,9 @@ namespace c2flux
 
     internal sealed class ColorDialogWindow : Window
     {
-        public ColorDialogWindow(string title, Color color)
+        public ColorDialogWindow(Color color)
         {
-            Title = title;
+            Title = LocalizationService.GetText("Color.Title");
             Width = 340;
             SizeToContent = SizeToContent.Height;
             CanResize = false;

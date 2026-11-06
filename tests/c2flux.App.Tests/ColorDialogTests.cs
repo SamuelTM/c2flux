@@ -21,7 +21,7 @@ namespace c2flux.AppTests
     {
         private static ColorDialogWindow Show(Color color)
         {
-            ColorDialogWindow window = new ColorDialogWindow("t", color);
+            ColorDialogWindow window = new ColorDialogWindow(color);
             window.Show();
             Dispatcher.UIThread.RunJobs();
             return window;
@@ -147,6 +147,23 @@ namespace c2flux.AppTests
             int offset = ((int)point.Y * pixels.RowBytes) + ((int)point.X * 4);
             bool blueFirst = pixels.Format == PixelFormat.Bgra8888;
             return Color.FromRgb(Marshal.ReadByte(pixels.Address, offset + (blueFirst ? 2 : 0)), Marshal.ReadByte(pixels.Address, offset + 1), Marshal.ReadByte(pixels.Address, offset + (blueFirst ? 0 : 2)));
+        }
+
+        [AvaloniaTheory]
+        [InlineData("en", "Choose Color")]
+        [InlineData("pt", "Escolher Cor")]
+        public void The_title_follows_the_language(string language, string title)
+        {
+            LocalizationService.Load(language);
+
+            try
+            {
+                Assert.Equal(title, new ColorDialogWindow(Colors.Red).Title);
+            }
+            finally
+            {
+                LocalizationService.Load("en");
+            }
         }
 
         [AvaloniaFact]

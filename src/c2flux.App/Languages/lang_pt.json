@@ -317,6 +317,7 @@
   "Settings.ExportMaxDepthHint": "(vazio = sem limite)",
   "Color.SaturationBrightness": "Saturação e brilho",
   "Color.Hue": "Matiz",
+  "Color.Title": "Escolher Cor",
   "Settings.ShellContextMenuFailed": "Não foi possível atualizar a entrada do menu de contexto do Explorador de Arquivos.",
   "AlertHistory.Title": "Log resumido",
   "AlertHistory.Type": "Tipo",

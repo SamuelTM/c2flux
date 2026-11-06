@@ -568,6 +568,7 @@ namespace c2flux
                 ["Settings.ExportMaxDepthHint"] = "(empty = no limit)",
                 ["Color.SaturationBrightness"] = "Saturation and brightness",
                 ["Color.Hue"] = "Hue",
+                ["Color.Title"] = "Choose Color",
                 ["Settings.ShellContextMenuFailed"] = "The Explorer context menu entry could not be updated.",
                 ["AlertHistory.Title"] = "Short log",
                 ["AlertHistory.Type"] = "Type",
