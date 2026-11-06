@@ -1,3 +1,5 @@
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -7,6 +9,9 @@ using Avalonia.Input;
 using Avalonia.Input.Raw;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Xunit;
 
@@ -75,6 +80,73 @@ namespace c2flux.AppTests
             {
                 window.Close();
             }
+        }
+
+        // Layers of gradients each smooth the rounded edge, and the bright ones
+        // under the black show through it: nothing near the bottom corners may
+        // be brighter than the window behind them.
+        [AvaloniaFact]
+        public void The_bottom_corners_of_the_square_do_not_show_the_hue()
+        {
+            ThemeVariant previous = Application.Current.RequestedThemeVariant;
+            Application.Current.RequestedThemeVariant = ThemeVariant.Dark;
+            ColorDialogWindow window = Show(Color.FromRgb(190, 255, 70));
+
+            try
+            {
+                using WriteableBitmap frame = window.CaptureRenderedFrame();
+                using ILockedFramebuffer pixels = frame.Lock();
+                SaturationValueArea area = window.Editor.Area;
+                Point start = area.TranslatePoint(new Point(0, area.Bounds.Height), window).Value;
+                int left = (int)start.X;
+                int right = (int)(start.X + area.Bounds.Width);
+                int bottom = (int)start.Y;
+                int behind = Marshal.ReadByte(pixels.Address, (((bottom + 6) * pixels.RowBytes) + (left * 4)) + 1);
+
+                for (int y = bottom - 9; y <= bottom; y++)
+                {
+                    foreach (int x in Enumerable.Range(left - 1, 10).Concat(Enumerable.Range(right - 9, 10)))
+                    {
+                        int green = Marshal.ReadByte(pixels.Address, (y * pixels.RowBytes) + (x * 4) + 1);
+                        Assert.True(green <= behind + 3, $"({x},{y}) has green {green}, behind it {behind}");
+                    }
+                }
+            }
+            finally
+            {
+                window.Close();
+                Application.Current.RequestedThemeVariant = previous;
+            }
+        }
+
+        // The square is redrawn for each hue: its top right corner is that hue.
+        [AvaloniaFact]
+        public void The_square_follows_the_hue()
+        {
+            ColorDialogWindow window = Show(Color.FromRgb(255, 0, 0));
+
+            try
+            {
+                Assert.True(PixelNearTopRight(window).R > 200 && PixelNearTopRight(window).B < 60);
+                window.Editor.SetHue(240);
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(PixelNearTopRight(window).B > 200 && PixelNearTopRight(window).R < 60);
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
+        private static Color PixelNearTopRight(ColorDialogWindow window)
+        {
+            using WriteableBitmap frame = window.CaptureRenderedFrame();
+            using ILockedFramebuffer pixels = frame.Lock();
+            SaturationValueArea area = window.Editor.Area;
+            Point point = area.TranslatePoint(new Point(area.Bounds.Width - 12, 12), window).Value;
+            int offset = ((int)point.Y * pixels.RowBytes) + ((int)point.X * 4);
+            bool blueFirst = pixels.Format == PixelFormat.Bgra8888;
+            return Color.FromRgb(Marshal.ReadByte(pixels.Address, offset + (blueFirst ? 2 : 0)), Marshal.ReadByte(pixels.Address, offset + 1), Marshal.ReadByte(pixels.Address, offset + (blueFirst ? 0 : 2)));
         }
 
         [AvaloniaFact]

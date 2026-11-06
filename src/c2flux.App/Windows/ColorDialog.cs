@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Automation;
@@ -9,6 +10,8 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Rendering;
 
 namespace c2flux
@@ -242,7 +245,10 @@ namespace c2flux
     internal sealed class SaturationValueArea : Control, ICustomHitTest
     {
         private const double Step = 0.01;
+        private const int ImageSize = 256;
         private readonly ColorEditor _editor;
+        private WriteableBitmap _colors;
+        private double _colorsHue;
 
         public SaturationValueArea(ColorEditor editor)
         {
@@ -260,10 +266,7 @@ namespace c2flux
         public override void Render(DrawingContext context)
         {
             Rect area = new Rect(Bounds.Size);
-            Color hue = HsvColor.FromHsv(_editor.HueDegrees, 1, 1).ToRgb();
-            context.DrawRectangle(new SolidColorBrush(hue), null, area, 8, 8);
-            context.DrawRectangle(Gradient(new RelativePoint(1, 0, RelativeUnit.Relative), Color.FromArgb(255, 255, 255, 255), Color.FromArgb(0, 255, 255, 255)), null, area, 8, 8);
-            context.DrawRectangle(Gradient(new RelativePoint(0, 1, RelativeUnit.Relative), Color.FromArgb(0, 0, 0, 0), Color.FromArgb(255, 0, 0, 0)), null, area, 8, 8);
+            context.DrawRectangle(new ImageBrush(GetColors()) { Stretch = Stretch.Fill }, null, area, 8, 8);
 
             Point thumb = new Point(_editor.Saturation * area.Width, (1 - _editor.Brightness) * area.Height);
             double radius = IsFocused ? 9 : 7;
@@ -309,12 +312,49 @@ namespace c2flux
             }
         }
 
-        private static LinearGradientBrush Gradient(RelativePoint end, Color from, Color to) => new LinearGradientBrush
+        // One image, not layers of gradients: each layer would smooth the
+        // rounded edge on its own, and the hue would show through the black.
+        private WriteableBitmap GetColors()
         {
-            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
-            EndPoint = end,
-            GradientStops = { new GradientStop(from, 0), new GradientStop(to, 1) },
-        };
+            if (_colors != null && _colorsHue == _editor.HueDegrees)
+            {
+                return _colors;
+            }
+
+            Color hue = HsvColor.FromHsv(_editor.HueDegrees, 1, 1).ToRgb();
+            int[] pixels = new int[ImageSize * ImageSize];
+
+            for (int y = 0; y < ImageSize; y++)
+            {
+                double value = 1 - (y / (double)(ImageSize - 1));
+
+                for (int x = 0; x < ImageSize; x++)
+                {
+                    double saturation = x / (double)(ImageSize - 1);
+                    pixels[(y * ImageSize) + x] = unchecked((int)0xFF000000) |
+                        (Channel(hue.R, saturation, value) << 16) |
+                        (Channel(hue.G, saturation, value) << 8) |
+                        Channel(hue.B, saturation, value);
+                }
+            }
+
+            // Rewritten, not replaced: a frame may still be drawing the last one.
+            _colors ??= new WriteableBitmap(new PixelSize(ImageSize, ImageSize), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Opaque);
+            _colorsHue = _editor.HueDegrees;
+
+            using (ILockedFramebuffer buffer = _colors.Lock())
+            {
+                for (int y = 0; y < ImageSize; y++)
+                {
+                    Marshal.Copy(pixels, y * ImageSize, buffer.Address + (y * buffer.RowBytes), ImageSize);
+                }
+            }
+
+            return _colors;
+        }
+
+        private static int Channel(byte hue, double saturation, double value) =>
+            (int)Math.Round(255 * value * (1 - (saturation * (1 - (hue / 255.0)))));
 
         private void MoveTo(Point point) =>
             _editor.SetSaturationValue(point.X / Bounds.Width, 1 - (point.Y / Bounds.Height));
